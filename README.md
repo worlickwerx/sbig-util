@@ -62,7 +62,6 @@ you can run SBIG's test code.
 ```
 cd sdk/LinuxDevKit.2014-01-10/arm/c/testapp
 make -f Makefile32 LIBRARY="-L ../lib" APP_OUT_DIR="./"
-./testmain
 LD_LIBRARY_PATH="../lib" ./testmain
 ```
 This displays a help message.  To snap an image from the camera
