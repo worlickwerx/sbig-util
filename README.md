@@ -4,17 +4,17 @@ and so far there is no intelligent life here!  Move along...
 ### sbig-util
 
 sbig-util is a set of Linux command line tools for controlling cameras
-from the Santa Barbara Instrument group.
+from the Santa Barbara Instrument group.  The goal is to develop a simple
+tool that can directly control a camera and filter wheel in the field
+during an astrophotography session.  Perhaps our tool can be a building
+block for more complex, process-oriented software, or serve as another
+demo for using the SBIG SDK.
 
-The goal is to develop a simple tool that can directly control a camera
-and filter wheel in the field during an astrophotography session.
-Perhaps our tool can be a building block for more complex, process-oriented
-software, or serve as another demo for using the SBIG SDK.
-
-sbig-util includes a copy of the SBIG Linux Development kit and firmware
+sbig-util includes a copy of the SBIG Linux Development Kit
 as a convenience.  You may configure sbig-util to use either this copy,
 or another external one.  These instructions presume that you will use
-the internal one.
+the internal one.  The SDK includes firmware, udev rules, documentation,
+the SBIG universal (user space) driver, and some test code.
 
 ### Supported Platforms
 
@@ -53,5 +53,20 @@ You may need to then poke udev with
 sudo udevadm control --reload-rules
 ```
 When my camera is properly initialized, the red LED on the back blinks
-for a few seconds, then the cooling fan comes on.
+for about a second, then the cooling fan comes on.
 
+### Building and running the SDK test code
+
+To validate that everything is installed properly thus far,
+you can run SBIG's test code.
+```
+cd sdk/LinuxDevKit.2014-01-10/arm/c/testapp
+make -f Makefile32 LIBRARY="-L ../lib" APP_OUT_DIR="./"
+./testmain
+LD_LIBRARY_PATH="../lib" ./testmain
+```
+This displays a help message.  To snap an image from the camera
+and store it in /tmp, run
+```
+LD_LIBRARY_PATH="../lib" ./testmain /tmp/ SBIG 1 LF 0.01 1x1 0 0 0 0 1 1
+```
