@@ -10,5 +10,9 @@ int sbig_open_device (sbig_t sb);
 int sbig_close_device (sbig_t sb);
 void sbig_destroy (sbig_t sb);
 
+
+int sbig_get_driver_info (sbig_t sb, ushort *version, char **namep,
+                          ushort *maxreq);
+
 const char *sbig_strerror (int err);
 #endif

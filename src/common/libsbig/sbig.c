@@ -68,6 +68,27 @@ int sbig_open_driver (sbig_t sb)
     return sb->fun (CC_OPEN_DRIVER, NULL, NULL); 
 }
 
+int sbig_get_driver_info (sbig_t sb, ushort *version, char **namep, ushort *maxreq)
+{
+    int e;
+    GetDriverInfoParams in;
+    GetDriverInfoResults0 out;
+
+    in.request = DRIVER_STD;
+    e = sb->fun (CC_GET_DRIVER_INFO, &in, &out);
+    if (e != CE_NO_ERROR)
+        goto done;
+    if (!(*namep = strdup (out.name))) {
+        e = CE_OS_ERROR;
+        errno = ENOMEM;
+        goto done;
+    }
+    *version = out.version;
+    *maxreq = out.maxRequest;
+done:
+    return e;
+}
+
 int sbig_open_device (sbig_t sb)
 {
     OpenDeviceParams in;

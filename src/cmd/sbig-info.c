@@ -34,9 +34,10 @@
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
 
-char *prog;
+void show_driver_info (sbig_t sb);
+void show_device_info (sbig_t sb);
 
-int main(int argc, char *argv[])
+int main (int argc, char *argv[])
 {
     sbig_t sb;
     const char *sbig_udrv = getenv ("SBIG_UDRV");
@@ -52,18 +53,41 @@ int main(int argc, char *argv[])
         msg_exit ("%s", dlerror ());
     if ((e = sbig_open_driver (sb)) != 0)
         msg_exit ("sbig_open_driver: %s", sbig_strerror (e));
-    if ((e = sbig_open_device (sb)) != 0)
-        msg_exit ("sbig_open_device: %s", sbig_strerror (e));
 
-    printf ("Hello\n");
 
-    if ((e = sbig_close_device (sb)) != 0)
-        msg_exit ("sbig_close_device: %s", sbig_strerror (e));
+    show_driver_info (sb);
+    //show_device_info (sb);
 
     sbig_destroy (sb);
     log_fini ();
     return 0;
 }
+
+void show_driver_info (sbig_t sb)
+{
+    ushort version;
+    ushort maxreq;
+    char *name;
+    int e;
+
+    if ((e = sbig_get_driver_info (sb, &version, &name, &maxreq)) != 0)
+        msg_exit ("sbig_get_driver_info: %s", sbig_strerror (e));
+    msg ("version: %d", version);
+    msg ("name: %s", name);
+    msg ("maxreq: %d", maxreq);
+    free (name);
+}
+
+void show_device_info (sbig_t sb)
+{
+    int e;
+
+    if ((e = sbig_open_device (sb)) != 0)
+        msg_exit ("sbig_open_device: %s", sbig_strerror (e));
+    if ((e = sbig_close_device (sb)) != 0)
+        msg_exit ("sbig_close_device: %s", sbig_strerror (e));
+}
+
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
