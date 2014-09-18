@@ -1,1 +1,1 @@
-SUBDIRS = libsbig
+SUBDIRS = libutil libsbig

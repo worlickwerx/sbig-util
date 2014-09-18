@@ -7,6 +7,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_SRCDIR([NEWS])
 AC_CANONICAL_SYSTEM
 X_AC_META
+X_AC_EXPAND_INSTALL_DIRS
 
 ##
 # Automake support
@@ -29,7 +30,6 @@ if test "$GCC" = yes; then
 fi
 AC_PROG_RANLIB
 AC_PROG_LIBTOOL
-AC_LIB_LTDL
 
 ##
 # Checks for header files.
@@ -70,6 +70,7 @@ AC_CHECK_FUNCS( \
   vsnprintf \
   vsscanf \
 )
+X_AC_CHECK_COND_LIB(dl, dlerror)
 
 ##
 # Epilogue
@@ -79,6 +80,7 @@ AC_CONFIG_FILES( \
   src/Makefile \
   src/common/Makefile \
   src/common/libsbig/Makefile \
+  src/common/libutil/Makefile \
   src/cmd/Makefile \
 )
 

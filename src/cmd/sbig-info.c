@@ -28,22 +28,40 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
+#include <dlfcn.h>
 
-#include "sbig.h"
+#include "src/common/libsbig/sbig.h"
+#include "src/common/libutil/log.h"
 
 char *prog;
 
 int main(int argc, char *argv[])
 {
     sbig_t sb;
+    const char *sbig_udrv = getenv ("SBIG_UDRV");
+    int e;
 
-    prog = basename (argv[0]);
+    log_init ("sbig-info");
 
-    if (!(sb = sbig_new ())) {
-        fprintf (stderr, "%s: %s\n", prog, strerror (errno));
-        exit (1);
-    }
-    printf ("%s: not implemented\n", prog);
+    if (!sbig_udrv)
+        msg_exit ("SBIG_UDRV is not set");
+    if (!(sb = sbig_new ()))
+        err_exit ("sbig_new");
+    if (sbig_dlopen (sb, sbig_udrv) != 0)
+        msg_exit ("%s", dlerror ());
+    if ((e = sbig_open_driver (sb)) != 0)
+        msg_exit ("sbig_open_driver: %s", sbig_strerror (e));
+    if ((e = sbig_open_device (sb)) != 0)
+        msg_exit ("sbig_open_device: %s", sbig_strerror (e));
+
+    printf ("Hello\n");
+
+    if ((e = sbig_close_device (sb)) != 0)
+        msg_exit ("sbig_close_device: %s", sbig_strerror (e));
+
+    sbig_destroy (sb);
+    log_fini ();
     return 0;
 }
 

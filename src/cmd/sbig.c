@@ -35,16 +35,18 @@
 #include <libgen.h>
 #include <stdbool.h>
 
-#include "sbig.h"
+#include "src/common/libsbig/sbig.h"
 
 static char *prog;
+char *dir_self (void);
 
-void exec_subcommand (const char *exec_path, char *argv[]);
+void exec_subcommand (char *argv[]);
 
-#define OPTIONS "+hx:"
+#define OPTIONS "+hx:S:"
 static const struct option longopts[] = {
     {"exec-dir",         required_argument,  0, 'x'},
-    {"help",            no_argument,        0, 'h'},
+    {"sbig-udrv",        required_argument,  0, 'S'},
+    {"help",             no_argument,        0, 'h'},
     {0, 0, 0, 0},
 };
 
@@ -52,7 +54,8 @@ static void usage (void)
 {
     fprintf (stderr, 
 "Usage: sbig [OPTIONS] COMMAND ARGS\n"
-"    -x,--exec-dir PATH      set directory to search for commands\n"
+"    -x,--exec-dir DIR     set directory to search for commands\n"
+"    -S,--sbig-udrv FILE   set path to SBIG universal driver .so file\n"
 );
 }
 
@@ -69,14 +72,22 @@ int main (int argc, char *argv[])
 {
     int ch;
     bool hopt = false;
-    char *exec_dir = EXEC_DIR;
 
     prog = basename (argv[0]);
 
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
             case 'x': /* --exec-dir */
-                exec_dir = optarg;
+                if (setenv ("SBIG_EXEC_DIR", optarg, 1) < 0) {
+                    fprintf (stderr, "%s: setenv", prog);
+                    exit (1);
+                }
+                break;
+            case 'S': /* --sbig-udrv FILE */
+                if (setenv ("SBIG_UDRV", optarg, 1) < 0) {
+                    fprintf (stderr, "%s: setenv", prog);
+                    exit (1);
+                }
                 break;
             case 'h': /* --help  */
                 hopt = true;
@@ -89,10 +100,30 @@ int main (int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
+    if (!strcmp (dir_self (), X_BINDIR)) {
+        if (setenv ("SBIG_EXEC_DIR", EXEC_DIR, 0) < 0) {
+            fprintf (stderr, "%s: setenv", prog);
+            exit (1);
+        }
+        if (setenv ("SBIG_UDRV", PATH_SBIGUDRV, 0) < 0) {
+            fprintf (stderr, "%s: setenv", prog);
+            exit (1);
+        }
+    } else {
+        if (setenv ("SBIG_EXEC_DIR", ".", 0) < 0) {
+            fprintf (stderr, "%s: setenv", prog);
+            exit (1);
+        }
+        if (setenv ("SBIG_UDRV", PATH_SBIGUDRV_BUILD, 0) < 0) {
+            fprintf (stderr, "%s: setenv", prog);
+            exit (1);
+        }
+    }
+
     if (hopt) {
         if (argc > 0) {
             char *av[] = { argv[0], "--help", NULL };
-            exec_subcommand (exec_dir, av);
+            exec_subcommand (av);
         } else
             help ();
         exit (0);
@@ -102,16 +133,27 @@ int main (int argc, char *argv[])
         exit (1);
     }
 
-    exec_subcommand (".", argv); /* for testing in source tree */
-    exec_subcommand (exec_dir, argv);
+    exec_subcommand (argv);
     fprintf (stderr, "`%s' is not an sbig command.  See 'sbig --help\n'",
              argv[0]);
 
     return 0;
 }
 
-void exec_subcommand (const char *dir, char *argv[])
+char *dir_self (void)
 {
+    static char path[MAXPATHLEN];
+    memset (path, 0, sizeof (path));
+    if (readlink ("/proc/self/exe", path, sizeof (path) - 1) < 0) {
+        fprintf (stderr, "/proc/self/exe");
+        exit (1);
+    }
+    return path; 
+}
+
+void exec_subcommand (char *argv[])
+{
+    char *dir = getenv ("SBIG_EXEC_DIR");
     char path[MAXPATHLEN];
     int n;
     n = snprintf (path, sizeof (path), "%s/sbig-%s", dir, argv[0]);

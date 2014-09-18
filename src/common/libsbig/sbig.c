@@ -24,24 +24,66 @@
 #include "config.h"
 #endif
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
+#include <dlfcn.h>
+
+#define ENV_LINUX   7
+#define TARGET      ENV_LINUX
+#include "usb.h"
+#include "sbigudrv.h"
 
 #include "sbig.h"
 
 struct sbig_struct {
+    void *dso;
+    short (*fun)(short cmd, void *parm, void *result);
 };
 
 sbig_t sbig_new (void)
 {
     sbig_t sb = malloc (sizeof (*sb));
-    if (!sb)
+    if (!sb) {
         errno = ENOMEM;
+        return NULL;
+    }
+    memset (sb, 0, sizeof (*sb));
     return sb;
+}
+
+int sbig_dlopen (sbig_t sb, const char *path)
+{
+    dlerror ();
+    if (!(sb->dso = dlopen (path, RTLD_LAZY | RTLD_LOCAL)))
+        return CE_OS_ERROR;
+    if (!(sb->fun = dlsym (sb->dso, "SBIGUnivDrvCommand")))
+        return CE_OS_ERROR;
+    return CE_NO_ERROR;
+}
+
+int sbig_open_driver (sbig_t sb)
+{
+    return sb->fun (CC_OPEN_DRIVER, NULL, NULL); 
+}
+
+int sbig_open_device (sbig_t sb)
+{
+    OpenDeviceParams in;
+    in.deviceType = DEV_USB1; // FIXME
+    return sb->fun (CC_OPEN_DEVICE, &in, NULL);
+}
+
+int sbig_close_device (sbig_t sb)
+{
+    return sb->fun (CC_CLOSE_DEVICE, NULL, NULL);
 }
 
 void sbig_destroy (sbig_t sb)
 {
+    if (sb->dso)
+        dlclose (sb->dso);
     free (sb);
 }
 
