@@ -16,4 +16,4 @@ sbigbin_PROGRAMS = \
 LDADD = \
 	$(top_builddir)/src/common/libsbig/libsbig.la \
 	$(top_builddir)/src/common/libutil/libutil.la \
-	-lm $(LIBDL)
+	$(LIBM) $(LIBDL)

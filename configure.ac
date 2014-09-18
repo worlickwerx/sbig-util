@@ -71,6 +71,7 @@ AC_CHECK_FUNCS( \
   vsscanf \
 )
 X_AC_CHECK_COND_LIB(dl, dlerror)
+X_AC_CHECK_COND_LIB(m, sqrt)
 
 ##
 # Epilogue
