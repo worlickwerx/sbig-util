@@ -36,9 +36,11 @@ AC_PROG_LIBTOOL
 ##
 AC_HEADER_STDC
 AC_CHECK_HEADERS( \
-  pthread.h \
-  getopt.h \
+  usb.h
 )
+AS_VAR_IF([ac_cv_header_usb_h],[yes],,[
+  AC_MSG_ERROR([libusb header usb.h not found])
+])
 
 ##
 # Checks for typedefs, structures, and compiler characteristics
