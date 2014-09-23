@@ -132,6 +132,11 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
     if ((e = sbig_get_ccd_info (sb, request, &info)) != 0)
         msg_exit ("sbig_get_ccd_info: %s", sbig_strerror (e));
 
+    /* FIXME: ST5C/237/237A (PixCel 255/237) only support req 0,3,4,5
+     * We are making requests 0,1,2,4,5 for ST-7/8/etc
+     * Req 6 is STX/STXL specific - but supported by all CCD's.
+     */
+
     bcd4str (info.firmwareVersion, version, sizeof (version));
     msg ("firmware-version: %s", version);
     msg ("camera-type:      %s", sbig_strcam (info.cameraType));
@@ -155,7 +160,26 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
                                                                       : "no");
         msg ("serial-number:     %s", xinfo.serialNumber);
     }
-
+    if (request == CCD_INFO_IMAGING) {
+        GetCCDInfoResults4 xinfo;
+        ushort cap;
+        if ((e = sbig_get_ccd_xinfo2 (sb, CCD_INFO_EXTENDED2_IMAGING,
+                                      &xinfo)) != 0)
+            msg_exit ("sbig_get_ccd_xinfo2: %s", sbig_strerror (e));
+        cap = xinfo.capabilitiesBits;
+        msg ("ccd-type:          %s", (cap & CB_CCD_TYPE_FRAME_TRANSFER)
+                                      ? "frame_transfer" : "full frame");
+        msg ("electronic-shutter:%s", !(cap & CB_CCD_ESHUTTER_YES) ? "no"
+             : "Interline Imaging CCD with electronic shutter and ms exposure");
+        msg ("remote-guide-port: %s", (cap & CB_CCD_EXT_TRACKER_YES)
+                                      ? "yes" : "no");
+        msg ("biorad-tdi-mode:   %s", (cap & CB_CCD_BTDI_YES) ? "yes" : "no");
+        msg ("AO8-detected:      %s", (cap & CB_AO8_YES) ? "yes" : "no");
+        msg ("frame-buffer:      %s", (cap & CB_FRAME_BUFFER_YES)
+                                      ? "yes" : "no");
+        msg ("use-startexp2:     %s", (cap & CB_REQUIRES_STARTEXP2_YES)
+                                      ? "yes" : "no");
+    }
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_strerror (e));
 }
