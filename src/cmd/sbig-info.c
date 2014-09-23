@@ -76,7 +76,7 @@ int main (int argc, char *argv[])
     if (optind == argc)
         usage ();
     cmd = argv[optind++];
- 
+
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
     if (!(sb = sbig_new ()))
@@ -133,9 +133,9 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
         msg_exit ("sbig_get_ccd_info: %s", sbig_strerror (e));
 
     bcd4str (info.firmwareVersion, version, sizeof (version));
-    msg ("firmware-version: %s", version); 
-    msg ("camera-type:      %s", sbig_strdevice (info.cameraType));
-    msg ("name:             %s", info.name); 
+    msg ("firmware-version: %s", version);
+    msg ("camera-type:      %s", sbig_strcam (info.cameraType));
+    msg ("name:             %s", info.name);
     msg ("readout-modes:");
     for (i = 0; i < info.readoutModes; i++) {
         msg ("%2d: %4d x %-4d %2.2f e-/ADU %3.2f x %-3.2f microns",
@@ -145,7 +145,7 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
              bcd2_2 (info.readoutInfo[i].gain),
              bcd6_2 (info.readoutInfo[i].pixelWidth),
              bcd6_2 (info.readoutInfo[i].pixelHeight));
-    } 
+    }
     if (request == CCD_INFO_IMAGING) {
         GetCCDInfoResults2 xinfo;
         if ((e = sbig_get_ccd_xinfo (sb, &xinfo)) != 0)
