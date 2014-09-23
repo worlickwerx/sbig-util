@@ -73,10 +73,9 @@ int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
     return sb->fun (CC_GET_DRIVER_INFO, &in, info);
 }
 
-int sbig_open_device (sbig_t sb)
+int sbig_open_device (sbig_t sb, SBIG_DEVICE_TYPE type)
 {
-    OpenDeviceParams in;
-    in.deviceType = DEV_USB1; // FIXME
+    OpenDeviceParams in = { .deviceType = type };
     return sb->fun (CC_OPEN_DEVICE, &in, NULL);
 }
 

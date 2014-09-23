@@ -121,7 +121,7 @@ void show_ccd_info (sbig_t sb, int ac, char **av)
 
     if (ac != 0)
         msg_exit ("device takes no arguments");
-    if ((e = sbig_open_device (sb)) != 0)
+    if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
         msg_exit ("sbig_open_device: %s", sbig_strerror (e));
     if ((e = sbig_establish_link (sb)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_strerror (e));

@@ -1,6 +1,6 @@
 AM_CFLAGS = @GCCWARN@
 
-AM_CPPFLAGS = -I$(top_srcdir)/src/common/libutil
+AM_CPPFLAGS = -I$(top_srcdir)
 
 noinst_LTLIBRARIES = libsbig.la
 
