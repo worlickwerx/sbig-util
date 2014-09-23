@@ -104,7 +104,7 @@ int sbig_get_ccd_info (sbig_t sb, CCD_INFO_REQUEST request,
     return sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
-int sbig_get_ccd_info_ext (sbig_t sb, GetCCDInfoResults2 *info)
+int sbig_get_ccd_xinfo (sbig_t sb, GetCCDInfoResults2 *info)
 {
     GetCCDInfoParams in = { .request = CCD_INFO_EXTENDED };
     return sb->fun (CC_GET_CCD_INFO, &in, info);

@@ -148,8 +148,8 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
     } 
     if (request == CCD_INFO_IMAGING) {
         GetCCDInfoResults2 xinfo;
-        if ((e = sbig_get_ccd_info_ext (sb, &xinfo)) != 0)
-            msg_exit ("sbig_get_ccd_info_ext: %s", sbig_strerror (e));
+        if ((e = sbig_get_ccd_xinfo (sb, &xinfo)) != 0)
+            msg_exit ("sbig_get_ccd_xinfo: %s", sbig_strerror (e));
         msg ("bad columns:       %d", xinfo.badColumns);
         msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT ? "yes"
                                                                       : "no");
