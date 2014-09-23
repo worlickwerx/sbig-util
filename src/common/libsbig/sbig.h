@@ -5,22 +5,6 @@
 
 typedef struct sbig_struct *sbig_t;
 
-typedef struct {
-    int mode;
-    int width;
-    int height;
-    double gain;
-    double pixw;
-    double pixh;
-} sbig_readout_mode_t;
-
-typedef struct {
-    char version[6];
-    char name[64];
-    int nmodes;
-    sbig_readout_mode_t modes[20];
-} sbig_ccd_info_t;
-
 sbig_t sbig_new (void);
 int sbig_dlopen (sbig_t sb, const char *path);
 int sbig_open_driver (sbig_t sb);
