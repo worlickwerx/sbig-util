@@ -26,13 +26,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <dlfcn.h>
 
 #define ENV_LINUX   7
 #define TARGET      ENV_LINUX
-#include "usb.h"
 #include "sbigudrv.h"
 
 #include "sbig.h"
@@ -68,7 +68,7 @@ int sbig_open_driver (sbig_t sb)
     return sb->fun (CC_OPEN_DRIVER, NULL, NULL); 
 }
 
-int sbig_get_driver_info (sbig_t sb, ushort *version, char **namep, ushort *maxreq)
+int sbig_get_driver_info (sbig_t sb, sbig_driver_info_t *ip)
 {
     int e;
     GetDriverInfoParams in;
@@ -78,13 +78,10 @@ int sbig_get_driver_info (sbig_t sb, ushort *version, char **namep, ushort *maxr
     e = sb->fun (CC_GET_DRIVER_INFO, &in, &out);
     if (e != CE_NO_ERROR)
         goto done;
-    if (!(*namep = strdup (out.name))) {
-        e = CE_OS_ERROR;
-        errno = ENOMEM;
-        goto done;
-    }
-    *version = out.version;
-    *maxreq = out.maxRequest;
+    assert (sizeof (out.name) == sizeof (ip->name));
+    memcpy (ip->name, out.name, sizeof (ip->name));
+    ip->version = out.version;
+    ip->maxreq = out.maxRequest;
 done:
     return e;
 }
@@ -99,6 +96,69 @@ int sbig_open_device (sbig_t sb)
 int sbig_close_device (sbig_t sb)
 {
     return sb->fun (CC_CLOSE_DEVICE, NULL, NULL);
+}
+
+int sbig_establish_link (sbig_t sb)
+{
+    EstablishLinkParams in;
+    EstablishLinkResults out;
+    in.sbigUseOnly = 0;
+    return sb->fun (CC_ESTABLISH_LINK, &in, &out);
+}
+
+static void bcd4str (ushort i, char *buf, int len)
+{
+    snprintf (buf, len, "%d%d.%d%d",
+                            (i >> 3) & 0xf,
+                            (i >> 2) & 0xf,
+                            (i >> 1) & 0xf,
+                            i & 0xf);
+}
+
+static double bcd2_2 (ushort i)
+{
+    return (1E-2 * ((i) & 0xf))
+          + 1E-1 * ((i >> 1) & 0xf)
+          + 1E-0 * ((i >> 2) & 0xf)
+          + 1E-1 * ((i >> 3) & 0xf);
+}
+
+static double bcd6_2 (ulong i)
+{
+    return (1E-2 * ((i) & 0xf))
+          + 1E-1 * ((i >> 1) & 0xf)
+          + 1E-0 * ((i >> 2) & 0xf)
+          + 1E-1 * ((i >> 3) & 0xf)
+          + 1E-2 * ((i >> 4) & 0xf)
+          + 1E-3 * ((i >> 5) & 0xf)
+          + 1E-4 * ((i >> 6) & 0xf)
+          + 1E-0 * ((i >> 7) & 0xf);
+}
+
+int sbig_get_ccd_info (sbig_t sb, sbig_ccd_info_t *ip)
+{
+    int i, e;
+    GetCCDInfoParams in;
+    GetCCDInfoResults0 out;
+
+    in.request = CCD_INFO_IMAGING;
+    e = sb->fun (CC_GET_CCD_INFO, &in, &out);
+    if (e != CE_NO_ERROR)
+        goto done;
+    bcd4str (out.firmwareVersion, ip->version, sizeof (ip->version));
+    assert (sizeof (ip->name) == sizeof (out.name));
+    memcpy (ip->name, out.name, sizeof (ip->name));
+    ip->nmodes = out.readoutModes;
+    for (i = 0; i < ip->nmodes; i++) {
+        ip->modes[i].mode = out.readoutInfo[i].mode;
+        ip->modes[i].width = out.readoutInfo[i].width;
+        ip->modes[i].height = out.readoutInfo[i].height;
+        ip->modes[i].gain = bcd2_2 (out.readoutInfo[i].gain);
+        ip->modes[i].pixw = bcd6_2 (out.readoutInfo[i].pixelWidth);
+        ip->modes[i].pixh = bcd6_2 (out.readoutInfo[i].pixelHeight);
+    }
+done:
+    return e;
 }
 
 void sbig_destroy (sbig_t sb)

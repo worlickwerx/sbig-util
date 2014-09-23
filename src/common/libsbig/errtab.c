@@ -25,14 +25,10 @@
 #endif
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <dlfcn.h>
+#include <sys/types.h>
 
 #define ENV_LINUX   7
 #define TARGET      ENV_LINUX
-#include "usb.h"
 #include "sbigudrv.h"
 
 #include "sbig.h"

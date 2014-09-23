@@ -37,7 +37,7 @@
 #include "src/common/libutil/log.h"
 
 void show_driver_info (sbig_t sb, int ac, char **av);
-void show_device_info (sbig_t sb, int ac, char **av);
+void show_ccd_info (sbig_t sb, int ac, char **av);
 
 #define OPTIONS "h"
 static const struct option longopts[] = {
@@ -49,7 +49,8 @@ void usage (void)
 {
     fprintf (stderr,
 "Usage: sbig-info driver\n"
-"       sbig-info device\n"
+"       sbig-info imaging-ccd\n"
+"       sbig-info guide-ccd\n"
 );
     exit (1);
 }
@@ -84,10 +85,12 @@ int main (int argc, char *argv[])
     if ((e = sbig_open_driver (sb)) != 0)
         msg_exit ("sbig_open_driver: %s", sbig_strerror (e));
 
-    if (!strcmp (cmd, "device"))
-        show_device_info (sb, argc - optind, argv + optind);
+    if (!strcmp (cmd, "imaging-ccd"))
+        show_ccd_info (sb, argc - optind, argv + optind);
     else if (!strcmp (cmd, "driver"))
         show_driver_info (sb, argc - optind, argv + optind);
+    else
+        usage ();
 
     sbig_destroy (sb);
     log_fini ();
@@ -96,30 +99,42 @@ int main (int argc, char *argv[])
 
 void show_driver_info (sbig_t sb, int ac, char **av)
 {
-    ushort version;
-    ushort maxreq;
-    char *name;
+    sbig_driver_info_t info;
     int e;
 
     if (ac != 0)
         msg_exit ("driver takes no arguments");
-
-    if ((e = sbig_get_driver_info (sb, &version, &name, &maxreq)) != 0)
+    if ((e = sbig_get_driver_info (sb, &info)) != 0)
         msg_exit ("sbig_get_driver_info: %s", sbig_strerror (e));
-    msg ("version: %d", version);
-    msg ("name: %s", name);
-    msg ("maxreq: %d", maxreq);
-    free (name);
+    msg ("version: %d", info.version);
+    msg ("name:    %s", info.name);
+    msg ("maxreq:  %d", info.maxreq);
 }
 
-void show_device_info (sbig_t sb, int ac, char **av)
+void show_ccd_info (sbig_t sb, int ac, char **av)
 {
-    int e;
+    int i, e;
+    sbig_ccd_info_t info;
 
     if (ac != 0)
         msg_exit ("device takes no arguments");
     if ((e = sbig_open_device (sb)) != 0)
         msg_exit ("sbig_open_device: %s", sbig_strerror (e));
+    if ((e = sbig_establish_link (sb)) != 0)
+        msg_exit ("sbig_establish_link: %s", sbig_strerror (e));
+
+    if ((e = sbig_get_ccd_info (sb, &info)) != 0)
+        msg_exit ("sbig_get_ccd_info: %s", sbig_strerror (e));
+
+    msg ("version:       %s", info.version); 
+    msg ("name:          %s", info.name); 
+    msg ("readout-modes: %d", info.nmodes); 
+    for (i = 0; i < info.nmodes; i++) {
+        msg ("%d: %dx%d, %2.2f e-/ADU, %6.2fx%6.2f microns",
+             info.modes[i].mode, info.modes[i].width, info.modes[i].height,
+             info.modes[i].gain, info.modes[i].pixw,  info.modes[i].pixh);
+    } 
+
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_strerror (e));
 }
