@@ -16,13 +16,13 @@ void sbig_destroy (sbig_t sb);
 
 int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
                           GetDriverInfoResults0 *info);
-		
+
 int sbig_get_ccd_info (sbig_t sb, CCD_INFO_REQUEST request,
                        GetCCDInfoResults0 *info);
 int sbig_get_ccd_xinfo (sbig_t sb, GetCCDInfoResults2 *info);
 
 const char *sbig_strerror (int err);
-const char *sbig_strdevice (int dev);
+const char *sbig_strcam (int dev);
 #endif
 
 /*

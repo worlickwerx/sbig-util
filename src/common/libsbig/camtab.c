@@ -30,7 +30,7 @@
 #include "sbig.h"
 
 typedef struct {
-    int dev;
+    CAMERA_TYPE type;
     const char *desc;
 } devtab_t;
 
@@ -57,11 +57,11 @@ static devtab_t dtab[] = {
   { NO_CAMERA, "no camera" },
 };
 
-const char *sbig_strdevice (int dev)
+const char *sbig_strcam (CAMERA_TYPE type)
 {
     int i, max = sizeof (dtab) / sizeof (dtab[0]);
     for (i = 0; i < max; i++)
-        if (dtab[i].dev == dev)
+        if (dtab[i].type == type)
             return dtab[i].desc;
     return "unknown";
 }
