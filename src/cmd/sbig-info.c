@@ -146,6 +146,15 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
              bcd6_2 (info.readoutInfo[i].pixelWidth),
              bcd6_2 (info.readoutInfo[i].pixelHeight));
     } 
+    if (request == CCD_INFO_IMAGING) {
+        GetCCDInfoResults2 xinfo;
+        if ((e = sbig_get_ccd_info_ext (sb, &xinfo)) != 0)
+            msg_exit ("sbig_get_ccd_info_ext: %s", sbig_strerror (e));
+        msg ("bad columns:       %d", xinfo.badColumns);
+        msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT ? "yes"
+                                                                      : "no");
+        msg ("serial-number:     %s", xinfo.serialNumber);
+    }
 
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_strerror (e));
