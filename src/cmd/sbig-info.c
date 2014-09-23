@@ -35,6 +35,7 @@
 
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
+#include "src/common/libutil/bcd.h"
 
 void show_driver_info (sbig_t sb, int ac, char **av);
 void show_ccd_info (sbig_t sb, int ac, char **av);
@@ -99,16 +100,18 @@ int main (int argc, char *argv[])
 
 void show_driver_info (sbig_t sb, int ac, char **av)
 {
-    sbig_driver_info_t info;
+    GetDriverInfoResults0 info;
     int e;
+    char version[16];
 
     if (ac != 0)
         msg_exit ("driver takes no arguments");
-    if ((e = sbig_get_driver_info (sb, &info)) != 0)
+    if ((e = sbig_get_driver_info (sb, DRIVER_STD, &info)) != 0)
         msg_exit ("sbig_get_driver_info: %s", sbig_strerror (e));
-    msg ("version: %d", info.version);
+    bcd4str (info.version, version, sizeof (version));
+    msg ("version: %s", version);
     msg ("name:    %s", info.name);
-    msg ("maxreq:  %d", info.maxreq);
+    msg ("maxreq:  %d", info.maxRequest);
 }
 
 void show_ccd_info (sbig_t sb, int ac, char **av)

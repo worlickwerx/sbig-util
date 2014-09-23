@@ -33,6 +33,8 @@
 
 #include "sbig.h"
 
+#include "src/common/libutil/bcd.h"
+
 struct sbig_struct {
     void *dso;
     short (*fun)(short cmd, void *parm, void *result);
@@ -64,22 +66,11 @@ int sbig_open_driver (sbig_t sb)
     return sb->fun (CC_OPEN_DRIVER, NULL, NULL); 
 }
 
-int sbig_get_driver_info (sbig_t sb, sbig_driver_info_t *ip)
+int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
+                          GetDriverInfoResults0 *info)
 {
-    int e;
-    GetDriverInfoParams in;
-    GetDriverInfoResults0 out;
-
-    in.request = DRIVER_STD;
-    e = sb->fun (CC_GET_DRIVER_INFO, &in, &out);
-    if (e != CE_NO_ERROR)
-        goto done;
-    assert (sizeof (out.name) == sizeof (ip->name));
-    memcpy (ip->name, out.name, sizeof (ip->name));
-    ip->version = out.version;
-    ip->maxreq = out.maxRequest;
-done:
-    return e;
+    GetDriverInfoParams in = { .request = request };
+    return sb->fun (CC_GET_DRIVER_INFO, &in, info);
 }
 
 int sbig_open_device (sbig_t sb)
@@ -100,35 +91,6 @@ int sbig_establish_link (sbig_t sb)
     EstablishLinkResults out;
     in.sbigUseOnly = 0;
     return sb->fun (CC_ESTABLISH_LINK, &in, &out);
-}
-
-static void bcd4str (ushort i, char *buf, int len)
-{
-    snprintf (buf, len, "%d%d.%d%d",
-                            (i >> 3) & 0xf,
-                            (i >> 2) & 0xf,
-                            (i >> 1) & 0xf,
-                            i & 0xf);
-}
-
-static double bcd2_2 (ushort i)
-{
-    return (1E-2 * ((i) & 0xf))
-          + 1E-1 * ((i >> 1) & 0xf)
-          + 1E-0 * ((i >> 2) & 0xf)
-          + 1E-1 * ((i >> 3) & 0xf);
-}
-
-static double bcd6_2 (ulong i)
-{
-    return (1E-2 * ((i) & 0xf))
-          + 1E-1 * ((i >> 1) & 0xf)
-          + 1E-0 * ((i >> 2) & 0xf)
-          + 1E-1 * ((i >> 3) & 0xf)
-          + 1E-2 * ((i >> 4) & 0xf)
-          + 1E-3 * ((i >> 5) & 0xf)
-          + 1E-4 * ((i >> 6) & 0xf)
-          + 1E-0 * ((i >> 7) & 0xf);
 }
 
 int sbig_get_ccd_info (sbig_t sb, sbig_ccd_info_t *ip)

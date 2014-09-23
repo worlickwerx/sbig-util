@@ -1,7 +1,7 @@
 #ifndef _SBIG_H
 #define _SBIG_H
 
-#include <sbigudrv.h>
+#include "sbigudrv.h"
 
 typedef struct sbig_struct *sbig_t;
 
@@ -21,12 +21,6 @@ typedef struct {
     sbig_readout_mode_t modes[20];
 } sbig_ccd_info_t;
 
-typedef struct {
-    int version;
-    char name[64];
-    int maxreq;
-} sbig_driver_info_t;
-
 sbig_t sbig_new (void);
 int sbig_dlopen (sbig_t sb, const char *path);
 int sbig_open_driver (sbig_t sb);
@@ -36,9 +30,15 @@ int sbig_establish_link (sbig_t sb);
 int sbig_close_device (sbig_t sb);
 void sbig_destroy (sbig_t sb);
 
-int sbig_get_driver_info (sbig_t sb, sbig_driver_info_t *ip);
+int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
+                          GetDriverInfoResults0 *info);
+		
 int sbig_get_ccd_info (sbig_t sb, sbig_ccd_info_t *ip);
 
 const char *sbig_strerror (int err);
 const char *sbig_strdevice (int dev);
 #endif
+
+/*
+ * vi:tabstop=4 shiftwidth=4 expandtab
+ */

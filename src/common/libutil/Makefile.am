@@ -9,4 +9,6 @@ libutil_la_SOURCES = \
 	log.c \
 	log.h \
 	xzmalloc.c \
-	xzmalloc.h
+	xzmalloc.h \
+	bcd.c \
+	bcd.h
