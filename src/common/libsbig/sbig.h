@@ -17,12 +17,24 @@ void sbig_destroy (sbig_t sb);
 int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
                           GetDriverInfoResults0 *info);
 
+/* Get ccd info
+ * Set request to CCD_INFO_IMAGING or CCD_INFO_TRACKING
+ */
 int sbig_get_ccd_info (sbig_t sb, CCD_INFO_REQUEST request,
                        GetCCDInfoResults0 *info);
+
+/* Get extended ccd info about imaging ccd.
+ */
 int sbig_get_ccd_xinfo (sbig_t sb, GetCCDInfoResults2 *info);
 
+/* Get extended ccd info
+ * Set request to CCD_INFO_EXTENDED2_IMAGING or CCD_INFO_EXTENDED2_TRACKING.
+ */
+int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
+                         GetCCDInfoResults4 *info);
+
 const char *sbig_strerror (int err);
-const char *sbig_strcam (int dev);
+const char *sbig_strcam (CAMERA_TYPE type);
 #endif
 
 /*

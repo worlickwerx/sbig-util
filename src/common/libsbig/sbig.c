@@ -110,6 +110,16 @@ int sbig_get_ccd_xinfo (sbig_t sb, GetCCDInfoResults2 *info)
     return sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
+int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
+                         GetCCDInfoResults4 *info)
+{
+    GetCCDInfoParams in = { .request = request };
+    if (request != CCD_INFO_EXTENDED2_TRACKING
+                        && request != CCD_INFO_EXTENDED2_IMAGING)
+        return CE_BAD_PARAMETER;
+    return sb->fun (CC_GET_CCD_INFO, &in, info);
+}
+
 void sbig_destroy (sbig_t sb)
 {
     if (sb->dso)
