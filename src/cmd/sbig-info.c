@@ -138,7 +138,7 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
     msg ("name:             %s", info.name); 
     msg ("readout-modes:");
     for (i = 0; i < info.readoutModes; i++) {
-        msg ("%d: %dx%d, %2.2f e-/ADU, %6.2fx%6.2f microns",
+        msg ("%2d: %4d x %-4d %2.2f e-/ADU %3.2f x %-3.2f microns",
              info.readoutInfo[i].mode,
              info.readoutInfo[i].width,
              info.readoutInfo[i].height,
@@ -159,7 +159,6 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_strerror (e));
 }
-
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
