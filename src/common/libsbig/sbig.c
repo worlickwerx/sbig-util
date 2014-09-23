@@ -31,10 +31,6 @@
 #include <string.h>
 #include <dlfcn.h>
 
-#define ENV_LINUX   7
-#define TARGET      ENV_LINUX
-#include "sbigudrv.h"
-
 #include "sbig.h"
 
 struct sbig_struct {

@@ -27,10 +27,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-#define ENV_LINUX   7
-#define TARGET      ENV_LINUX
-#include "sbigudrv.h"
-
 #include "sbig.h"
 
 typedef struct {

@@ -1,6 +1,8 @@
 #ifndef _SBIG_H
 #define _SBIG_H
 
+#include <sbigudrv.h>
+
 typedef struct sbig_struct *sbig_t;
 
 typedef struct {
