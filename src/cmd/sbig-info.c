@@ -117,13 +117,14 @@ void show_driver_info (sbig_t sb, int ac, char **av)
 void show_ccd_info (sbig_t sb, int ac, char **av)
 {
     int i, e;
+    CAMERA_TYPE type;
     sbig_ccd_info_t info;
 
     if (ac != 0)
         msg_exit ("device takes no arguments");
     if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
         msg_exit ("sbig_open_device: %s", sbig_strerror (e));
-    if ((e = sbig_establish_link (sb)) != 0)
+    if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_strerror (e));
 
     if ((e = sbig_get_ccd_info (sb, &info)) != 0)

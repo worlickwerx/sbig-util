@@ -84,12 +84,15 @@ int sbig_close_device (sbig_t sb)
     return sb->fun (CC_CLOSE_DEVICE, NULL, NULL);
 }
 
-int sbig_establish_link (sbig_t sb)
+int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
 {
-    EstablishLinkParams in;
+    int e;
+    EstablishLinkParams in = { .sbigUseOnly = 0 };
     EstablishLinkResults out;
-    in.sbigUseOnly = 0;
-    return sb->fun (CC_ESTABLISH_LINK, &in, &out);
+    e = sb->fun (CC_ESTABLISH_LINK, &in, &out);
+    if (e == CE_NO_ERROR)
+        *type = out.cameraType;
+    return e;
 }
 
 int sbig_get_ccd_info (sbig_t sb, sbig_ccd_info_t *ip)
