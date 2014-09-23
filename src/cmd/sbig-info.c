@@ -38,7 +38,7 @@
 #include "src/common/libutil/bcd.h"
 
 void show_driver_info (sbig_t sb, int ac, char **av);
-void show_ccd_info (sbig_t sb, int ac, char **av);
+void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST, int ac, char **av);
 
 #define OPTIONS "h"
 static const struct option longopts[] = {
@@ -51,7 +51,7 @@ void usage (void)
     fprintf (stderr,
 "Usage: sbig-info driver\n"
 "       sbig-info imaging-ccd\n"
-"       sbig-info guide-ccd\n"
+"       sbig-info tracking-ccd\n"
 );
     exit (1);
 }
@@ -87,7 +87,9 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_open_driver: %s", sbig_strerror (e));
 
     if (!strcmp (cmd, "imaging-ccd"))
-        show_ccd_info (sb, argc - optind, argv + optind);
+        show_ccd_info (sb, CCD_INFO_IMAGING, argc - optind, argv + optind);
+    else if (!strcmp (cmd, "tracking-ccd"))
+        show_ccd_info (sb, CCD_INFO_TRACKING, argc - optind, argv + optind);
     else if (!strcmp (cmd, "driver"))
         show_driver_info (sb, argc - optind, argv + optind);
     else
@@ -114,11 +116,12 @@ void show_driver_info (sbig_t sb, int ac, char **av)
     msg ("maxreq:  %d", info.maxRequest);
 }
 
-void show_ccd_info (sbig_t sb, int ac, char **av)
+void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
 {
     int i, e;
     CAMERA_TYPE type;
-    sbig_ccd_info_t info;
+    GetCCDInfoResults0 info;
+    char version[16];
 
     if (ac != 0)
         msg_exit ("device takes no arguments");
@@ -126,17 +129,22 @@ void show_ccd_info (sbig_t sb, int ac, char **av)
         msg_exit ("sbig_open_device: %s", sbig_strerror (e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_strerror (e));
-
-    if ((e = sbig_get_ccd_info (sb, &info)) != 0)
+    if ((e = sbig_get_ccd_info (sb, request, &info)) != 0)
         msg_exit ("sbig_get_ccd_info: %s", sbig_strerror (e));
 
-    msg ("version:       %s", info.version); 
-    msg ("name:          %s", info.name); 
-    msg ("readout-modes: %d", info.nmodes); 
-    for (i = 0; i < info.nmodes; i++) {
+    bcd4str (info.firmwareVersion, version, sizeof (version));
+    msg ("firmware-version: %s", version); 
+    msg ("camera-type:      %s", sbig_strdevice (info.cameraType));
+    msg ("name:             %s", info.name); 
+    msg ("readout-modes:");
+    for (i = 0; i < info.readoutModes; i++) {
         msg ("%d: %dx%d, %2.2f e-/ADU, %6.2fx%6.2f microns",
-             info.modes[i].mode, info.modes[i].width, info.modes[i].height,
-             info.modes[i].gain, info.modes[i].pixw,  info.modes[i].pixh);
+             info.readoutInfo[i].mode,
+             info.readoutInfo[i].width,
+             info.readoutInfo[i].height,
+             bcd2_2 (info.readoutInfo[i].gain),
+             bcd6_2 (info.readoutInfo[i].pixelWidth),
+             bcd6_2 (info.readoutInfo[i].pixelHeight));
     } 
 
     if ((e = sbig_close_device (sb)) != 0)

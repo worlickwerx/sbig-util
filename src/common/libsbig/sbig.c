@@ -95,30 +95,13 @@ int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
     return e;
 }
 
-int sbig_get_ccd_info (sbig_t sb, sbig_ccd_info_t *ip)
+int sbig_get_ccd_info (sbig_t sb, CCD_INFO_REQUEST request,
+                       GetCCDInfoResults0 *info)
 {
-    int i, e;
-    GetCCDInfoParams in;
-    GetCCDInfoResults0 out;
-
-    in.request = CCD_INFO_IMAGING;
-    e = sb->fun (CC_GET_CCD_INFO, &in, &out);
-    if (e != CE_NO_ERROR)
-        goto done;
-    bcd4str (out.firmwareVersion, ip->version, sizeof (ip->version));
-    assert (sizeof (ip->name) == sizeof (out.name));
-    memcpy (ip->name, out.name, sizeof (ip->name));
-    ip->nmodes = out.readoutModes;
-    for (i = 0; i < ip->nmodes; i++) {
-        ip->modes[i].mode = out.readoutInfo[i].mode;
-        ip->modes[i].width = out.readoutInfo[i].width;
-        ip->modes[i].height = out.readoutInfo[i].height;
-        ip->modes[i].gain = bcd2_2 (out.readoutInfo[i].gain);
-        ip->modes[i].pixw = bcd6_2 (out.readoutInfo[i].pixelWidth);
-        ip->modes[i].pixh = bcd6_2 (out.readoutInfo[i].pixelHeight);
-    }
-done:
-    return e;
+    GetCCDInfoParams in = { .request = request };
+    if (request != CCD_INFO_TRACKING && request != CCD_INFO_IMAGING)
+        return CE_BAD_PARAMETER;
+    return sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
 void sbig_destroy (sbig_t sb)

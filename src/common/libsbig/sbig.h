@@ -33,7 +33,8 @@ void sbig_destroy (sbig_t sb);
 int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
                           GetDriverInfoResults0 *info);
 		
-int sbig_get_ccd_info (sbig_t sb, sbig_ccd_info_t *ip);
+int sbig_get_ccd_info (sbig_t sb, CCD_INFO_REQUEST request,
+                       GetCCDInfoResults0 *info);
 
 const char *sbig_strerror (int err);
 const char *sbig_strdevice (int dev);
