@@ -8,4 +8,5 @@ libsbig_la_SOURCES = \
 	sbig.c \
 	sbig.h \
 	errtab.c \
-	camtab.c
+	camtab.c \
+	cfwtab.c
