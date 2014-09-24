@@ -53,7 +53,7 @@ void usage (void)
 "Usage: sbig-info driver\n"
 "       sbig-info imaging-ccd\n"
 "       sbig-info tracking-ccd\n"
-"       sbig-info filter-wheeln"
+"       sbig-info cfw\n"
 );
     exit (1);
 }
@@ -94,7 +94,7 @@ int main (int argc, char *argv[])
         show_ccd_info (sb, CCD_INFO_TRACKING, argc - optind, argv + optind);
     else if (!strcmp (cmd, "driver"))
         show_driver_info (sb, argc - optind, argv + optind);
-    else if (!strcmp (cmd, "filter-wheel") || !strcmp (cmd, "cfw"))
+    else if (!strcmp (cmd, "cfw"))
         show_cfw_info (sb, argc - optind, argv + optind);
     else
         usage ();
@@ -124,7 +124,6 @@ void show_cfw_info (sbig_t sb, int ac, char **av)
 {
     int e;
     ulong fwrev, numpos;
-    ushort position;
     CAMERA_TYPE type;
     CFW_MODEL_SELECT model;
     if (ac != 0)
@@ -133,15 +132,12 @@ void show_cfw_info (sbig_t sb, int ac, char **av)
         msg_exit ("sbig_open_device: %s", sbig_strerror (e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_strerror (e));
-    if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos, &position)) != 0)
+    if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos)) != 0)
         msg_exit ("sbig_cfw_get_info: %s", sbig_strerror (e));
     msg ("model:            %s", sbig_strcfw (model));
     msg ("firmware-version: %lu", fwrev);
     msg ("num-positions:    %lu", numpos);
-    if (position == 0)
-        msg ("position:         unknown");
-    else
-        msg ("position:         %u", position);
+
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_strerror (e));
 }

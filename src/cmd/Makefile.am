@@ -11,7 +11,8 @@ AM_CPPFLAGS = \
 bin_PROGRAMS = sbig
 
 sbigbin_PROGRAMS = \
-	sbig-info
+	sbig-info \
+	sbig-cfw
 
 LDADD = \
 	$(top_builddir)/src/common/libsbig/libsbig.la \
