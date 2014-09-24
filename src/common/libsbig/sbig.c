@@ -61,6 +61,13 @@ int sbig_dlopen (sbig_t sb, const char *path)
     return CE_NO_ERROR;
 }
 
+void sbig_destroy (sbig_t sb)
+{
+    if (sb->dso)
+        dlclose (sb->dso);
+    free (sb);
+}
+
 int sbig_open_driver (sbig_t sb)
 {
     return sb->fun (CC_OPEN_DRIVER, NULL, NULL); 
@@ -86,10 +93,9 @@ int sbig_close_device (sbig_t sb)
 
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
 {
-    int e;
     EstablishLinkParams in = { .sbigUseOnly = 0 };
     EstablishLinkResults out;
-    e = sb->fun (CC_ESTABLISH_LINK, &in, &out);
+    int e = sb->fun (CC_ESTABLISH_LINK, &in, &out);
     if (e == CE_NO_ERROR)
         *type = out.cameraType;
     return e;
@@ -120,12 +126,23 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
     return sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
-void sbig_destroy (sbig_t sb)
+int sbig_cfw_get_info (sbig_t sb, CFW_MODEL_SELECT *model,
+                       ulong *fwrev, ulong *numpos, ushort *position)
 {
-    if (sb->dso)
-        dlclose (sb->dso);
-    free (sb);
+    CFWParams in = { .cfwModel = CFWSEL_AUTO, .cfwCommand = CFWC_GET_INFO,
+                     .cfwParam1 = CFWG_FIRMWARE_VERSION };
+    CFWResults out;
+    int e = sb->fun (CC_CFW, &in, &out);
+    if (e == CE_NO_ERROR) {
+        *model = out.cfwModel;
+        *fwrev = out.cfwResult1;
+        *numpos = out.cfwResult2;
+        *position = out.cfwPosition; /* unknown == 0 */
+    }
+    /* FIXME: if e == CE_CFW_ERROR, check out.cfwError */
+    return e;
 }
+
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

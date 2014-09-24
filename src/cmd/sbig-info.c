@@ -37,6 +37,7 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
+void show_cfw_info (sbig_t sb, int ac, char **av);
 void show_driver_info (sbig_t sb, int ac, char **av);
 void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST, int ac, char **av);
 
@@ -52,6 +53,7 @@ void usage (void)
 "Usage: sbig-info driver\n"
 "       sbig-info imaging-ccd\n"
 "       sbig-info tracking-ccd\n"
+"       sbig-info filter-wheeln"
 );
     exit (1);
 }
@@ -92,6 +94,8 @@ int main (int argc, char *argv[])
         show_ccd_info (sb, CCD_INFO_TRACKING, argc - optind, argv + optind);
     else if (!strcmp (cmd, "driver"))
         show_driver_info (sb, argc - optind, argv + optind);
+    else if (!strcmp (cmd, "filter-wheel") || !strcmp (cmd, "cfw"))
+        show_cfw_info (sb, argc - optind, argv + optind);
     else
         usage ();
 
@@ -114,6 +118,32 @@ void show_driver_info (sbig_t sb, int ac, char **av)
     msg ("version: %s", version);
     msg ("name:    %s", info.name);
     msg ("maxreq:  %d", info.maxRequest);
+}
+
+void show_cfw_info (sbig_t sb, int ac, char **av)
+{
+    int e;
+    ulong fwrev, numpos;
+    ushort position;
+    CAMERA_TYPE type;
+    CFW_MODEL_SELECT model;
+    if (ac != 0)
+        msg_exit ("cfw takes no arguments");
+    if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
+        msg_exit ("sbig_open_device: %s", sbig_strerror (e));
+    if ((e = sbig_establish_link (sb, &type)) != 0)
+        msg_exit ("sbig_establish_link: %s", sbig_strerror (e));
+    if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos, &position)) != 0)
+        msg_exit ("sbig_cfw_get_info: %s", sbig_strerror (e));
+    msg ("model:            %s", sbig_strcfw (model));
+    msg ("firmware-version: %lu", fwrev);
+    msg ("num-positions:    %lu", numpos);
+    if (position == 0)
+        msg ("position:         unknown");
+    else
+        msg ("position:         %u", position);
+    if ((e = sbig_close_device (sb)) != 0)
+        msg_exit ("sbig_close_device: %s", sbig_strerror (e));
 }
 
 void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)

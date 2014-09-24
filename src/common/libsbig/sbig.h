@@ -35,7 +35,7 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
                          GetCCDInfoResults4 *info);
 
 int sbig_cfw_get_info (sbig_t sb, CFW_MODEL_SELECT *model,
-                       ulong *fwrev, ulong *numpos);
+                       ulong *fwrev, ulong *numpos, ushort *position);
 
 const char *sbig_strerror (int err);
 const char *sbig_strcam (CAMERA_TYPE type);
