@@ -35,7 +35,10 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
                          GetCCDInfoResults4 *info);
 
 int sbig_cfw_get_info (sbig_t sb, CFW_MODEL_SELECT *model,
-                       ulong *fwrev, ulong *numpos, ushort *position);
+                       ulong *fwrev, ulong *numpos);
+
+int sbig_cfw_goto (sbig_t sb, CFW_POSITION position);
+int sbig_cfw_query (sbig_t sb, CFW_STATUS *status, CFW_POSITION *position);
 
 const char *sbig_strerror (int err);
 const char *sbig_strcam (CAMERA_TYPE type);

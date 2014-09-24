@@ -127,7 +127,7 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
 }
 
 int sbig_cfw_get_info (sbig_t sb, CFW_MODEL_SELECT *model,
-                       ulong *fwrev, ulong *numpos, ushort *position)
+                       ulong *fwrev, ulong *numpos)
 {
     CFWParams in = { .cfwModel = CFWSEL_AUTO, .cfwCommand = CFWC_GET_INFO,
                      .cfwParam1 = CFWG_FIRMWARE_VERSION };
@@ -137,12 +137,33 @@ int sbig_cfw_get_info (sbig_t sb, CFW_MODEL_SELECT *model,
         *model = out.cfwModel;
         *fwrev = out.cfwResult1;
         *numpos = out.cfwResult2;
-        *position = out.cfwPosition; /* unknown == 0 */
     }
     /* FIXME: if e == CE_CFW_ERROR, check out.cfwError */
     return e;
 }
 
+int sbig_cfw_goto (sbig_t sb, CFW_POSITION position)
+{
+    CFWParams in = { .cfwModel = CFWSEL_AUTO, .cfwCommand = CFWC_GOTO,
+                     .cfwParam1 = position };
+    CFWResults out;
+    int e = sb->fun (CC_CFW, &in, &out);
+    /* FIXME: if e == CE_CFW_ERROR, check out.cfwError */
+    return e;
+}
+
+int sbig_cfw_query (sbig_t sb, CFW_STATUS *status, CFW_POSITION *position)
+{
+    CFWParams in = { .cfwModel = CFWSEL_AUTO, .cfwCommand = CFWC_QUERY };
+    CFWResults out;
+    int e = sb->fun (CC_CFW, &in, &out);
+    if (e == CE_NO_ERROR) {
+        *status = out.cfwStatus;
+        *position = out.cfwPosition; /* unknown == 0 */
+    }
+    /* FIXME: if e == CE_CFW_ERROR, check out.cfwError */
+    return e;
+}
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
