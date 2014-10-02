@@ -91,7 +91,7 @@ int main (int argc, char *argv[])
 
     if (!strcmp (cmd, "query"))
         cfw_query (sb, argc - optind, argv + optind);
-    else if (!strcmp (cmd, "select"))
+    else if (!strcmp (cmd, "goto"))
         cfw_goto (sb, argc - optind, argv + optind);
     else
         usage ();
