@@ -74,7 +74,7 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
 
 int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd, double exposureTime,
                           ABG_STATE7 abgState, SHUTTER_COMMAND openShutter,
-                          unsigned short readoutMode,
+                          READOUT_BINNING_MODE readoutMode,
                           unsigned short top, unsigned short left,
                           unsigned short height, unsigned short width)
 {
