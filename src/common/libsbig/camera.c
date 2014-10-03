@@ -72,6 +72,30 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
     return sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
+int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd,
+                          unsigned long exposureTime, ABG_STATE7 abgState,
+                          SHUTTER_COMMAND openShutter,
+                          unsigned short readoutMode,
+                          unsigned short top, unsigned short left,
+                          unsigned short height, unsigned short width)
+{
+    StartExposureParams2 in = { .ccd = ccd,
+                                .exposureTime = exposureTime,
+                                .abgState = abgState,
+                                .openShutter = openShutter,
+                                .readoutMode = readoutMode,
+                                .top = top, .left = left,
+                                .height = height, .width = width };
+    return sb->fun (CC_START_EXPOSURE2, &in, NULL);
+}
+
+int sbig_end_exposure (sbig_t sb, CCD_REQUEST ccd)
+{
+    EndExposureParams in = { .ccd = ccd };
+    return sb->fun (CC_END_EXPOSURE, &in, NULL);
+}
+
+
 typedef struct {
     CAMERA_TYPE type;
     const char *desc;

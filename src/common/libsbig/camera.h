@@ -4,6 +4,9 @@
 #include "handle.h"
 #include "sbigudrv.h"
 
+/* Call before any camera commands.
+ * Somewhat vestigual as far as I can tell.
+ */
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type);
 
 /* Get ccd info
@@ -23,6 +26,16 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
                          GetCCDInfoResults4 *info);
 
 const char *sbig_strcam (CAMERA_TYPE type);
+
+int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd,
+                          unsigned long exposureTime, ABG_STATE7 abgState,
+                          SHUTTER_COMMAND openShutter,
+                          unsigned short readoutMode,
+                          unsigned short top, unsigned short left,
+                          unsigned short height, unsigned short width);
+
+int sbig_end_exposure (sbig_t sb, CCD_REQUEST ccd);
+
 #endif
 
 /*
