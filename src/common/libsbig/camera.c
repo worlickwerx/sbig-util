@@ -72,20 +72,21 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
     return sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
-int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd,
-                          unsigned long exposureTime, ABG_STATE7 abgState,
-                          SHUTTER_COMMAND openShutter,
+int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd, double exposureTime,
+                          ABG_STATE7 abgState, SHUTTER_COMMAND openShutter,
                           unsigned short readoutMode,
                           unsigned short top, unsigned short left,
                           unsigned short height, unsigned short width)
 {
     StartExposureParams2 in = { .ccd = ccd,
-                                .exposureTime = exposureTime,
+                                .exposureTime = exposureTime * 100.0,
                                 .abgState = abgState,
                                 .openShutter = openShutter,
                                 .readoutMode = readoutMode,
                                 .top = top, .left = left,
                                 .height = height, .width = width };
+    if (in.exposureTime < 1 || in.exposureTime > 0x00ffffff)
+        return CE_BAD_PARAMETER;
     return sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 

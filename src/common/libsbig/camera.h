@@ -27,9 +27,8 @@ int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
 
 const char *sbig_strcam (CAMERA_TYPE type);
 
-int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd,
-                          unsigned long exposureTime, ABG_STATE7 abgState,
-                          SHUTTER_COMMAND openShutter,
+int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd, double exp_msec,
+                          ABG_STATE7 abgState, SHUTTER_COMMAND openShutter,
                           unsigned short readoutMode,
                           unsigned short top, unsigned short left,
                           unsigned short height, unsigned short width);
