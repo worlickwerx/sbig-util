@@ -7,7 +7,7 @@ sbig_t sbig_new (void);
 int sbig_dlopen (sbig_t sb, const char *path);
 void sbig_destroy (sbig_t sb);
 
-const char *sbig_strerror (int err);
+const char *sbig_get_error_string (sbig_t sb, unsigned short errorNo);
 #endif
 
 /*

@@ -63,7 +63,7 @@ int main (int argc, char *argv[])
     char *cmd;
     CAMERA_TYPE type;
 
-    log_init ("sbig-info");
+    log_init ("sbig-cfw");
 
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
@@ -83,11 +83,11 @@ int main (int argc, char *argv[])
     if (sbig_dlopen (sb, sbig_udrv) != 0)
         msg_exit ("%s", dlerror ());
     if ((e = sbig_open_driver (sb)) != 0)
-        msg_exit ("sbig_open_driver: %s", sbig_strerror (e));
+        msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
-        msg_exit ("sbig_open_device: %s", sbig_strerror (e));
+        msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
-        msg_exit ("sbig_establish_link: %s", sbig_strerror (e));
+        msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
 
     if (!strcmp (cmd, "query"))
         cfw_query (sb, argc - optind, argv + optind);
@@ -97,7 +97,7 @@ int main (int argc, char *argv[])
         usage ();
 
     if ((e = sbig_close_device (sb)) != 0)
-        msg_exit ("sbig_close_device: %s", sbig_strerror (e));
+        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
 
     sbig_destroy (sb);
     log_fini ();
@@ -115,10 +115,10 @@ void cfw_goto (sbig_t sb, int ac, char **av)
     position = strtoul (av[0], NULL, 10);
     
     if ((e = sbig_cfw_goto (sb, position)) != CE_NO_ERROR)
-        msg_exit ("sbig_cfw_goto: %s", sbig_strerror (e));
+        msg_exit ("sbig_cfw_goto: %s", sbig_get_error_string (sb, e));
     do {
         if ((e = sbig_cfw_query (sb, &status, &actual)) != CE_NO_ERROR)
-            msg_exit ("sbig_cfw_query: %s", sbig_strerror (e));
+            msg_exit ("sbig_cfw_query: %s", sbig_get_error_string (sb, e));
         if (status == CFWS_BUSY)
             usleep (1000*100);
     } while (status == CFWS_BUSY);
@@ -136,7 +136,7 @@ void cfw_query (sbig_t sb, int ac, char **av)
     if (ac != 0)
         msg_exit ("show takes no arguments");
     if ((e = sbig_cfw_query (sb, &status, &position)) != CE_NO_ERROR)
-        msg_exit ("sbig_cfw_query: %s", sbig_strerror (e));
+        msg_exit ("sbig_cfw_query: %s", sbig_get_error_string (sb, e));
         msg ("status:   %s", status == CFWS_UNKNOWN ? "unknown" :
                              status == CFWS_IDLE ? "idle" : "busy");
     if (position == CFWP_UNKNOWN)

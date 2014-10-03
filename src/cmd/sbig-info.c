@@ -86,7 +86,7 @@ int main (int argc, char *argv[])
     if (sbig_dlopen (sb, sbig_udrv) != 0)
         msg_exit ("%s", dlerror ());
     if ((e = sbig_open_driver (sb)) != 0)
-        msg_exit ("sbig_open_driver: %s", sbig_strerror (e));
+        msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
 
     if (!strcmp (cmd, "imaging-ccd"))
         show_ccd_info (sb, CCD_INFO_IMAGING, argc - optind, argv + optind);
@@ -113,7 +113,7 @@ void show_driver_info (sbig_t sb, int ac, char **av)
     if (ac != 0)
         msg_exit ("driver takes no arguments");
     if ((e = sbig_get_driver_info (sb, DRIVER_STD, &info)) != 0)
-        msg_exit ("sbig_get_driver_info: %s", sbig_strerror (e));
+        msg_exit ("sbig_get_driver_info: %s", sbig_get_error_string (sb, e));
     bcd4str (info.version, version, sizeof (version));
     msg ("version: %s", version);
     msg ("name:    %s", info.name);
@@ -129,17 +129,17 @@ void show_cfw_info (sbig_t sb, int ac, char **av)
     if (ac != 0)
         msg_exit ("cfw takes no arguments");
     if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
-        msg_exit ("sbig_open_device: %s", sbig_strerror (e));
+        msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
-        msg_exit ("sbig_establish_link: %s", sbig_strerror (e));
+        msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos)) != 0)
-        msg_exit ("sbig_cfw_get_info: %s", sbig_strerror (e));
+        msg_exit ("sbig_cfw_get_info: %s", sbig_get_error_string (sb, e));
     msg ("model:            %s", sbig_strcfw (model));
     msg ("firmware-version: %lu", fwrev);
     msg ("num-positions:    %lu", numpos);
 
     if ((e = sbig_close_device (sb)) != 0)
-        msg_exit ("sbig_close_device: %s", sbig_strerror (e));
+        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
 }
 
 void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
@@ -152,11 +152,11 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
     if (ac != 0)
         msg_exit ("device takes no arguments");
     if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
-        msg_exit ("sbig_open_device: %s", sbig_strerror (e));
+        msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
-        msg_exit ("sbig_establish_link: %s", sbig_strerror (e));
+        msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_get_ccd_info (sb, request, &info)) != 0)
-        msg_exit ("sbig_get_ccd_info: %s", sbig_strerror (e));
+        msg_exit ("sbig_get_ccd_info: %s", sbig_get_error_string (sb, e));
 
     /* FIXME: ST5C/237/237A (PixCel 255/237) only support req 0,3,4,5
      * We are making requests 0,1,2,4,5 for ST-7/8/etc
@@ -180,7 +180,7 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
     if (request == CCD_INFO_IMAGING) {
         GetCCDInfoResults2 xinfo;
         if ((e = sbig_get_ccd_xinfo (sb, &xinfo)) != 0)
-            msg_exit ("sbig_get_ccd_xinfo: %s", sbig_strerror (e));
+            msg_exit ("sbig_get_ccd_xinfo: %s", sbig_get_error_string (sb, e));
         msg ("bad columns:       %d", xinfo.badColumns);
         msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT ? "yes"
                                                                       : "no");
@@ -191,7 +191,7 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
         ushort cap;
         if ((e = sbig_get_ccd_xinfo2 (sb, CCD_INFO_EXTENDED2_IMAGING,
                                       &xinfo)) != 0)
-            msg_exit ("sbig_get_ccd_xinfo2: %s", sbig_strerror (e));
+            msg_exit ("sbig_get_ccd_xinfo2: %s", sbig_get_error_string (sb, e));
         cap = xinfo.capabilitiesBits;
         msg ("ccd-type:          %s", (cap & CB_CCD_TYPE_FRAME_TRANSFER)
                                       ? "frame_transfer" : "full frame");
@@ -207,7 +207,7 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
                                       ? "yes" : "no");
     }
     if ((e = sbig_close_device (sb)) != 0)
-        msg_exit ("sbig_close_device: %s", sbig_strerror (e));
+        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
 }
 
 /*
