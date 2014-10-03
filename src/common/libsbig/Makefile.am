@@ -13,4 +13,8 @@ libsbig_la_SOURCES = \
 	camera.c \
 	camera.h \
 	cfw.c \
-	cfw.h
+	cfw.h \
+	ao.c \
+	ao.h \
+	temp.c \
+	temp.h

@@ -1,3 +1,6 @@
+#ifndef _SBIG_SBIGUDRV_H
+#define _SBIG_SBIGUDRV_H
+
 /*
 
 	SBIGUDRV.H
@@ -27,8 +30,6 @@
 	(c)1995-2012 - Santa Barbara Instrument Group
 
 */
-#ifndef _PARDRV_
-#define _PARDRV_
 
 /*
 
@@ -1652,5 +1653,4 @@ DebugLogParams;
   #endif
 #endif
 
-#endif /* ifndef _PARDRV_ */
-
+#endif /* ifndef _SBIG_SBIGUDRV_H */

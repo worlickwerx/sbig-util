@@ -1,10 +1,8 @@
 #ifndef _SBIG_CFW_H
 #define _SBIG_CFW_H
 
-#include "sbigudrv.h"
 #include "handle.h"
-#include "driver.h"
-#include "cfw.h"
+#include "sbigudrv.h"
 
 int sbig_cfw_get_info (sbig_t sb, CFW_MODEL_SELECT *model,
                        ulong *fwrev, ulong *numpos);

@@ -6,6 +6,8 @@
 #include "driver.h"
 #include "camera.h"
 #include "cfw.h"
+#include "ao.h"
+#include "temp.h"
 
 #endif
 

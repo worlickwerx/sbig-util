@@ -1,7 +1,8 @@
 #ifndef _SBIG_CAMERA_H
 #define _SBIG_CAMERA_H
 
-#include "camera.h"
+#include "handle.h"
+#include "sbigudrv.h"
 
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type);
 

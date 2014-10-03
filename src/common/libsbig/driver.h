@@ -1,6 +1,9 @@
 #ifndef _SBIG_DRIVER_H
 #define _SBIG_DRIVER_H
 
+#include "handle.h"
+#include "sbigudrv.h"
+
 int sbig_open_driver (sbig_t sb);
 int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
                           GetDriverInfoResults0 *info);
