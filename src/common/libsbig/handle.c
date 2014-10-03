@@ -25,9 +25,43 @@
 #endif
 
 #include <stdio.h>
-#include <sys/types.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include <dlfcn.h>
 
-#include "sbig.h"
+#include "handle.h"
+#include "handle_impl.h"
+#include "sbigudrv.h"
+
+sbig_t sbig_new (void)
+{
+    sbig_t sb = malloc (sizeof (*sb));
+    if (!sb) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    memset (sb, 0, sizeof (*sb));
+    return sb;
+}
+
+int sbig_dlopen (sbig_t sb, const char *path)
+{
+    dlerror ();
+    if (!(sb->dso = dlopen (path, RTLD_LAZY | RTLD_LOCAL)))
+        return CE_OS_ERROR;
+    if (!(sb->fun = dlsym (sb->dso, "SBIGUnivDrvCommand")))
+        return CE_OS_ERROR;
+    return CE_NO_ERROR;
+}
+
+void sbig_destroy (sbig_t sb)
+{
+    if (sb->dso)
+        dlclose (sb->dso);
+    free (sb);
+}
 
 typedef struct {
     int err;

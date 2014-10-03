@@ -25,9 +25,52 @@
 #endif
 
 #include <stdio.h>
-#include <sys/types.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include <dlfcn.h>
 
-#include "sbig.h"
+#include "handle.h"
+#include "handle_impl.h"
+#include "sbigudrv.h"
+
+#include "src/common/libutil/bcd.h"
+
+int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
+{
+    EstablishLinkParams in = { .sbigUseOnly = 0 };
+    EstablishLinkResults out;
+    int e = sb->fun (CC_ESTABLISH_LINK, &in, &out);
+    if (e == CE_NO_ERROR)
+        *type = out.cameraType;
+    return e;
+}
+
+int sbig_get_ccd_info (sbig_t sb, CCD_INFO_REQUEST request,
+                       GetCCDInfoResults0 *info)
+{
+    GetCCDInfoParams in = { .request = request };
+    if (request != CCD_INFO_TRACKING && request != CCD_INFO_IMAGING)
+        return CE_BAD_PARAMETER;
+    return sb->fun (CC_GET_CCD_INFO, &in, info);
+}
+
+int sbig_get_ccd_xinfo (sbig_t sb, GetCCDInfoResults2 *info)
+{
+    GetCCDInfoParams in = { .request = CCD_INFO_EXTENDED };
+    return sb->fun (CC_GET_CCD_INFO, &in, info);
+}
+
+int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
+                         GetCCDInfoResults4 *info)
+{
+    GetCCDInfoParams in = { .request = request };
+    if (request != CCD_INFO_EXTENDED2_TRACKING
+                        && request != CCD_INFO_EXTENDED2_IMAGING)
+        return CE_BAD_PARAMETER;
+    return sb->fun (CC_GET_CCD_INFO, &in, info);
+}
 
 typedef struct {
     CAMERA_TYPE type;

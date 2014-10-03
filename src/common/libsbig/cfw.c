@@ -23,11 +23,51 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-
-#include <stdio.h>
 #include <sys/types.h>
 
-#include "sbig.h"
+#include "handle.h"
+#include "handle_impl.h"
+#include "sbigudrv.h"
+#include "cfw.h"
+
+int sbig_cfw_get_info (sbig_t sb, CFW_MODEL_SELECT *model,
+                       ulong *fwrev, ulong *numpos)
+{
+    CFWParams in = { .cfwModel = CFWSEL_AUTO, .cfwCommand = CFWC_GET_INFO,
+                     .cfwParam1 = CFWG_FIRMWARE_VERSION };
+    CFWResults out;
+    int e = sb->fun (CC_CFW, &in, &out);
+    if (e == CE_NO_ERROR) {
+        *model = out.cfwModel;
+        *fwrev = out.cfwResult1;
+        *numpos = out.cfwResult2;
+    }
+    /* FIXME: if e == CE_CFW_ERROR, check out.cfwError */
+    return e;
+}
+
+int sbig_cfw_goto (sbig_t sb, CFW_POSITION position)
+{
+    CFWParams in = { .cfwModel = CFWSEL_AUTO, .cfwCommand = CFWC_GOTO,
+                     .cfwParam1 = position };
+    CFWResults out;
+    int e = sb->fun (CC_CFW, &in, &out);
+    /* FIXME: if e == CE_CFW_ERROR, check out.cfwError */
+    return e;
+}
+
+int sbig_cfw_query (sbig_t sb, CFW_STATUS *status, CFW_POSITION *position)
+{
+    CFWParams in = { .cfwModel = CFWSEL_AUTO, .cfwCommand = CFWC_QUERY };
+    CFWResults out;
+    int e = sb->fun (CC_CFW, &in, &out);
+    if (e == CE_NO_ERROR) {
+        *status = out.cfwStatus;
+        *position = out.cfwPosition; /* unknown == 0 */
+    }
+    /* FIXME: if e == CE_CFW_ERROR, check out.cfwError */
+    return e;
+}
 
 typedef struct {
     CFW_MODEL_SELECT type;

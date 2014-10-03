@@ -5,8 +5,12 @@ AM_CPPFLAGS = -I$(top_srcdir)
 noinst_LTLIBRARIES = libsbig.la
 
 libsbig_la_SOURCES = \
-	sbig.c \
-	sbig.h \
-	errtab.c \
-	camtab.c \
-	cfwtab.c
+	handle.c \
+	handle.h \
+	handle_impl.h \
+	driver.c \
+	driver.h \
+	camera.c \
+	camera.h \
+	cfw.c \
+	cfw.h
