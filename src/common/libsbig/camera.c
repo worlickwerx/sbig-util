@@ -69,16 +69,15 @@ int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
         return e;
     }
     ccd->abg_mode = ABG_CLK_MED7;
-    ccd->shutter_mode = SC_OPEN_SHUTTER;
+    ccd->shutter_mode = SC_OPEN_SHUTTER; /* open during exp, close during ro */
     ccd->readout_mode = RM_1X1;
 
-    int ro_index = lookup_roinfo (ccd, RM_1X1);
-    assert (ro_index != -1);
-    ccd->readout_mode = ccd->info.readoutInfo[ro_index].mode;
+    assert (ccd->info.readoutModes > 0);
+    ccd->readout_mode = ccd->info.readoutInfo[0].mode;
     ccd->top = 0;
     ccd->left = 0;
-    ccd->height = ccd->info.readoutInfo[ro_index].height;
-    ccd->width = ccd->info.readoutInfo[ro_index].width;
+    ccd->height = ccd->info.readoutInfo[0].height;
+    ccd->width = ccd->info.readoutInfo[0].width;
     
     *ccdp = ccd;
     return CE_NO_ERROR;     
@@ -170,6 +169,9 @@ int sbig_ccd_set_window (sbig_ccd_t ccd,
                          unsigned short top, unsigned short left,
                          unsigned short height, unsigned short width)
 {
+    if (top > ccd->height || left > ccd->width || height > ccd->height
+                                               || width > ccd->width)
+        return CE_BAD_PARAMETER;
     ccd->top = top;
     ccd->left = left;
     ccd->height = height;
@@ -189,7 +191,7 @@ int sbig_ccd_get_window (sbig_ccd_t ccd,
 }
 
 
-int sbig_start_exposure (sbig_ccd_t ccd, double exposureTime)
+int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime)
 {
     StartExposureParams2 in = { .ccd = ccd->ccd,
                                 .exposureTime = exposureTime * 100.0,
@@ -203,7 +205,20 @@ int sbig_start_exposure (sbig_ccd_t ccd, double exposureTime)
     return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 
-int sbig_end_exposure (sbig_ccd_t ccd)
+int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, ushort *sp)
+{
+    ushort status;
+    int e = sbig_query_cmd_status (ccd->sb, CC_START_EXPOSURE, &status);
+    if (e == CE_NO_ERROR) {
+        if (ccd->ccd == CCD_IMAGING)
+            *sp = status & 3;
+        else
+            *sp = (status >> 2) & 3;
+    }
+    return e;
+}
+
+int sbig_ccd_end_exposure (sbig_ccd_t ccd)
 {
     EndExposureParams in = { .ccd = ccd->ccd };
     return ccd->sb->fun (CC_END_EXPOSURE, &in, NULL);

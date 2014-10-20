@@ -50,6 +50,7 @@ int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep);
 
 /* Set top most row to readout (0 based), left most pixel (0, based),
  * and image height and width in binned pixels (used on next exposure/readout)
+ * Note: reset to full size internally when readout mode is selected.
  */
 int sbig_ccd_set_window (sbig_ccd_t ccd,
                          unsigned short top, unsigned short left,
@@ -58,9 +59,13 @@ int sbig_ccd_get_window (sbig_ccd_t ccd,
                          unsigned short *topp, unsigned short *leftp,
                          unsigned short *heightp, unsigned short *widthp);
 
-int sbig_start_exposure (sbig_ccd_t sb, double exposureTime);
 
-int sbig_end_exposure (sbig_ccd_t sb);
+/* Exposure control: start exposure, poll for status, then end exposure
+ *  Status: CS_IDLE, CS_IN_PROGRESS, CS_INTEGRATING, CS_INTEGRATION_COMPLETE
+ */
+int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime);
+int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, ushort *sp);
+int sbig_ccd_end_exposure (sbig_ccd_t ccd);
 
 #endif
 
