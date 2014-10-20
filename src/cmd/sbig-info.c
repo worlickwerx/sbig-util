@@ -39,7 +39,7 @@
 
 void show_cfw_info (sbig_t sb, int ac, char **av);
 void show_driver_info (sbig_t sb, int ac, char **av);
-void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST, int ac, char **av);
+void show_ccd_info (sbig_t sb, CCD_REQUEST chip, int ac, char **av);
 
 #define OPTIONS "h"
 static const struct option longopts[] = {
@@ -89,9 +89,9 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
 
     if (!strcmp (cmd, "imaging-ccd"))
-        show_ccd_info (sb, CCD_INFO_IMAGING, argc - optind, argv + optind);
+        show_ccd_info (sb, CCD_IMAGING, argc - optind, argv + optind);
     else if (!strcmp (cmd, "tracking-ccd"))
-        show_ccd_info (sb, CCD_INFO_TRACKING, argc - optind, argv + optind);
+        show_ccd_info (sb, CCD_TRACKING, argc - optind, argv + optind);
     else if (!strcmp (cmd, "driver"))
         show_driver_info (sb, argc - optind, argv + optind);
     else if (!strcmp (cmd, "cfw"))
@@ -142,12 +142,13 @@ void show_cfw_info (sbig_t sb, int ac, char **av)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
 }
 
-void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
+void show_ccd_info (sbig_t sb, CCD_REQUEST chip, int ac, char **av)
 {
     int i, e;
     CAMERA_TYPE type;
     GetCCDInfoResults0 info;
     char version[16];
+    sbig_ccd_t ccd;
 
     if (ac != 0)
         msg_exit ("device takes no arguments");
@@ -155,8 +156,10 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_get_ccd_info (sb, request, &info)) != 0)
-        msg_exit ("sbig_get_ccd_info: %s", sbig_get_error_string (sb, e));
+    if ((e = sbig_ccd_create (sb, chip, &ccd)))
+        msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
+    if ((e = sbig_ccd_get_info0 (ccd, &info)) != 0)
+        msg_exit ("sbig_ccd_get_info: %s", sbig_get_error_string (sb, e));
 
     /* FIXME: ST5C/237/237A (PixCel 255/237) only support req 0,3,4,5
      * We are making requests 0,1,2,4,5 for ST-7/8/etc
@@ -177,20 +180,19 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
              bcd6_2 (info.readoutInfo[i].pixelWidth),
              bcd6_2 (info.readoutInfo[i].pixelHeight));
     }
-    if (request == CCD_INFO_IMAGING) {
+    if (chip == CCD_IMAGING) {
         GetCCDInfoResults2 xinfo;
-        if ((e = sbig_get_ccd_xinfo (sb, &xinfo)) != 0)
+        if ((e = sbig_ccd_get_info2 (ccd, &xinfo)) != 0)
             msg_exit ("sbig_get_ccd_xinfo: %s", sbig_get_error_string (sb, e));
         msg ("bad columns:       %d", xinfo.badColumns);
         msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT ? "yes"
                                                                       : "no");
         msg ("serial-number:     %s", xinfo.serialNumber);
     }
-    if (request == CCD_INFO_IMAGING) {
+    if (chip == CCD_IMAGING) {
         GetCCDInfoResults4 xinfo;
         ushort cap;
-        if ((e = sbig_get_ccd_xinfo2 (sb, CCD_INFO_EXTENDED2_IMAGING,
-                                      &xinfo)) != 0)
+        if ((e = sbig_ccd_get_info4 (ccd, &xinfo)) != 0)
             msg_exit ("sbig_get_ccd_xinfo2: %s", sbig_get_error_string (sb, e));
         cap = xinfo.capabilitiesBits;
         msg ("ccd-type:          %s", (cap & CB_CCD_TYPE_FRAME_TRANSFER)
@@ -206,6 +208,7 @@ void show_ccd_info (sbig_t sb, CCD_INFO_REQUEST request, int ac, char **av)
         msg ("use-startexp2:     %s", (cap & CB_REQUIRES_STARTEXP2_YES)
                                       ? "yes" : "no");
     }
+    sbig_ccd_destroy (ccd);
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
 }
