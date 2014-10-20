@@ -1,6 +1,10 @@
 #ifndef _SBIG_HANDLE_H
 #define _SBIG_HANDLE_H
 
+/* This is our handle (sbig-utils), not to be confused with "driver handle"
+ * described in SBIGUdrv sec 3.1.6.
+ */
+
 typedef struct sbig_struct *sbig_t;
 
 sbig_t sbig_new (void);
