@@ -4,39 +4,63 @@
 #include "handle.h"
 #include "sbigudrv.h"
 
-/* Call before any camera commands.
+typedef struct sbig_ccd_struct *sbig_ccd_t;
+
+/* Call before any camera commands.  Camera type (model) is returned.
  * Somewhat vestigual as far as I can tell.
  */
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type);
 
-/* Get ccd info
- * Set request to CCD_INFO_IMAGING or CCD_INFO_TRACKING
+/* Convert CAMERA_TYPE to camera model string
  */
-int sbig_get_ccd_info (sbig_t sb, CCD_INFO_REQUEST request,
-                       GetCCDInfoResults0 *info);
-
-/* Get extended ccd info about imaging ccd.
- */
-int sbig_get_ccd_xinfo (sbig_t sb, GetCCDInfoResults2 *info);
-
-/* Get extended ccd info
- * Set request to CCD_INFO_EXTENDED2_IMAGING or CCD_INFO_EXTENDED2_TRACKING.
- */
-int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
-                         GetCCDInfoResults4 *info);
-
 const char *sbig_strcam (CAMERA_TYPE type);
 
-/* Begin exposure.
- * exposureTime is in seconds, resolution to 1E-2sec
+/* Establish a handle for a particular chip:
+ *  CCD_IMAGING, CCD_TRACKING, CCD_EXT_TRACKING
  */
-int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd, double exposureTime,
-                          ABG_STATE7 abgState, SHUTTER_COMMAND openShutter,
-                          READOUT_BINNING_MODE readoutMode,
-                          unsigned short top, unsigned short left,
-                          unsigned short height, unsigned short width);
+int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp);
+void sbig_ccd_destroy (sbig_ccd_t ccd);
 
-int sbig_end_exposure (sbig_t sb, CCD_REQUEST ccd);
+/* Query ccd info
+ * info0: all ccds, info2: imaging only, info4: imaging/tracking
+ */
+int sbig_ccd_get_info0 (sbig_ccd_t ccd, GetCCDInfoResults0 *info);
+int sbig_ccd_get_info2 (sbig_ccd_t ccd, GetCCDInfoResults2 *info);
+int sbig_ccd_get_info4 (sbig_ccd_t ccd, GetCCDInfoResults4 *info);
+
+/* Get/set ccd anti-blooming gate state (used on next exposure/readout)
+ *  ABG_LOW7, ABG_CLK_LOW7, ABG_CLK_MED7, ABG_CLK_HI7
+ */
+int sbig_ccd_set_abg (sbig_ccd_t ccd, ABG_STATE7 state);
+int sbig_ccd_get_abg (sbig_ccd_t ccd, ABG_STATE7 *statep);
+
+/* Get/set readout binning mode (used on next exposure/readout)
+ *  RM_1X1, RM_2X2, RM_3X3, RM_NX1, RM_NX2, RM_NX3,
+ *  RM_1X1_VOFFCHIP, RM_2X2_VOFFCHIP, RM_3X3_VOFFCHIP, RM_9X9, RM_MXN.
+ */
+int sbig_ccd_set_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE mode);
+int sbig_ccd_get_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE *modep);
+
+/* Get/set shutter mode (used on next exposure/readout)
+ *  SC_LEAVE_SHUTTER, SC_OPEN_SHUTTER, SC_CLOSE_SHUTTER,
+ *  SC_INITIALIZE_SHUTTER, SC_OPEN_EXT_SHUTTER, SC_CLOSE_EXT_SHUTTER
+ */
+int sbig_ccd_set_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND mode);
+int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep);
+
+/* Set top most row to readout (0 based), left most pixel (0, based),
+ * and image height and width in binned pixels (used on next exposure/readout)
+ */
+int sbig_ccd_set_window (sbig_ccd_t ccd,
+                         unsigned short top, unsigned short left,
+                         unsigned short height, unsigned short width);
+int sbig_ccd_get_window (sbig_ccd_t ccd,
+                         unsigned short *topp, unsigned short *leftp,
+                         unsigned short *heightp, unsigned short *widthp);
+
+int sbig_start_exposure (sbig_ccd_t sb, double exposureTime);
+
+int sbig_end_exposure (sbig_ccd_t sb);
 
 #endif
 

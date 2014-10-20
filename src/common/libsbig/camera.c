@@ -34,8 +34,180 @@
 #include "handle.h"
 #include "handle_impl.h"
 #include "sbigudrv.h"
+#include "sbig.h"
 
 #include "src/common/libutil/bcd.h"
+#include "src/common/libutil/xzmalloc.h"
+
+struct sbig_ccd_struct {
+    sbig_t sb;
+    CCD_REQUEST ccd;
+    ABG_STATE7 abg_mode;
+    READOUT_BINNING_MODE readout_mode;
+    SHUTTER_COMMAND shutter_mode;
+    GetCCDInfoResults0 info;
+    unsigned short top, left, height, width;
+};
+
+static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
+{
+    int i;
+    for (i = 0; i < ccd->info.readoutModes; i++)
+        if (ccd->info.readoutInfo[i].mode == mode)
+            return i;
+    return -1;
+}
+
+int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
+{
+    sbig_ccd_t ccd = xzmalloc (sizeof (*ccd));
+    ccd->ccd = chip;
+    ccd->sb = sb;
+    int e = sbig_ccd_get_info0 (ccd, &ccd->info);
+    if (e != CE_NO_ERROR) {
+        free (ccd);
+        return e;
+    }
+    ccd->abg_mode = ABG_CLK_MED7;
+    ccd->shutter_mode = SC_OPEN_SHUTTER;
+    ccd->readout_mode = RM_1X1;
+
+    int ro_index = lookup_roinfo (ccd, RM_1X1);
+    assert (ro_index != -1);
+    ccd->readout_mode = ccd->info.readoutInfo[ro_index].mode;
+    ccd->top = 0;
+    ccd->left = 0;
+    ccd->height = ccd->info.readoutInfo[ro_index].height;
+    ccd->width = ccd->info.readoutInfo[ro_index].width;
+    
+    *ccdp = ccd;
+    return CE_NO_ERROR;     
+}
+
+void sbig_ccd_destroy (sbig_ccd_t ccd)
+{
+    free (ccd);
+}
+
+int sbig_ccd_get_info0 (sbig_ccd_t ccd, GetCCDInfoResults0 *info)
+{
+    GetCCDInfoParams in;
+    if (ccd->ccd == CCD_IMAGING)
+        in.request = CCD_INFO_IMAGING;
+    else if (ccd->ccd == CCD_TRACKING)
+        in.request = CCD_INFO_TRACKING;
+    else
+        return CE_BAD_PARAMETER;
+    return ccd->sb->fun (CC_GET_CCD_INFO, &in, info);
+}
+
+int sbig_ccd_get_info2 (sbig_ccd_t ccd, GetCCDInfoResults2 *info)
+{
+    GetCCDInfoParams in;
+    if (ccd->ccd == CCD_IMAGING)
+        in.request = CCD_INFO_EXTENDED;
+    else
+        return CE_BAD_PARAMETER;
+    return ccd->sb->fun (CC_GET_CCD_INFO, &in, info);
+}
+
+int sbig_ccd_get_info4 (sbig_ccd_t ccd, GetCCDInfoResults4 *info)
+{
+    GetCCDInfoParams in;
+    if (ccd->ccd == CCD_IMAGING)
+        in.request = CCD_INFO_EXTENDED2_IMAGING;
+    else if (ccd->ccd == CCD_TRACKING)
+        in.request = CCD_INFO_EXTENDED2_TRACKING;
+    else
+        return CE_BAD_PARAMETER;
+    return ccd->sb->fun (CC_GET_CCD_INFO, &in, info);
+}
+
+int sbig_ccd_set_abg_mode (sbig_ccd_t ccd, ABG_STATE7 mode)
+{
+    ccd->abg_mode = mode;
+    return CE_NO_ERROR;
+}
+
+int sbig_ccd_get_abg_mode (sbig_ccd_t ccd, ABG_STATE7 *modep)
+{
+    *modep = ccd->abg_mode;
+    return CE_NO_ERROR;
+}
+
+int sbig_ccd_set_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
+{
+    int ro_index = lookup_roinfo (ccd, mode);
+    if (ro_index == -1)
+        return CE_BAD_PARAMETER;
+    ccd->readout_mode = ccd->info.readoutInfo[ro_index].mode;
+    ccd->top = 0;
+    ccd->left = 0;
+    ccd->height = ccd->info.readoutInfo[ro_index].height;
+    ccd->width = ccd->info.readoutInfo[ro_index].width;
+    return CE_NO_ERROR;
+}
+
+int sbig_ccd_get_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE *modep)
+{
+    *modep = ccd->readout_mode;
+    return CE_NO_ERROR;
+}
+
+int sbig_ccd_set_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND mode)
+{
+    ccd->shutter_mode = mode;
+    return CE_NO_ERROR;
+}
+
+int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep)
+{
+    *modep = ccd->shutter_mode;
+    return CE_NO_ERROR;
+}
+
+int sbig_ccd_set_window (sbig_ccd_t ccd,
+                         unsigned short top, unsigned short left,
+                         unsigned short height, unsigned short width)
+{
+    ccd->top = top;
+    ccd->left = left;
+    ccd->height = height;
+    ccd->width = width;
+    return CE_NO_ERROR;
+}
+
+int sbig_ccd_get_window (sbig_ccd_t ccd,
+                         unsigned short *topp, unsigned short *leftp,
+                         unsigned short *heightp, unsigned short *widthp)
+{
+    *topp = ccd->top;
+    *leftp = ccd->left;
+    *heightp = ccd->height;
+    *widthp = ccd->width;
+    return CE_NO_ERROR;
+}
+
+
+int sbig_start_exposure (sbig_ccd_t ccd, double exposureTime)
+{
+    StartExposureParams2 in = { .ccd = ccd->ccd,
+                                .exposureTime = exposureTime * 100.0,
+                                .abgState = ccd->abg_mode,
+                                .openShutter = ccd->shutter_mode,
+                                .readoutMode = ccd->readout_mode,
+                                .top = ccd->top, .left = ccd->left,
+                                .height = ccd->height, .width = ccd->width };
+    if (in.exposureTime < 1 || in.exposureTime > 0x00ffffff)
+        return CE_BAD_PARAMETER;
+    return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
+}
+
+int sbig_end_exposure (sbig_ccd_t ccd)
+{
+    EndExposureParams in = { .ccd = ccd->ccd };
+    return ccd->sb->fun (CC_END_EXPOSURE, &in, NULL);
+}
 
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
 {
@@ -45,55 +217,6 @@ int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
     if (e == CE_NO_ERROR)
         *type = out.cameraType;
     return e;
-}
-
-int sbig_get_ccd_info (sbig_t sb, CCD_INFO_REQUEST request,
-                       GetCCDInfoResults0 *info)
-{
-    GetCCDInfoParams in = { .request = request };
-    if (request != CCD_INFO_TRACKING && request != CCD_INFO_IMAGING)
-        return CE_BAD_PARAMETER;
-    return sb->fun (CC_GET_CCD_INFO, &in, info);
-}
-
-int sbig_get_ccd_xinfo (sbig_t sb, GetCCDInfoResults2 *info)
-{
-    GetCCDInfoParams in = { .request = CCD_INFO_EXTENDED };
-    return sb->fun (CC_GET_CCD_INFO, &in, info);
-}
-
-int sbig_get_ccd_xinfo2 (sbig_t sb, CCD_INFO_REQUEST request,
-                         GetCCDInfoResults4 *info)
-{
-    GetCCDInfoParams in = { .request = request };
-    if (request != CCD_INFO_EXTENDED2_TRACKING
-                        && request != CCD_INFO_EXTENDED2_IMAGING)
-        return CE_BAD_PARAMETER;
-    return sb->fun (CC_GET_CCD_INFO, &in, info);
-}
-
-int sbig_start_exposure2 (sbig_t sb, CCD_REQUEST ccd, double exposureTime,
-                          ABG_STATE7 abgState, SHUTTER_COMMAND openShutter,
-                          READOUT_BINNING_MODE readoutMode,
-                          unsigned short top, unsigned short left,
-                          unsigned short height, unsigned short width)
-{
-    StartExposureParams2 in = { .ccd = ccd,
-                                .exposureTime = exposureTime * 100.0,
-                                .abgState = abgState,
-                                .openShutter = openShutter,
-                                .readoutMode = readoutMode,
-                                .top = top, .left = left,
-                                .height = height, .width = width };
-    if (in.exposureTime < 1 || in.exposureTime > 0x00ffffff)
-        return CE_BAD_PARAMETER;
-    return sb->fun (CC_START_EXPOSURE2, &in, NULL);
-}
-
-int sbig_end_exposure (sbig_t sb, CCD_REQUEST ccd)
-{
-    EndExposureParams in = { .ccd = ccd };
-    return sb->fun (CC_END_EXPOSURE, &in, NULL);
 }
 
 
