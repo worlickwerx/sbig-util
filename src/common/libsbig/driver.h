@@ -26,11 +26,13 @@ int sbig_close_device (sbig_t sb);
 int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
                           GetDriverInfoResults0 *info);
 
-/* Get/set 
+/* Get/set driver handle
  * Ref SBIGUdrv sec 3.1.6
  */
-int sbig_get_driver_handle ();
-int sbig_set_driver_handle ();
+int sbig_get_driver_handle (); // unimplemented
+int sbig_set_driver_handle (); // unimplemented
+
+int sbig_query_cmd_status (sbig_t sb, ushort cmd, ushort *outp);
 
 #endif
 

@@ -79,6 +79,16 @@ int sbig_close_device (sbig_t sb)
     return sb->fun (CC_CLOSE_DEVICE, NULL, NULL);
 }
 
+int sbig_query_cmd_status (sbig_t sb, ushort cmd, ushort *outp)
+{
+    QueryCommandStatusParams in = { .command = cmd };
+    QueryCommandStatusResults out;
+    int e = sb->fun (CC_QUERY_COMMAND_STATUS, &in, &out);
+    if (e == CE_NO_ERROR)
+        *outp = out.status;
+    return e;
+}
+
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
  */
