@@ -55,9 +55,22 @@ int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
     return sb->fun (CC_GET_DRIVER_INFO, &in, info);
 }
 
+/* N.B. presumed that lptBaseAddress would be zero on Linux, but untested
+ */
 int sbig_open_device (sbig_t sb, SBIG_DEVICE_TYPE type)
 {
-    OpenDeviceParams in = { .deviceType = type };
+    if (   type != DEV_LPT1 && type != DEV_LPT2 && type != DEV_LPT3
+        && type != DEV_USB  && type != DEV_USB1 && type != DEV_USB2
+        && type != DEV_USB3 && type != DEV_USB4 && type != DEV_USB5
+        && type != DEV_USB6 && type != DEV_USB7 && type != DEV_USB8)
+        return CE_BAD_PARAMETER;
+    OpenDeviceParams in = { .deviceType = type, .lptBaseAddress = 0 };
+    return sb->fun (CC_OPEN_DEVICE, &in, NULL);
+}
+
+int sbig_open_device_ip (sbig_t sb, ulong ipaddr)
+{
+    OpenDeviceParams in = { .deviceType = DEV_ETH, .ipAddress = ipaddr };
     return sb->fun (CC_OPEN_DEVICE, &in, NULL);
 }
 
