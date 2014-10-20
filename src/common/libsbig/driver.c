@@ -43,6 +43,11 @@ int sbig_open_driver (sbig_t sb)
     return sb->fun (CC_OPEN_DRIVER, NULL, NULL); 
 }
 
+int sbig_close_driver (sbig_t sb)
+{
+    return sb->fun (CC_CLOSE_DRIVER, NULL, NULL); 
+}
+
 int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
                           GetDriverInfoResults0 *info)
 {
