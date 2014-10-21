@@ -71,6 +71,11 @@ int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime);
 int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, ushort *sp);
 int sbig_ccd_end_exposure (sbig_ccd_t ccd);
 
+/* Readout to internal buffer.
+ * Ref SBIGUDrv sec 3.2.3, 3.2.4, 3.2.5
+ */
+int sbig_ccd_readout (sbig_ccd_t ccd);
+
 /* Readout control
  */
 

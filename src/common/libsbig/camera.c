@@ -48,6 +48,7 @@ struct sbig_ccd_struct {
     GetCCDInfoResults0 info0;
     GetCCDInfoResults4 info4;
     unsigned short top, left, height, width;
+    unsigned short *frame;
 };
 
 static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
@@ -57,6 +58,13 @@ static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
         if (ccd->info0.readoutInfo[i].mode == mode)
             return i;
     return -1;
+}
+
+static void realloc_frame (sbig_ccd_t ccd)
+{
+    if (ccd->frame)
+        free (ccd->frame);
+    ccd->frame = xzmalloc (sizeof (*ccd->frame) * ccd->height * ccd->width);
 }
 
 int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
@@ -87,6 +95,7 @@ int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
     ccd->left = 0;
     ccd->height = ccd->info0.readoutInfo[0].height;
     ccd->width = ccd->info0.readoutInfo[0].width;
+    realloc_frame (ccd);
     
     *ccdp = ccd;
     return CE_NO_ERROR;     
@@ -94,6 +103,8 @@ int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
 
 void sbig_ccd_destroy (sbig_ccd_t ccd)
 {
+    if (ccd->frame)
+        free (ccd->frame);
     free (ccd);
 }
 
@@ -153,6 +164,7 @@ int sbig_ccd_set_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
     ccd->left = 0;
     ccd->height = ccd->info0.readoutInfo[ro_index].height;
     ccd->width = ccd->info0.readoutInfo[ro_index].width;
+    realloc_frame (ccd);
     return CE_NO_ERROR;
 }
 
@@ -185,6 +197,7 @@ int sbig_ccd_set_window (sbig_ccd_t ccd,
     ccd->left = left;
     ccd->height = height;
     ccd->width = width;
+    realloc_frame (ccd);
     return CE_NO_ERROR;
 }
 
@@ -290,6 +303,49 @@ int sbig_ccd_end_exposure (sbig_ccd_t ccd)
 {
     EndExposureParams in = { .ccd = ccd->ccd };
     return ccd->sb->fun (CC_END_EXPOSURE, &in, NULL);
+}
+
+static int start_readout (sbig_ccd_t ccd)
+{
+    StartReadoutParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
+                              .top = ccd->top, .left = ccd->left,
+                              .height = ccd->height, .width = ccd->width };
+    return ccd->sb->fun (CC_START_READOUT, &in, NULL);
+}
+
+/* On ST-7/8/etc, end_readout turns off CCD preamp and unfreezes TE if
+ * autofreeze enabled
+ */
+static int end_readout (sbig_ccd_t ccd)
+{
+    EndReadoutParams in = { .ccd = ccd->ccd };
+    return ccd->sb->fun (CC_END_READOUT, &in, NULL);
+}
+
+static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, void *buf)
+{
+    ReadoutLineParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
+                             .pixelStart = start, .pixelLength = len };
+    return ccd->sb->fun (CC_READOUT_LINE, &in, buf);
+}
+
+int sbig_ccd_readout (sbig_ccd_t ccd)
+{
+    int i, e;
+
+    e = start_readout (ccd);
+
+    assert (ccd->frame != NULL);
+    unsigned short *pp = ccd->frame;
+    for (i = 0; e == CE_NO_ERROR && i < ccd->height; i++) {
+        e = readout_line (ccd, ccd->left, ccd->width, pp);
+        pp += ccd->width;
+    }
+
+    if (e == CE_NO_ERROR)
+        e = end_readout (ccd);
+
+    return e;
 }
 
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
