@@ -368,7 +368,7 @@ int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
     int i;
     if (!f)
         goto error;
-    if (fprintf (f, "P5 %d %d 65536\n", ccd->height, ccd->width) < 0)
+    if (fprintf (f, "P5 %d %d 65535\n", ccd->height, ccd->width) < 0)
         goto error;
     for (i = 0; i < ccd->height; i++) {
         if (fwrite (pp, sizeof (*pp), ccd->width, f) < ccd->width)
