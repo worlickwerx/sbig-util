@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdbool.h>
+#include <arpa/inet.h> /* htons */
 
 #include "handle.h"
 #include "handle_impl.h"
@@ -54,6 +55,7 @@ struct sbig_ccd_struct {
 static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
 {
     int i;
+
     for (i = 0; i < ccd->info0.readoutModes; i++)
         if (ccd->info0.readoutInfo[i].mode == mode)
             return i;
@@ -67,15 +69,15 @@ static void realloc_frame (sbig_ccd_t ccd)
     ccd->frame = xzmalloc (sizeof (*ccd->frame) * ccd->height * ccd->width);
 }
 
+/* FIXME: PixCel255/237 doesn't support info0 on tracking ccd
+ */
 int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
 {
     sbig_ccd_t ccd = xzmalloc (sizeof (*ccd));
     ccd->ccd = chip;
     ccd->sb = sb;
-
-    /* FIXME: PixCel255/237 doesn't support info0 on tracking ccd
-     */
     int e = sbig_ccd_get_info0 (ccd, &ccd->info0);
+
     if (e != CE_NO_ERROR) {
         free (ccd);
         return e;
@@ -111,6 +113,7 @@ void sbig_ccd_destroy (sbig_ccd_t ccd)
 int sbig_ccd_get_info0 (sbig_ccd_t ccd, GetCCDInfoResults0 *info)
 {
     GetCCDInfoParams in;
+
     if (ccd->ccd == CCD_IMAGING)
         in.request = CCD_INFO_IMAGING;
     else if (ccd->ccd == CCD_TRACKING)
@@ -123,6 +126,7 @@ int sbig_ccd_get_info0 (sbig_ccd_t ccd, GetCCDInfoResults0 *info)
 int sbig_ccd_get_info2 (sbig_ccd_t ccd, GetCCDInfoResults2 *info)
 {
     GetCCDInfoParams in;
+
     if (ccd->ccd == CCD_IMAGING)
         in.request = CCD_INFO_EXTENDED;
     else
@@ -133,6 +137,7 @@ int sbig_ccd_get_info2 (sbig_ccd_t ccd, GetCCDInfoResults2 *info)
 int sbig_ccd_get_info4 (sbig_ccd_t ccd, GetCCDInfoResults4 *info)
 {
     GetCCDInfoParams in;
+
     if (ccd->ccd == CCD_IMAGING)
         in.request = CCD_INFO_EXTENDED2_IMAGING;
     else if (ccd->ccd == CCD_TRACKING)
@@ -157,6 +162,7 @@ int sbig_ccd_get_abg_mode (sbig_ccd_t ccd, ABG_STATE7 *modep)
 int sbig_ccd_set_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
 {
     int ro_index = lookup_roinfo (ccd, mode);
+
     if (ro_index == -1)
         return CE_BAD_PARAMETER;
     ccd->readout_mode = ccd->info0.readoutInfo[ro_index].mode;
@@ -215,6 +221,7 @@ int sbig_ccd_get_window (sbig_ccd_t ccd,
 static bool has_cap_eshutter (sbig_ccd_t ccd)
 {
     ushort cap = ccd->info4.capabilitiesBits;
+
     return (cap & CB_CCD_ESHUTTER_MASK) == CB_CCD_ESHUTTER_YES;
 }
 
@@ -225,6 +232,7 @@ static bool has_cap_eshutter (sbig_ccd_t ccd)
 static double min_exposure (sbig_ccd_t ccd)
 {
     double m;
+
     switch (ccd->info0.cameraType) {
         case ST402_CAMERA:
             m = 1E-2*MIN_ST402_EXPOSURE;
@@ -276,6 +284,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime)
                                 .readoutMode = ccd->readout_mode,
                                 .top = ccd->top, .left = ccd->left,
                                 .height = ccd->height, .width = ccd->width };
+
     if (exposureTime < min_exposure (ccd) || exposureTime*100 > 0x00ffffff)
         return CE_BAD_PARAMETER;
     if (exposureTime < 0.01 && has_cap_eshutter (ccd)) {
@@ -290,6 +299,7 @@ int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, ushort *sp)
 {
     ushort status;
     int e = sbig_query_cmd_status (ccd->sb, CC_START_EXPOSURE, &status);
+
     if (e == CE_NO_ERROR) {
         if (ccd->ccd == CCD_IMAGING)
             *sp = status & 3;
@@ -302,6 +312,7 @@ int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, ushort *sp)
 int sbig_ccd_end_exposure (sbig_ccd_t ccd)
 {
     EndExposureParams in = { .ccd = ccd->ccd };
+
     return ccd->sb->fun (CC_END_EXPOSURE, &in, NULL);
 }
 
@@ -310,6 +321,7 @@ static int start_readout (sbig_ccd_t ccd)
     StartReadoutParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
                               .top = ccd->top, .left = ccd->left,
                               .height = ccd->height, .width = ccd->width };
+
     return ccd->sb->fun (CC_START_READOUT, &in, NULL);
 }
 
@@ -319,6 +331,7 @@ static int start_readout (sbig_ccd_t ccd)
 static int end_readout (sbig_ccd_t ccd)
 {
     EndReadoutParams in = { .ccd = ccd->ccd };
+
     return ccd->sb->fun (CC_END_READOUT, &in, NULL);
 }
 
@@ -326,6 +339,7 @@ static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, void *buf)
 {
     ReadoutLineParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
                              .pixelStart = start, .pixelLength = len };
+
     return ccd->sb->fun (CC_READOUT_LINE, &in, buf);
 }
 
@@ -334,23 +348,27 @@ int sbig_ccd_readout (sbig_ccd_t ccd)
     unsigned short *pp = ccd->frame;
     int i, e;
 
-    e = start_readout (ccd);
-
     assert (pp != NULL);
+
+    e = start_readout (ccd);
     for (i = 0; e == CE_NO_ERROR && i < ccd->height; i++) {
         e = readout_line (ccd, ccd->left, ccd->width, pp);
         pp += ccd->width;
     }
-
     if (e == CE_NO_ERROR)
         e = end_readout (ccd);
 
     return e;
 }
 
+/* These two functions presume that SBIGUdrv gave us unsigned shorts
+ * in host byte order.
+ */
+
 int sbig_ccd_writemem (sbig_ccd_t ccd, unsigned short *buf, int len)
 {
     int i;
+
     if (len != ccd->height * ccd->width)
         return CE_BAD_PARAMETER;
     for (i = 0; i < len; i++)
@@ -358,22 +376,26 @@ int sbig_ccd_writemem (sbig_ccd_t ccd, unsigned short *buf, int len)
     return CE_NO_ERROR;
 }
 
-/* FIXME: pgm is network byte order.  This code assumes we get that
- * from the camera.
- */
 int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
 {
     unsigned short *pp = ccd->frame;
-    FILE *f = fopen (filename, "w+");
-    int i;
-    if (!f)
+    unsigned short *nrow;
+    FILE *f;
+    int i, j;
+
+    assert (pp != NULL);
+
+    nrow = xzmalloc (sizeof (*nrow) * ccd->width);
+
+    if (!(f = fopen (filename, "w+")))
         goto error;
     if (fprintf (f, "P5 %d %d 65535\n", ccd->height, ccd->width) < 0)
         goto error;
     for (i = 0; i < ccd->height; i++) {
-        if (fwrite (pp, sizeof (*pp), ccd->width, f) < ccd->width)
+        for (j = 0; j < ccd->width; j++)
+            nrow[i] = htons (*pp++);
+        if (fwrite (nrow, sizeof (*nrow), ccd->width, f) < ccd->width)
             goto error;
-        pp += ccd->width;
     }
     if (fclose (f) != 0)
         goto error;
