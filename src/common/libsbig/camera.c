@@ -29,7 +29,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
-#include <dlfcn.h>
+#include <stdbool.h>
 
 #include "handle.h"
 #include "handle_impl.h"
@@ -45,15 +45,16 @@ struct sbig_ccd_struct {
     ABG_STATE7 abg_mode;
     READOUT_BINNING_MODE readout_mode;
     SHUTTER_COMMAND shutter_mode;
-    GetCCDInfoResults0 info;
+    GetCCDInfoResults0 info0;
+    GetCCDInfoResults4 info4;
     unsigned short top, left, height, width;
 };
 
 static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
 {
     int i;
-    for (i = 0; i < ccd->info.readoutModes; i++)
-        if (ccd->info.readoutInfo[i].mode == mode)
+    for (i = 0; i < ccd->info0.readoutModes; i++)
+        if (ccd->info0.readoutInfo[i].mode == mode)
             return i;
     return -1;
 }
@@ -63,7 +64,15 @@ int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
     sbig_ccd_t ccd = xzmalloc (sizeof (*ccd));
     ccd->ccd = chip;
     ccd->sb = sb;
-    int e = sbig_ccd_get_info0 (ccd, &ccd->info);
+
+    /* FIXME: PixCel255/237 doesn't support info0 on tracking ccd
+     */
+    int e = sbig_ccd_get_info0 (ccd, &ccd->info0);
+    if (e != CE_NO_ERROR) {
+        free (ccd);
+        return e;
+    }
+    e = sbig_ccd_get_info4 (ccd, &ccd->info4);
     if (e != CE_NO_ERROR) {
         free (ccd);
         return e;
@@ -72,12 +81,12 @@ int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
     ccd->shutter_mode = SC_OPEN_SHUTTER; /* open during exp, close during ro */
     ccd->readout_mode = RM_1X1;
 
-    assert (ccd->info.readoutModes > 0);
-    ccd->readout_mode = ccd->info.readoutInfo[0].mode;
+    assert (ccd->info0.readoutModes > 0);
+    ccd->readout_mode = ccd->info0.readoutInfo[0].mode;
     ccd->top = 0;
     ccd->left = 0;
-    ccd->height = ccd->info.readoutInfo[0].height;
-    ccd->width = ccd->info.readoutInfo[0].width;
+    ccd->height = ccd->info0.readoutInfo[0].height;
+    ccd->width = ccd->info0.readoutInfo[0].width;
     
     *ccdp = ccd;
     return CE_NO_ERROR;     
@@ -139,11 +148,11 @@ int sbig_ccd_set_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
     int ro_index = lookup_roinfo (ccd, mode);
     if (ro_index == -1)
         return CE_BAD_PARAMETER;
-    ccd->readout_mode = ccd->info.readoutInfo[ro_index].mode;
+    ccd->readout_mode = ccd->info0.readoutInfo[ro_index].mode;
     ccd->top = 0;
     ccd->left = 0;
-    ccd->height = ccd->info.readoutInfo[ro_index].height;
-    ccd->width = ccd->info.readoutInfo[ro_index].width;
+    ccd->height = ccd->info0.readoutInfo[ro_index].height;
+    ccd->width = ccd->info0.readoutInfo[ro_index].width;
     return CE_NO_ERROR;
 }
 
@@ -190,18 +199,77 @@ int sbig_ccd_get_window (sbig_ccd_t ccd,
     return CE_NO_ERROR;
 }
 
+static bool has_cap_eshutter (sbig_ccd_t ccd)
+{
+    ushort cap = ccd->info4.capabilitiesBits;
+    return (cap & CB_CCD_ESHUTTER_MASK) == CB_CCD_ESHUTTER_YES;
+}
+
+
+/* Min exposure in seconds
+ * FIXME: I've been conservative in grouping the ? cameras with ST7.
+ */
+static double min_exposure (sbig_ccd_t ccd)
+{
+    double m;
+    switch (ccd->info0.cameraType) {
+        case ST402_CAMERA:
+            m = 1E-2*MIN_ST402_EXPOSURE;
+            break;
+        case STX_CAMERA:
+            m = 1E-2*MIN_STX_EXPOSURE;
+            break;
+        case STT_CAMERA:
+            m = 1E-2*MIN_STT_EXPOSURE;
+            break;
+        case STI_CAMERA:
+            m = 1E-3*MIN_STU_EXPOSURE;
+            break;
+        case STF_CAMERA:
+            //m = 1E-2*MIN_STF3200_EXPOSURE; // ?
+            //m = 1E-3*MIN_STF8050_EXPOSURE; // ?
+            //m = 1E-3*MIN_STF4070_EXPOSURE; // ?
+            m = 1E-2*MIN_STF8300_EXPOSURE; // largest of the STL's 
+            break;
+        case ST7_CAMERA:
+        case ST8_CAMERA:
+        case ST9_CAMERA:
+        case ST10_CAMERA:
+        case ST1K_CAMERA:
+        case ST4K_CAMERA: // ?
+        case ST5C_CAMERA: // ? (PixCel)
+        case ST237_CAMERA: // ? (PixCel)
+        case TCE_CONTROLLER: // ?
+        case STV_CAMERA: // ?
+        case ST2K_CAMERA: // ?
+        case STL_CAMERA: // ?
+        default:
+            m = 1E-2*MIN_ST7_EXPOSURE; // 0.12 == 120 msec
+            break;
+    }
+    /* Fudge possibly conservative numbers above if we have an e-shutter.
+     */
+    if (has_cap_eshutter (ccd))
+        m = 1E-3;
+
+    return m;
+}
 
 int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime)
 {
     StartExposureParams2 in = { .ccd = ccd->ccd,
-                                .exposureTime = exposureTime * 100.0,
                                 .abgState = ccd->abg_mode,
                                 .openShutter = ccd->shutter_mode,
                                 .readoutMode = ccd->readout_mode,
                                 .top = ccd->top, .left = ccd->left,
                                 .height = ccd->height, .width = ccd->width };
-    if (in.exposureTime < 1 || in.exposureTime > 0x00ffffff)
+    if (exposureTime < min_exposure (ccd) || exposureTime*100 > 0x00ffffff)
         return CE_BAD_PARAMETER;
+    if (exposureTime < 0.01 && has_cap_eshutter (ccd)) {
+        in.exposureTime = exposureTime * 1000.0;
+        in.exposureTime |= EXP_MS_EXPOSURE;
+    } else
+        in.exposureTime = exposureTime * 100.0;
     return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 

@@ -17,12 +17,14 @@ const char *sbig_strcam (CAMERA_TYPE type);
 
 /* Establish a handle for a particular chip:
  *  CCD_IMAGING, CCD_TRACKING, CCD_EXT_TRACKING
+ * Internally, create calls get_info0.
  */
 int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp);
 void sbig_ccd_destroy (sbig_ccd_t ccd);
 
 /* Query ccd info
  * info0: all ccds, info2: imaging only, info4: imaging/tracking
+ * Ref SBIGUDrv sec 3.5.2
  */
 int sbig_ccd_get_info0 (sbig_ccd_t ccd, GetCCDInfoResults0 *info);
 int sbig_ccd_get_info2 (sbig_ccd_t ccd, GetCCDInfoResults2 *info);
@@ -30,6 +32,7 @@ int sbig_ccd_get_info4 (sbig_ccd_t ccd, GetCCDInfoResults4 *info);
 
 /* Get/set ccd anti-blooming gate state (used on next exposure/readout)
  *  ABG_LOW7, ABG_CLK_LOW7, ABG_CLK_MED7, ABG_CLK_HI7
+ * Only affects TC211 tracking CCD on ST-7/8/etc and imaging CCD on PixCel255.
  */
 int sbig_ccd_set_abg (sbig_ccd_t ccd, ABG_STATE7 state);
 int sbig_ccd_get_abg (sbig_ccd_t ccd, ABG_STATE7 *statep);
@@ -62,10 +65,14 @@ int sbig_ccd_get_window (sbig_ccd_t ccd,
 
 /* Exposure control: start exposure, poll for status, then end exposure
  *  Status: CS_IDLE, CS_IN_PROGRESS, CS_INTEGRATING, CS_INTEGRATION_COMPLETE
+ * Ref SBIGUDrv sec 3.2.1, 3.2.2
  */
 int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime);
 int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, ushort *sp);
 int sbig_ccd_end_exposure (sbig_ccd_t ccd);
+
+/* Readout control
+ */
 
 #endif
 

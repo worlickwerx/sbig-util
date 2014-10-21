@@ -32,6 +32,9 @@ int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
 int sbig_get_driver_handle (); // unimplemented
 int sbig_set_driver_handle (); // unimplemented
 
+/* Get command status
+ * Ref SBIGUdrv sec 3.5.4
+ */
 int sbig_query_cmd_status (sbig_t sb, ushort cmd, ushort *outp);
 
 #endif
