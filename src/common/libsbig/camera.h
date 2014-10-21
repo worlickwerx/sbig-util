@@ -71,10 +71,20 @@ int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime);
 int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, ushort *sp);
 int sbig_ccd_end_exposure (sbig_ccd_t ccd);
 
-/* Readout to internal buffer.
+/* Readout to internal buffer (start, iterate reading lines, stop).
  * Ref SBIGUDrv sec 3.2.3, 3.2.4, 3.2.5
  */
 int sbig_ccd_readout (sbig_ccd_t ccd);
+
+/* Copy from internal buffer as a sequence of rows.
+ * Buffer len must == height*width (use get_window above)
+ */
+int sbig_ccd_writemem (sbig_ccd_t ccd, unsigned short *buf, int len);
+
+/* Copy out buffer to a PGM format file
+ * Ref: netpbm.sourceforge.net/doc/pgm.html
+ */
+int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename);
 
 /* Readout control
  */

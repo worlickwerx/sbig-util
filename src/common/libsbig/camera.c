@@ -331,12 +331,12 @@ static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, void *buf)
 
 int sbig_ccd_readout (sbig_ccd_t ccd)
 {
+    unsigned short *pp = ccd->frame;
     int i, e;
 
     e = start_readout (ccd);
 
-    assert (ccd->frame != NULL);
-    unsigned short *pp = ccd->frame;
+    assert (pp != NULL);
     for (i = 0; e == CE_NO_ERROR && i < ccd->height; i++) {
         e = readout_line (ccd, ccd->left, ccd->width, pp);
         pp += ccd->width;
@@ -346,6 +346,42 @@ int sbig_ccd_readout (sbig_ccd_t ccd)
         e = end_readout (ccd);
 
     return e;
+}
+
+int sbig_ccd_writemem (sbig_ccd_t ccd, unsigned short *buf, int len)
+{
+    int i;
+    if (len != ccd->height * ccd->width)
+        return CE_BAD_PARAMETER;
+    for (i = 0; i < len; i++)
+        buf[i] = ccd->frame[i];
+    return CE_NO_ERROR;
+}
+
+/* FIXME: pgm is network byte order.  This code assumes we get that
+ * from the camera.
+ */
+int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
+{
+    unsigned short *pp = ccd->frame;
+    FILE *f = fopen (filename, "w+");
+    int i;
+    if (!f)
+        goto error;
+    if (fprintf (f, "P5 %d %d 65536\n", ccd->height, ccd->width) < 0)
+        goto error;
+    for (i = 0; i < ccd->height; i++) {
+        if (fwrite (pp, sizeof (*pp), ccd->width, f) < ccd->width)
+            goto error;
+        pp += ccd->width;
+    }
+    if (fclose (f) != 0)
+        goto error;
+    return CE_NO_ERROR;
+error:
+    if (f)
+        fclose (f);
+    return CE_OS_ERROR;
 }
 
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
