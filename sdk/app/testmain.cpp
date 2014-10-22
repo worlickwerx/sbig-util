@@ -132,9 +132,9 @@ PAR_ERROR grabImageTest(int argc, char *argv[])
   if (argc != 13)
 	{
 		cout << "Application startup error: Bad number of input parameters. " << endl;
-		cout << "Format : ./testmain filePath               fileType imgCount imgType expTime rm  top left width heigh fr dcm" << endl;
-		cout << "Example: ./testmain /observations/img/raw/  FITS     100       LF     0.001  1x1  0    0  1000  1000   1  1 " << endl;
-		cout << "Example: ./testmain /observations/img/raw/  SBIG      5        DF     15.5   2x2  0    0   0     0     1  1 " << endl;
+		cout << "Format : ./testapp filePath               fileType imgCount imgType expTime rm  top left width heigh fr dcm" << endl;
+		cout << "Example: ./testapp /observations/img/raw/  FITS     100       LF     0.001  1x1  0    0  1000  1000   1  1 " << endl;
+		cout << "Example: ./testapp /observations/img/raw/  SBIG      5        DF     15.5   2x2  0    0   0     0     1  1 " << endl;
 		return CE_BAD_PARAMETER;
 	}
 

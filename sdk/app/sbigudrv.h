@@ -1,31 +1,25 @@
 /*
-
 	SBIGUDRV.H
 
-	Contains the function prototypes and enumerated constants
-	for the Universal Parallel/USB/Ethernet driver.
+	Contains the function prototypes and enumerated constants	for the Universal Parallel/USB/Ethernet driver.
 
 	This supports the following devices:
 
-		ST-7E/8E/9E/10E
 		ST-5C/237/237A (PixCel255/237)
+		ST-7E/8E/9E/10E
 		ST-1K, ST-2K, ST-4K
 		STL Large Format Cameras
 		ST-402 Family of Cameras
+		ST-8300 Cameras
+		STF-8300, 8050 Cameras
+		STT Cameras
+		STX/STXL Cameras
+		ST-i Cameras
 		AO-7, AOL, AO-8
 		CFW-8, CFW-9, CFW-10, CFW-L
-		ST Focuser
-		STX Cameras
-		ST-8300 Cameras
-		STF-8300 Cameras
-		ST-i Cameras
-		STT Cameras (Preliminary)
-		Differential Guider Accessory (Preliminary)
 		FW5-8300, FW8-8300
- 
-	Version 4.75 - March 27, 2012
-	(c)1995-2012 - Santa Barbara Instrument Group
-
+		ST Focuser
+		Differential Guider Accessory (Preliminary)
 */
 #ifndef _PARDRV_
 #define _PARDRV_
@@ -44,7 +38,7 @@
  #define ENV_MACOSX   6				/* SBIG Use Only, Mac OSX */
  #define ENV_LINUX		7				/* SBIG Use Only, Linux */
  #define ENV_NIOS	    8				/* SBIG Use Only, Embedded NIOS */
- #define TARGET			ENV_WIN   /* Set for your target */
+ #define TARGET			ENV_LINUX   /* Set for your target */
 #endif
 
 
@@ -151,10 +145,13 @@ typedef enum
 	CC_DEBUG_LOG,
 	CC_QUERY_USB2,
 	CC_QUERY_ETHERNET2, 
+	CC_GET_AO_MODEL,
 
 	/*
 		SBIG Use Only Commands
 	*/
+
+	/* 90 - 99 */
 	CC_SEND_BLOCK = 90, 
 	CC_SEND_BYTE, 
 	CC_GET_BYTE, 
@@ -165,10 +162,19 @@ typedef enum
 	CC_GET_DRIVER_OPTIONS, 
 	CC_SET_DRIVER_OPTIONS,
 	CC_FIRMWARE, 
+
+	/* 100 -109 */
 	CC_BULK_IO, 
 	CC_RIPPLE_CORRECTION,
 	CC_EZUSB_RESET,
+	CC_BREAKPOINT,
+	CC_QUERY_EXPOSURE_TICKS,
+	CC_SET_ACTIVE_CCD_AREA,
+
 	CC_LAST_COMMAND
+
+	/* 110 - 119 */
+
 } 
 PAR_COMMAND;
 
@@ -235,6 +241,8 @@ typedef enum
 	CE_DIFF_GUIDER_ERROR,
 	CE_RIPPLE_CORRECTION_ERROR,
 	CE_EZUSB_RESET,
+
+	/* 41 - 50*/
 	CE_NEXT_ERROR
 
 } PAR_ERROR;
@@ -585,7 +593,8 @@ typedef enum
 	CFWSEL_FW5_8300,
 	CFWSEL_FW8_8300, 
 	CFWSEL_FW7_STX, 
-	CFWSEL_FW8_STT
+	CFWSEL_FW8_STT,
+	CFWSEL_FW5_STF_DETENT
 } 
 CFW_MODEL_SELECT;
 
@@ -832,6 +841,7 @@ ACTIVE_PIXEL_CHANNEL;
 #define EXP_MS_EXPOSURE					0x10000000	// set to interpret exposure time as milliseconds
 #define EXP_FAST_READOUT				0x08000000	// activate the fast readout mode of the STF-8300, etc.
 #define EXP_DUAL_CHANNEL_MODE   0x04000000  // activate the dual channel CCD readout mode of the STF-8050
+#define EXP_RIPPLE_CORRECTION		0x02000000	// Ripple correction for STF-8050/4070
 #define EXP_TIME_MASK           0x00FFFFFF  // mask with exposure time to remove flags
 
 /*
@@ -1558,6 +1568,12 @@ typedef struct
 } 
 CustomerOptionsParams, CustomerOptionsResults;
 
+typedef struct
+{
+	unsigned short i2cAoModel;
+}
+GetI2CAoModelResults;
+
 typedef enum 
 { 
 	DLF_CC_BASE					= 0x0001,
@@ -1593,7 +1609,7 @@ typedef enum
 	DLF_FCE_0010				= 0x0010,
 	DLF_FCE_0020				= 0x0020,
 	DLF_FCE_0040		    = 0x0040,
-	DLF_FCE_0080   			= 0x0080
+	DLF_FCE_CAMERA 			= 0x0080
 } 
 DEBUG_LOG_FCE_FLAGS;
 
@@ -1619,6 +1635,35 @@ typedef struct
 	char					 logFilePathName[1024];
 } 
 DebugLogParams;
+
+#if TARGET == ENV_WIN
+
+#include <Windows.h>
+/*
+typedef union _LARGE_INTEGER {
+  struct {
+    DWORD LowPart;
+    LONG  HighPart;
+  };
+  struct {
+    DWORD LowPart;
+    LONG  HighPart;
+  } u;
+  LONGLONG QuadPart;
+} LARGE_INTEGER, *PLARGE_INTEGER;
+*/
+
+typedef struct 
+{
+	LARGE_INTEGER		startExposureTicks0;
+	LARGE_INTEGER		startExposureTicks1;
+	LARGE_INTEGER		endExposureTicks0;
+	LARGE_INTEGER		endExposureTicks1;
+} 
+QueryExposureTicksResults;
+
+#endif
+
 
 #pragma pack(pop)	/* Restore previous struct align */
 
