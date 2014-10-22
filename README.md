@@ -36,6 +36,7 @@ On Debian Wheezy use:
 ```
 sudo apt-get install fxload
 sudo apt-get install libusb-1.0-0-dev
+sudo apt-get install cfitsio-dev
 ```
 
 ### USB firmware download
@@ -45,8 +46,8 @@ When udev detects an SBIG USB device, the udev rules invoke fxload to
 download the appropriate .hex file into the camera.  For this to work
 you must copy the udev rules and firmware files to the following locations:
 ```
-sudo cp sdk/LinuxDevKit.2014-01-10/udev/51-sbig-debian.rules /etc/udev/rules.d
-sudo cp sdk/LinuxDevKit.2014-01-10/firmware/* /lib/firmware/
+sudo cp sdk/udev/51-sbig-debian.rules /etc/udev/rules.d
+sudo cp sdk/firmware/* /lib/firmware/
 ```
 You may need to then poke udev with
 ```
@@ -60,12 +61,12 @@ for about a second, then the cooling fan comes on.
 To validate that everything is installed properly thus far,
 you can run SBIG's test code.
 ```
-cd sdk/LinuxDevKit.2014-01-10/arm/c/testapp
-make -f Makefile32 LIBRARY="-L ../lib" APP_OUT_DIR="./"
-LD_LIBRARY_PATH="../lib" ./testmain
+cd sdk/app
+make
+./testapp
 ```
 This displays a help message.  To snap an image from the camera
 and store it in /tmp, run
 ```
-LD_LIBRARY_PATH="../lib" ./testmain /tmp/ SBIG 1 LF 0.01 1x1 0 0 0 0 1 1
+./testapp /tmp/ SBIG 1 LF 0.01 1x1 0 0 0 0 1 1
 ```
