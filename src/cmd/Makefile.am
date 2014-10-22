@@ -1,4 +1,4 @@
-AM_CFLAGS = @GCCWARN@
+AM_CFLAGS = @GCCWARN@ -I$(top_srcdir)/sdk/app
 
 sbigbindir = $(libexecdir)/sbig-util
 
