@@ -14,20 +14,18 @@ sbig-util includes a copy of the SBIG Linux Development Kit
 as a convenience.  You may configure sbig-util to use either this copy,
 or another external one.  These instructions presume that you will use
 the internal one.  The SDK includes firmware, udev rules, documentation,
-the SBIG universal (user space) driver, and some test code.
+the SBIG universal (all user space) driver, and some test code.
 
 ### Supported Platforms
 
 We are limited to architectures for which SBIG pre-compiled the
-libraries in the SDK.  For the 2014-01-10 release, this includes:
-* 32-bit ARM
-* 32-bit x86
-* 64-bit x86.
+libraries in the SDK.  As of this writing, this includes:
+* 32-bit ARM (compiled on Raspberry Pi, version unknown)
+* 32-bit x86 (compiled on Ubuntu 14.04)
+* 64-bit x86 (compiled on Ubuntu 14.04)
 
-Further, SBIG claims they tested this release on Debian 6.0.6 and
-Ubuntu 12.04.  My testing thus far is on a BeagleBone black (ARM)
-running Debian 7.0 (Wheezy), with an SBIG ST-8XME USB camera and
-CFW-10 filter wheel.
+My testing thus far is on a BeagleBone black (ARM) running Debian
+7.0 (Wheezy), with an SBIG ST-8XME USB camera and CFW-10 filter wheel.
 
 ### Prerequisites
 You will need to install libusb version 1.0.x and fxload,
