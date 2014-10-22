@@ -13,8 +13,10 @@ APP_NAME   = testapp
 APP_SRC    = testmain.cpp csbigcam.cpp csbigimg.cpp
 APP_OBJ    = testmain.o   csbigcam.o   csbigimg.o
 
-INCLUDE    = -I .ls -I /usr/include/libusb-1.0/ -I /data/fits/cfitsio
-LIBRARY    = -L /usr/local/lib -L /data/fits/cfitsio/lib/
+ARCHDIR    = $(PWD)/../arch/$(shell arch)
+INCLUDE    = -I/usr/include/libusb-1.0/
+LIBRARY    = -Wl,-rpath,$(ARCHDIR) -L$(ARCHDIR)
+
 
 APP_FLAGS  = -O2 $(INCLUDE) $(LIBRARY) -Wall
 ####################################################################################
@@ -34,5 +36,5 @@ csbigimg.o : csbigimg.cpp csbigimg.h
 	  g++ $(APP_FLAGS) -o csbigimg.o -c csbigimg.cpp
 ####################################################################################
 clean:
-		rm -f *.o
+		rm -f *.o testapp
 ####################################################################################
