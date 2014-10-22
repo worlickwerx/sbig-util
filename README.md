@@ -62,7 +62,13 @@ cd sdk/app
 make
 ./testapp
 ```
-This displays a help message.  To snap an image from the camera
+This displays a help message:
+```
+Format : ./testapp filePath               fileType imgCount imgType expTime rm  top left width heigh fr dcm
+Example: ./testapp /observations/img/raw/  FITS     100       LF     0.001  1x1  0    0  1000  1000   1  1 
+Example: ./testapp /observations/img/raw/  SBIG      5        DF     15.5   2x2  0    0   0     0     1  1 
+```
+To snap an image from the camera
 and store it in /tmp, run
 ```
 ./testapp /tmp/ SBIG 1 LF 0.01 1x1 0 0 0 0 1 1
