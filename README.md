@@ -19,7 +19,8 @@ the SBIG universal (all user space) driver, and some test code.
 ### Supported Platforms
 
 We are limited to architectures for which SBIG pre-compiled the
-libraries in the SDK.  As of this writing, this includes:
+libraries in the SDK.  As of this writing, sbig-util includes the
+SDK drop dated `2014-10-21T14-29`, built for:
 * 32-bit ARM (compiled on Raspberry Pi, version unknown)
 * 32-bit x86 (compiled on Ubuntu 14.04)
 * 64-bit x86 (compiled on Ubuntu 14.04)
