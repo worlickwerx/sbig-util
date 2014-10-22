@@ -49,20 +49,17 @@ AC_C_BIGENDIAN
 AC_C_CONST
 
 ##
-# Set $sdk_libdir and $sdk_includedir according to architecture.
+# Set $sdk_libdir according to architecture.
 ##
 AC_MSG_CHECKING([for usable sdk libdir])
-sdk_top=sdk/LinuxDevKit.2014-01-10
 case "$host_cpu" in
-    i386|i686)	sdk_libdir="$sdk_top"/x86/c/lib32 ;;
-    x86_64)	sdk_libdir="$sdk_top"/x86/c/lib64 ;;
-    arm*)	sdk_libdir="$sdk_top"/arm/c/lib ;;
+    i386|i686)	sdk_libdir="sdk/arch/i386" ;;
+    x86_64)	sdk_libdir="sdk/arch/x86_64" ;;
+    arm*)	sdk_libdir="sdk/arch/arm" ;;
     *)		AC_MSG_RESULT([no]) ;;
 esac
 AC_MSG_RESULT([yes])
 AC_SUBST([sdk_libdir])
-sdk_includedir="$sdk_libdir/../testapp"
-AC_SUBST([sdk_includedir])
 
 ##
 # Checks for library functions

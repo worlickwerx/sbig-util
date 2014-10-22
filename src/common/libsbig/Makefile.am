@@ -1,6 +1,6 @@
 AM_CFLAGS = @GCCWARN@
 
-AM_CPPFLAGS = -I$(top_srcdir)
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/sdk/app
 
 noinst_LTLIBRARIES = libsbig.la
 
