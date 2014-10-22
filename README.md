@@ -30,9 +30,8 @@ running Debian 7.0 (Wheezy), with an SBIG ST-8XME USB camera and
 CFW-10 filter wheel.
 
 ### Prerequisites
-
-You will need to install libusb version 1.0.x and fxload.
-On Debian Wheezy use:
+You will need to install libusb version 1.0.x and fxload,
+as well as cfitsio for the SBIG test application.  On Debian Wheezy use:
 ```
 sudo apt-get install fxload
 sudo apt-get install libusb-1.0-0-dev
