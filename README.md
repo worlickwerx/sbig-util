@@ -56,15 +56,24 @@ for about a second, then the cooling fan comes on.
 ### Building and running the SDK test code
 
 To validate that everything is installed properly thus far,
-you can run SBIG's test code.
+you can build and run SBIG's test code.
 ```
 cd sdk/app
 make
-./testapp
 ```
-This displays a help message:
+The usage is:
 ```
 ./testapp filePath fileType imgCount imgType expTime rm top left width heigh fr dcm
+
+fileType: SBIG or FITS
+imgCount: integer number of images to snap
+imgType:  LF=light field or DF=dark field
+expTime:  floating point exposure time in seconds
+rm:       readout mode 1x1, 2x2, 3x3 
+top, left, width, height:
+          image size (set all to zero for full size)
+fr:       1=enable fast readout (at cost of noise)
+dcm:      1=enable dual channel mode
 ```
 For example, to snap an image from the camera and store it in /tmp, run
 ```
