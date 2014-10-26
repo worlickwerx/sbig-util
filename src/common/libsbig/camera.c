@@ -48,8 +48,8 @@ struct sbig_ccd_struct {
     SHUTTER_COMMAND shutter_mode;
     GetCCDInfoResults0 info0;
     GetCCDInfoResults4 info4;
-    unsigned short top, left, height, width;
-    unsigned short *frame;
+    ushort top, left, height, width;
+    ushort *frame;
 };
 
 static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
@@ -89,7 +89,6 @@ int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
     }
     ccd->abg_mode = ABG_CLK_MED7;
     ccd->shutter_mode = SC_OPEN_SHUTTER; /* open during exp, close during ro */
-    ccd->readout_mode = RM_1X1;
 
     assert (ccd->info0.readoutModes > 0);
     ccd->readout_mode = ccd->info0.readoutInfo[0].mode;
@@ -192,9 +191,8 @@ int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep)
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_set_window (sbig_ccd_t ccd,
-                         unsigned short top, unsigned short left,
-                         unsigned short height, unsigned short width)
+int sbig_ccd_set_window (sbig_ccd_t ccd, ushort top, ushort left,
+                         ushort height, ushort width)
 {
     if (top > ccd->height || left > ccd->width || height > ccd->height
                                                || width > ccd->width)
@@ -207,9 +205,8 @@ int sbig_ccd_set_window (sbig_ccd_t ccd,
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_get_window (sbig_ccd_t ccd,
-                         unsigned short *topp, unsigned short *leftp,
-                         unsigned short *heightp, unsigned short *widthp)
+int sbig_ccd_get_window (sbig_ccd_t ccd, ushort *topp, ushort *leftp,
+                         ushort *heightp, ushort *widthp)
 {
     *topp = ccd->top;
     *leftp = ccd->left;
@@ -335,7 +332,7 @@ static int end_readout (sbig_ccd_t ccd)
     return ccd->sb->fun (CC_END_READOUT, &in, NULL);
 }
 
-static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, void *buf)
+static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, ushort *buf)
 {
     ReadoutLineParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
                              .pixelStart = start, .pixelLength = len };
@@ -345,7 +342,7 @@ static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, void *buf)
 
 int sbig_ccd_readout (sbig_ccd_t ccd)
 {
-    unsigned short *pp = ccd->frame;
+    ushort *pp = ccd->frame;
     int i, e;
 
     assert (pp != NULL);
@@ -365,7 +362,7 @@ int sbig_ccd_readout (sbig_ccd_t ccd)
  * in host byte order.
  */
 
-int sbig_ccd_writemem (sbig_ccd_t ccd, unsigned short *buf, int len)
+int sbig_ccd_writemem (sbig_ccd_t ccd, ushort *buf, int len)
 {
     int i;
 
@@ -378,10 +375,10 @@ int sbig_ccd_writemem (sbig_ccd_t ccd, unsigned short *buf, int len)
 
 int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
 {
-    unsigned short *pp = ccd->frame;
-    unsigned short *nrow;
+    ushort *pp = ccd->frame;
+    ushort *nrow;
     FILE *f;
-    int i, j;
+    int i;
 
     assert (pp != NULL);
 
@@ -391,7 +388,10 @@ int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
         goto error;
     if (fprintf (f, "P5 %d %d 65535\n", ccd->height, ccd->width) < 0)
         goto error;
+    /* Add 'height' rows, from top to bottom.
+     */
     for (i = 0; i < ccd->height; i++) {
+        int j;
         for (j = 0; j < ccd->width; j++)
             nrow[i] = htons (*pp++);
         if (fwrite (nrow, sizeof (*nrow), ccd->width, f) < ccd->width)
@@ -406,11 +406,11 @@ error:
     return CE_OS_ERROR;
 }
 
-int sbig_ccd_get_max (sbig_ccd_t ccd, unsigned short *maxp)
+int sbig_ccd_get_max (sbig_ccd_t ccd, ushort *maxp)
 {
     int i, j;
-    unsigned short max = 0;
-    unsigned short *pp = ccd->frame;
+    ushort max = 0;
+    ushort *pp = ccd->frame;
     for (i = 0; i < ccd->height; i++) {
         for (j = 0; j < ccd->width; j++)
             if (*pp > max)

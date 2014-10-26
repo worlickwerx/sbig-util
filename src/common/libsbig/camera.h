@@ -59,12 +59,10 @@ int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep);
  * Note: reset to full size internally when readout mode is selected.
  * Default: full size for readout mode
  */
-int sbig_ccd_set_window (sbig_ccd_t ccd,
-                         unsigned short top, unsigned short left,
-                         unsigned short height, unsigned short width);
-int sbig_ccd_get_window (sbig_ccd_t ccd,
-                         unsigned short *topp, unsigned short *leftp,
-                         unsigned short *heightp, unsigned short *widthp);
+int sbig_ccd_set_window (sbig_ccd_t ccd, ushort top, ushort left,
+                         ushort height, ushort width);
+int sbig_ccd_get_window (sbig_ccd_t ccd, ushort *topp, ushort *leftp,
+                         ushort *heightp, ushort *widthp);
 
 
 /* Exposure control: start exposure, poll for status, then end exposure
@@ -83,14 +81,14 @@ int sbig_ccd_readout (sbig_ccd_t ccd);
 /* Copy from internal buffer to memory, as a sequence of rows, pixels
  * in host byte order. Buffer len must == height*width (use get_window above)
  */
-int sbig_ccd_writemem (sbig_ccd_t ccd, unsigned short *buf, int len);
+int sbig_ccd_writemem (sbig_ccd_t ccd, ushort *buf, int len);
 
 /* Copy from internal buffer to a PGM file
  * Ref: netpbm.sourceforge.net/doc/pgm.html
  */
 int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename);
 
-int sbig_ccd_get_max (sbig_ccd_t ccd, unsigned short *max);
+int sbig_ccd_get_max (sbig_ccd_t ccd, ushort *max);
 
 #endif
 
