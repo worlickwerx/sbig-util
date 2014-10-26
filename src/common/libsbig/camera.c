@@ -50,6 +50,7 @@ struct sbig_ccd_struct {
     GetCCDInfoResults4 info4;
     ushort top, left, height, width;
     ushort *frame;
+    ulong exp_flags;
 };
 
 static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
@@ -215,13 +216,28 @@ int sbig_ccd_get_window (sbig_ccd_t ccd, ushort *topp, ushort *leftp,
     return CE_NO_ERROR;
 }
 
+int sbig_ccd_set_exposure_flags (sbig_ccd_t ccd, ulong flags)
+{
+    if ((flags & EXP_TIME_MASK) || (flags & EXP_MS_EXPOSURE))
+        return CE_BAD_PARAMETER;
+    ccd->exp_flags |= flags;
+    return CE_NO_ERROR;
+}
+
+int sbig_ccd_clr_exposure_flags (sbig_ccd_t ccd, ulong flags)
+{
+    if ((flags & EXP_TIME_MASK) || (flags & EXP_MS_EXPOSURE))
+        return CE_BAD_PARAMETER;
+    ccd->exp_flags &= ~flags;
+    return CE_NO_ERROR;
+}
+
 static bool has_cap_eshutter (sbig_ccd_t ccd)
 {
     ushort cap = ccd->info4.capabilitiesBits;
 
     return (cap & CB_CCD_ESHUTTER_MASK) == CB_CCD_ESHUTTER_YES;
 }
-
 
 /* Min exposure in seconds
  * FIXME: I've been conservative in grouping the ? cameras with ST7.
@@ -289,6 +305,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime)
         in.exposureTime |= EXP_MS_EXPOSURE;
     } else
         in.exposureTime = exposureTime * 100.0;
+    in.exposureTime |= ccd->exp_flags;
     return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 
@@ -388,7 +405,7 @@ int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
         goto error;
     if (fprintf (f, "P5 %d %d 65535\n", ccd->height, ccd->width) < 0)
         goto error;
-    /* Add 'height' rows, from top to bottom.
+    /* Add 'height' rows, from top to bottom, lsb first
      */
     for (i = 0; i < ccd->height; i++) {
         int j;

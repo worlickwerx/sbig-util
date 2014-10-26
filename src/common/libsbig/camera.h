@@ -64,6 +64,13 @@ int sbig_ccd_set_window (sbig_ccd_t ccd, ushort top, ushort left,
 int sbig_ccd_get_window (sbig_ccd_t ccd, ushort *topp, ushort *leftp,
                          ushort *heightp, ushort *widthp);
 
+/* Set/clear exposure flags:
+ *  EXP_FAST_READOUT, EXP_DUAL_CHANNEL_MODE, EXP_WAIT_FOR_TRIGGER_IN,
+ *  EXP_LIGHT_CLEAR, EXP_RIPPLE CORRECTION (for STF-8050/4070 only)
+ * Ref SBIGUdrv sec 3.2.1
+ */
+int sbig_ccd_set_exposure_flags (sbig_ccd_t ccd, ulong flags);
+int sbig_ccd_clr_exposure_flags (sbig_ccd_t ccd, ulong flags);
 
 /* Exposure control: start exposure, poll for status, then end exposure
  *  Status: CS_IDLE, CS_IN_PROGRESS, CS_INTEGRATING, CS_INTEGRATION_COMPLETE
