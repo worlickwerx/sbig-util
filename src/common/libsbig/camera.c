@@ -395,7 +395,7 @@ int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
     ushort *pp = ccd->frame;
     ushort *nrow;
     FILE *f;
-    int i;
+    int i, j;
 
     assert (pp != NULL);
 
@@ -403,10 +403,9 @@ int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
 
     if (!(f = fopen (filename, "w+")))
         goto error;
-    if (fprintf (f, "P5 %d %d 65535\n", ccd->height, ccd->width) < 0)
+    if (fprintf (f, "P5 %d %d 65535\n", ccd->width, ccd->height) < 0)
         goto error;
     for (i = 0; i < ccd->height; i++) {
-        int j;
         for (j = 0; j < ccd->width; j++)
             nrow[j] = htons (*pp++);
         if (fwrite (nrow, sizeof (*nrow), ccd->width, f) < ccd->width)
