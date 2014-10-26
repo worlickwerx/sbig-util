@@ -405,12 +405,10 @@ int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
         goto error;
     if (fprintf (f, "P5 %d %d 65535\n", ccd->height, ccd->width) < 0)
         goto error;
-    /* Add 'height' rows, from top to bottom, lsb first
-     */
     for (i = 0; i < ccd->height; i++) {
         int j;
         for (j = 0; j < ccd->width; j++)
-            nrow[i] = htons (*pp++);
+            nrow[j] = htons (*pp++);
         if (fwrite (nrow, sizeof (*nrow), ccd->width, f) < ccd->width)
             goto error;
     }
