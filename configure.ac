@@ -53,9 +53,11 @@ AC_C_CONST
 ##
 AC_MSG_CHECKING([for usable sdk libdir])
 case "$host_cpu" in
-    i386|i686)	sdk_libdir="sdk/arch/i386" ;;
-    x86_64)	sdk_libdir="sdk/arch/x86_64" ;;
-    arm*)	sdk_libdir="sdk/arch/arm" ;;
+    i386|i686)	sdk_libdir="sdk/libs/i386" ;;
+    x86_64)	sdk_libdir="sdk/libs/x86_64" ;;
+    armv6l)	sdk_libdir="sdk/libs/arm_v6" ;;
+    armv7l)	sdk_libdir="sdk/libs/arm_v7" ;;
+    armv8l)	sdk_libdir="sdk/libs/arm_v8" ;;
     *)		AC_MSG_RESULT([no]) ;;
 esac
 AC_MSG_RESULT([yes])
