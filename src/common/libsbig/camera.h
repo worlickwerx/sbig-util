@@ -86,8 +86,7 @@ int sbig_ccd_writemem (sbig_ccd_t ccd, unsigned short *buf, int len);
  */
 int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename);
 
-/* Readout control
- */
+int sbig_ccd_get_max (sbig_ccd_t ccd, unsigned short *max);
 
 #endif
 

@@ -406,6 +406,20 @@ error:
     return CE_OS_ERROR;
 }
 
+int sbig_ccd_get_max (sbig_ccd_t ccd, unsigned short *maxp)
+{
+    int i, j;
+    unsigned short max = 0;
+    unsigned short *pp = ccd->frame;
+    for (i = 0; i < ccd->height; i++) {
+        for (j = 0; j < ccd->width; j++)
+            if (*pp > max)
+                max = *pp;
+    }
+    *maxp = max;
+    return CE_NO_ERROR;
+}
+
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
 {
     EstablishLinkParams in = { .sbigUseOnly = 0 };
