@@ -24,11 +24,11 @@ SDK drop dated 2014-10-26T18-10 built for
 * 32-bit ARM (v6, v7, v8)
 * 32-bit x86
 * 64-bit x86
-and as I understand it all builds were on Debian 7 derived distros
-(Raspbian for arm v6, Ubuntu 14.04 for the rest)
 
-My testing thus far is on a BeagleBone black (ARM) running Debian
-7.0 (Wheezy), with an SBIG ST-8XME USB camera and CFW-10 filter wheel.
+As I understand it all builds were on Debian 7 derived distros
+(Raspbian for arm v6, Ubuntu 14.04 for the rest).  My testing thus
+far is on a BeagleBone black (ARM) running Debian 7.0 (Wheezy),
+with an SBIG ST-8XME USB camera and CFW-10 filter wheel.
 
 ### Prerequisites
 You will need to install libusb version 1.0.x and fxload,
