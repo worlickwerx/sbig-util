@@ -13,17 +13,19 @@ APP_NAME   = testapp
 APP_SRC    = testmain.cpp csbigcam.cpp csbigimg.cpp
 APP_OBJ    = testmain.o   csbigcam.o   csbigimg.o
 
-ARCHDIR    = $(PWD)/../arch/$(shell arch)
+ARCHDIR    = $(PWD)/../libs/$(shell arch | sed -e 's/armv6l/arm_v6/' \
+                                               -e 's/armv7l/arm_v7/' \
+                                               -e 's/armv8l/arm_v8/')
 INCLUDE    = -I/usr/include/libusb-1.0/
 LIBRARY    = -Wl,-rpath,$(ARCHDIR) -L$(ARCHDIR)
 
 
-APP_FLAGS  = -O2 $(INCLUDE) $(LIBRARY) -Wall
+APP_FLAGS  = -O2 $(INCLUDE) -Wall
 ####################################################################################
 all: $(APP_NAME)
 ####################################################################################
 $(APP_NAME): $(APP_OBJ)
-	  g++ $(APP_FLAGS) -o $(APP_DEST)$(APP_NAME) $(APP_OBJ) -lsbigudrv -lcfitsio -lm -lusb-1.0
+	  g++ $(APP_FLAGS) -o $(APP_DEST)$(APP_NAME) $(APP_OBJ) $(LIBRARY) -lsbigudrv -lcfitsio -lm -lusb-1.0
 	  chmod a+x $(APP_DEST)$(APP_NAME)
 
 testmain.o : testmain.cpp csbigcam.h csbigimg.h
