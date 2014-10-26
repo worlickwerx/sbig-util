@@ -20,10 +20,12 @@ the SBIG universal (all user space) driver, and some test code.
 
 We are limited to architectures for which SBIG pre-compiled the
 libraries in the SDK.  As of this writing, sbig-util includes the
-SDK drop dated `2014-10-21T14-29`, built for:
-* 32-bit ARM (compiled on Raspberry Pi, version unknown)
-* 32-bit x86 (compiled on Ubuntu 14.04)
-* 64-bit x86 (compiled on Ubuntu 14.04)
+SDK drop dated 2014-10-26T18-10 built for
+* 32-bit ARM (v6, v7, v8)
+* 32-bit x86
+* 64-bit x86
+and as I understand it all builds were on Debian 7 derived distros
+(Raspbian for arm v6, Ubuntu 14.04 for the rest)
 
 My testing thus far is on a BeagleBone black (ARM) running Debian
 7.0 (Wheezy), with an SBIG ST-8XME USB camera and CFW-10 filter wheel.
@@ -78,5 +80,5 @@ dcm:      1=enable dual channel mode
 ```
 For example, to snap an image from the camera and store it in /tmp, run
 ```
-./testapp /tmp/ SBIG 1 LF 0.01 1x1 0 0 0 0 1 1
+./testapp /tmp/ FITS 1 LF 0.01 1x1 0 0 0 0 1 1
 ```
