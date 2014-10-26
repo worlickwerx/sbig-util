@@ -12,7 +12,8 @@ bin_PROGRAMS = sbig
 
 sbigbin_PROGRAMS = \
 	sbig-info \
-	sbig-cfw
+	sbig-cfw \
+	sbig-snap
 
 LDADD = \
 	$(top_builddir)/src/common/libsbig/libsbig.la \
