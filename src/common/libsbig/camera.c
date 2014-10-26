@@ -51,6 +51,7 @@ struct sbig_ccd_struct {
     ushort top, left, height, width;
     ushort *frame;
     ulong exp_flags;
+    double exposureTime;
 };
 
 static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
@@ -306,6 +307,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime)
     } else
         in.exposureTime = exposureTime * 100.0;
     in.exposureTime |= ccd->exp_flags;
+    ccd->exposureTime = exposureTime; /* leave it here for stats later */
     return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 
@@ -390,6 +392,29 @@ int sbig_ccd_writemem (sbig_ccd_t ccd, ushort *buf, int len)
     return CE_NO_ERROR;
 }
 
+static int add_comments (sbig_ccd_t ccd, FILE *f)
+{
+    int i = lookup_roinfo (ccd, ccd->readout_mode);
+
+    if (fprintf (f, "P5 %d %d 65535\n", ccd->width, ccd->height) < 0)
+        return -1;
+    if (fprintf (f, "# SBIG %s\n", sbig_strcam (ccd->info0.cameraType)) < 0)
+        return -1;
+    if (fprintf (f, "# exposureTime %.3f seconds\n", ccd->exposureTime) < 0)
+        return -1;
+    if (fprintf (f, "# mode %s (%d x %d) %2.2f e-/ADU %3.2f x %-3.2f microns\n",
+                 ccd->readout_mode == RM_1X1 ? "high" :
+                 ccd->readout_mode == RM_2X2 ? "medium" :
+                 ccd->readout_mode == RM_3X3 ? "low" : "other",
+                 ccd->info0.readoutInfo[i].width,
+                 ccd->info0.readoutInfo[i].height,
+                 bcd2_2 (ccd->info0.readoutInfo[i].gain),
+                 bcd6_2 (ccd->info0.readoutInfo[i].pixelWidth),
+                 bcd6_2 (ccd->info0.readoutInfo[i].pixelHeight)) < 0)
+        return -1;
+    return 0;
+}
+
 int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
 {
     ushort *pp = ccd->frame;
@@ -404,6 +429,8 @@ int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
     if (!(f = fopen (filename, "w+")))
         goto error;
     if (fprintf (f, "P5 %d %d 65535\n", ccd->width, ccd->height) < 0)
+        goto error;
+    if (add_comments (ccd, f) < 0)
         goto error;
     for (i = 0; i < ccd->height; i++) {
         for (j = 0; j < ccd->width; j++)
