@@ -295,7 +295,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime)
     return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 
-int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, ushort *sp)
+int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, PAR_COMMAND_STATUS *sp)
 {
     ushort status;
     int e = sbig_query_cmd_status (ccd->sb, CC_START_EXPOSURE, &status);
