@@ -40,9 +40,12 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-#define OPTIONS "h"
+#define OPTIONS "ht:d:C:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
+    {"exposure-time", required_argument,     0, 't'},
+    {"image-directory", required_argument,   0, 'd'},
+    {"chip",          required_argument,   0, 'C'},
     {0, 0, 0, 0},
 };
 
@@ -52,6 +55,9 @@ void usage (void)
 {
     fprintf (stderr,
 "Usage: sbig-snap [OPTIONS]\n"
+"  -t, --exposure-time DOUBLE exposure time in seconds (default 1.0)\n"
+"  -d, --image-directory DIR  where to put images (default /mnt/img)\n"
+"  -C, --ccd-chip CHIP        use, imaging, tracking, or ext-tracking\n"
 );
     exit (1);
 }
@@ -66,15 +72,34 @@ int main (int argc, char *argv[])
     CAMERA_TYPE type;
     CCD_REQUEST chip = CCD_IMAGING;
     PAR_COMMAND_STATUS status;
+    char *imagedir = "/mnt/img";
     char filename[PATH_MAX];
     char date[64];
-    double t = 0.2;
+    double t = 1.0;
     bool verbose = true;
 
     log_init ("sbig-info");
 
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
+            case 't': /* --exposure-time SEC */
+                t = strtod (optarg, NULL);
+                if (t < 0 || t > 86400)
+                    msg_exit ("error parsing --exposure-time argument");
+                break;
+            case 'C': /* --ccd-chip CHIP */
+                if (!strcmp (optarg, "imaging"))
+                    chip = CCD_IMAGING;
+                else if (!strcmp (optarg, "tracking"))
+                    chip = CCD_TRACKING;
+                else if (!strcmp (optarg, "ext-tracking"))
+                    chip = CCD_EXT_TRACKING;
+                else
+                    msg_exit ("error parsing --ccd-chip argument");
+                break;
+            case 'd': /* --image-directory DIR */
+                imagedir = optarg;
+                break;
             case 'h': /* --help */
             default:
                 usage ();
@@ -83,8 +108,8 @@ int main (int argc, char *argv[])
     if (optind != argc)
         usage ();
 
-    snprintf (filename, sizeof (filename), "/mnt/img/LF_%s.png",
-              ctime_iso8601_now (date, sizeof (date)));
+    snprintf (filename, sizeof (filename), "%s/LF_%s.png",
+              imagedir, ctime_iso8601_now (date, sizeof (date)));
 
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
@@ -118,14 +143,14 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_ccd_start_exposure");
     if (verbose)
         msg ("exposure: start");
-    //sleep (t);
     do {
         if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
             msg_exit ("sbig_ccd_start_exposure");
-        if (verbose)
-            msg ("exposure: %d", status);
+        fprintf (stderr, ".");
         if (status != CS_INTEGRATION_COMPLETE)
-            usleep (100000); /* 100 msec */
+            usleep ((t / 4) * 1000000);
+        else
+            fprintf (stderr, "\n");
     } while (status != CS_INTEGRATION_COMPLETE);
     if ((e = sbig_ccd_end_exposure (ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure");
