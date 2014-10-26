@@ -33,6 +33,8 @@
 #include <dlfcn.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <sys/param.h>
+#include <time.h>
 
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
@@ -43,6 +45,8 @@ static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {0, 0, 0, 0},
 };
+
+char *ctime_iso8601_now (char *buf, size_t sz);
 
 void usage (void)
 {
@@ -60,9 +64,10 @@ int main (int argc, char *argv[])
     int ch;
     sbig_ccd_t ccd;
     CAMERA_TYPE type;
-    CCD_REQUEST chip = CCD_TRACKING;
+    CCD_REQUEST chip = CCD_IMAGING;
     PAR_COMMAND_STATUS status;
-    char *filename = "image.pgm";
+    char filename[PATH_MAX];
+    char date[64];
     double t = 0.2;
     bool verbose = true;
 
@@ -77,6 +82,9 @@ int main (int argc, char *argv[])
     }
     if (optind != argc)
         usage ();
+
+    snprintf (filename, sizeof (filename), "/mnt/img/LF_%s.png",
+              ctime_iso8601_now (date, sizeof (date)));
 
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
@@ -97,6 +105,8 @@ int main (int argc, char *argv[])
         msg ("Link established to %s", sbig_strcam (type));
     if ((e = sbig_ccd_create (sb, chip, &ccd)))
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
+    if ((e = sbig_ccd_set_readout_mode (ccd, RM_1X1)))
+        msg_exit ("sbig_ccd_set_readout_mode");
 
     /* Just in case we left an exposure going, end it
      */
@@ -123,8 +133,17 @@ int main (int argc, char *argv[])
         msg ("exposure: end");
     if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure");
-    if (verbose)
-        msg ("readout complete");
+    if (verbose) {
+        unsigned short max;
+        unsigned short top, left, h, w;
+        if ((e = sbig_ccd_get_max (ccd, &max)) != CE_NO_ERROR)
+            msg_exit ("sbig_ccd_get_max");
+        msg ("readout complete (max pixel %hu)", max);
+        if ((e = sbig_ccd_get_window (ccd, &top, &left, &h, &w)) != CE_NO_ERROR)
+            msg_exit ("sbig_ccd_get_window"); 
+        msg ("image is %hux%hu", h, w); /* FIXME */
+    }
+
     if ((e = sbig_ccd_writepgm (ccd, filename)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_writepgm %s", filename);
     if (verbose)
@@ -137,6 +156,20 @@ int main (int argc, char *argv[])
     sbig_destroy (sb);
     log_fini ();
     return 0;
+}
+
+char *ctime_iso8601_now (char *buf, size_t sz)
+{
+    struct tm tm;
+    time_t now = time (NULL);
+
+    memset (buf, 0, sz);
+
+    if (!localtime_r (&now, &tm))
+        return (NULL);
+    strftime (buf, sz, "%FT%T", &tm);
+
+    return (buf);
 }
 
 /*
