@@ -33,6 +33,7 @@ int sbig_ccd_get_info4 (sbig_ccd_t ccd, GetCCDInfoResults4 *info);
 /* Get/set ccd anti-blooming gate state (used on next exposure/readout)
  *  ABG_LOW7, ABG_CLK_LOW7, ABG_CLK_MED7, ABG_CLK_HI7
  * Only affects TC211 tracking CCD on ST-7/8/etc and imaging CCD on PixCel255.
+ * Default: ABG_CLK_MED7
  */
 int sbig_ccd_set_abg (sbig_ccd_t ccd, ABG_STATE7 state);
 int sbig_ccd_get_abg (sbig_ccd_t ccd, ABG_STATE7 *statep);
@@ -40,6 +41,7 @@ int sbig_ccd_get_abg (sbig_ccd_t ccd, ABG_STATE7 *statep);
 /* Get/set readout binning mode (used on next exposure/readout)
  *  RM_1X1, RM_2X2, RM_3X3, RM_NX1, RM_NX2, RM_NX3,
  *  RM_1X1_VOFFCHIP, RM_2X2_VOFFCHIP, RM_3X3_VOFFCHIP, RM_9X9, RM_MXN.
+ * Default: RM_1X1
  */
 int sbig_ccd_set_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE mode);
 int sbig_ccd_get_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE *modep);
@@ -47,6 +49,7 @@ int sbig_ccd_get_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE *modep);
 /* Get/set shutter mode (used on next exposure/readout)
  *  SC_LEAVE_SHUTTER, SC_OPEN_SHUTTER, SC_CLOSE_SHUTTER,
  *  SC_INITIALIZE_SHUTTER, SC_OPEN_EXT_SHUTTER, SC_CLOSE_EXT_SHUTTER
+ * Default: SC_OPEN_SHUTTER
  */
 int sbig_ccd_set_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND mode);
 int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep);
@@ -54,6 +57,7 @@ int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep);
 /* Set top most row to readout (0 based), left most pixel (0, based),
  * and image height and width in binned pixels (used on next exposure/readout)
  * Note: reset to full size internally when readout mode is selected.
+ * Default: full size for readout mode
  */
 int sbig_ccd_set_window (sbig_ccd_t ccd,
                          unsigned short top, unsigned short left,
