@@ -40,12 +40,13 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-#define OPTIONS "ht:d:C:"
+#define OPTIONS "ht:d:C:D"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
+    {"dark",          no_argument,           0, 'D'},
     {"exposure-time", required_argument,     0, 't'},
     {"image-directory", required_argument,   0, 'd'},
-    {"chip",          required_argument,   0, 'C'},
+    {"chip",          required_argument,     0, 'C'},
     {0, 0, 0, 0},
 };
 
@@ -57,7 +58,8 @@ void usage (void)
 "Usage: sbig-snap [OPTIONS]\n"
 "  -t, --exposure-time DOUBLE exposure time in seconds (default 1.0)\n"
 "  -d, --image-directory DIR  where to put images (default /mnt/img)\n"
-"  -C, --ccd-chip CHIP        use, imaging, tracking, or ext-tracking\n"
+"  -C, --ccd-chip CHIP        use imaging, tracking, or ext-tracking\n"
+"  -D, --dark                 take a dark frame\n"
 );
     exit (1);
 }
@@ -77,6 +79,7 @@ int main (int argc, char *argv[])
     char date[64];
     double t = 1.0;
     bool verbose = true;
+    bool dark = false;
 
     log_init ("sbig-info");
 
@@ -100,6 +103,9 @@ int main (int argc, char *argv[])
             case 'd': /* --image-directory DIR */
                 imagedir = optarg;
                 break;
+            case 'D': /* --dark */
+                dark = true;
+                break;
             case 'h': /* --help */
             default:
                 usage ();
@@ -108,8 +114,9 @@ int main (int argc, char *argv[])
     if (optind != argc)
         usage ();
 
-    snprintf (filename, sizeof (filename), "%s/LF_%s.png",
-              imagedir, ctime_iso8601_now (date, sizeof (date)));
+    snprintf (filename, sizeof (filename), "%s/%s_%s.png",
+              imagedir, dark ? "DF" : "LF",
+              ctime_iso8601_now (date, sizeof (date)));
 
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
@@ -117,21 +124,24 @@ int main (int argc, char *argv[])
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != 0)
         msg_exit ("%s", dlerror ());
-    if ((e = sbig_open_driver (sb)) != 0)
+    if ((e = sbig_open_driver (sb)) != CE_NO_ERROR)
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
 
-    if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
+    if ((e = sbig_open_device (sb, DEV_USB1)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if (verbose)
         msg ("Device open");
-    if ((e = sbig_establish_link (sb, &type)) != 0)
+    if ((e = sbig_establish_link (sb, &type)) != CE_NO_ERROR)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
     if (verbose)
         msg ("Link established to %s", sbig_strcam (type));
-    if ((e = sbig_ccd_create (sb, chip, &ccd)))
+    if ((e = sbig_ccd_create (sb, chip, &ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_ccd_set_readout_mode (ccd, RM_1X1)))
+    if ((e = sbig_ccd_set_readout_mode (ccd, RM_1X1)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode");
+    if ((e = sbig_ccd_set_shutter_mode (ccd,
+                    dark ? SC_CLOSE_SHUTTER : SC_OPEN_SHUTTER)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_set_shutter_mode");
 
     /* Just in case we left an exposure going, end it
      */
