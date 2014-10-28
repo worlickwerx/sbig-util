@@ -23,6 +23,33 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <sys/types.h>
+#include <stdio.h>
+
+#include "handle.h"
+#include "handle_impl.h"
+#include "sbigudrv.h"
+#include "sbig.h"
+
+int sbig_temp_set (sbig_t sb, TEMPERATURE_REGULATION reg, double ccdSetpoint)
+{
+    SetTemperatureRegulationParams2 in = { .regulation = reg,
+                                           .ccdSetpoint = ccdSetpoint };
+    
+    return sb->fun (CC_SET_TEMPERATURE_REGULATION2, &in, NULL); 
+}
+
+int sbig_temp_get_stat (sbig_t sb, QueryTemperatureStatusResults *stat)
+{
+    QueryTemperatureStatusParams in = { .request = TEMP_STATUS_STANDARD };
+    return sb->fun (CC_QUERY_TEMPERATURE_STATUS, &in, stat); 
+}
+
+int sbig_temp_get_stat2 (sbig_t sb, QueryTemperatureStatusResults2 *stat2)
+{
+    QueryTemperatureStatusParams in = { .request = TEMP_STATUS_ADVANCED};
+    return sb->fun (CC_QUERY_TEMPERATURE_STATUS, &in, stat2); 
+}
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
