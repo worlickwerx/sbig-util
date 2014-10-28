@@ -73,6 +73,7 @@ AC_CHECK_FUNCS( \
 )
 X_AC_CHECK_COND_LIB(dl, dlerror)
 X_AC_CHECK_COND_LIB(m, sqrt)
+X_AC_CHECK_COND_LIB(cfitsio, ffopen)
 
 ##
 # Epilogue
