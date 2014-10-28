@@ -40,6 +40,7 @@
 void show_cfw_info (sbig_t sb, int ac, char **av);
 void show_driver_info (sbig_t sb, int ac, char **av);
 void show_ccd_info (sbig_t sb, CCD_REQUEST chip, int ac, char **av);
+void show_cooler_info (sbig_t sb, int ac, char **av);
 
 #define OPTIONS "h"
 static const struct option longopts[] = {
@@ -54,6 +55,7 @@ void usage (void)
 "       sbig-info imaging-ccd\n"
 "       sbig-info tracking-ccd\n"
 "       sbig-info cfw\n"
+"       sbig-info cooler\n"
 );
     exit (1);
 }
@@ -96,12 +98,51 @@ int main (int argc, char *argv[])
         show_driver_info (sb, argc - optind, argv + optind);
     else if (!strcmp (cmd, "cfw"))
         show_cfw_info (sb, argc - optind, argv + optind);
+    else if (!strcmp (cmd, "cooler"))
+        show_cooler_info (sb, argc - optind, argv + optind);
     else
         usage ();
 
     sbig_destroy (sb);
     log_fini ();
     return 0;
+}
+
+void show_cooler_info (sbig_t sb, int ac, char **av)
+{
+    QueryTemperatureStatusResults2 info;
+    CAMERA_TYPE type;
+    int e;
+
+    if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
+        msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
+    if ((e = sbig_establish_link (sb, &type)) != 0)
+        msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
+
+    if ((e = sbig_temp_get_info (sb, &info)) != CE_NO_ERROR)
+        msg_exit ("sbig_temp_get_info: %s", sbig_get_error_string (sb, e));
+    msg ("cooling:              %s", info.coolingEnabled ? "enabled"
+                                                         : "disabled");
+    msg ("imaging ccd setpoint: %.2fC", info.ccdSetpoint);
+    msg ("imaging ccd:          %.2fC", info.imagingCCDTemperature);
+    msg ("tracking setpoint:    %.2fC", info.trackingCCDSetpoint);
+    msg ("tracking ccd:         %.2fC", info.trackingCCDTemperature);
+    //msg ("ext-track ccd:     %.2fC", info.externalTrackingCCDTemperature);
+    msg ("ambient:              %.2fC", info.ambientTemperature);
+    msg ("heatsink:             %.2fC", info.heatsinkTemperature);
+
+    msg ("imaging pwr:          %.0f%%", info.imagingCCDPower);
+    msg ("tracking pwr:         %.0f%%", info.trackingCCDPower);
+    //msg ("ext-track pwr:        %.0f percent", info.externalTrackingCCDPower);
+    
+    msg ("fan:                  %s", info.fanEnabled == FS_OFF ? "off"
+                                   : info.fanEnabled == FS_ON ? "manual"
+                                   : "auto");
+    msg ("fan pwr:              %.0f%%", info.fanPower);
+    msg ("fan speed:            %.0fRPM", info.fanSpeed);
+
+    if ((e = sbig_close_device (sb)) != 0)
+        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
 }
 
 void show_driver_info (sbig_t sb, int ac, char **av)
