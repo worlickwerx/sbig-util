@@ -145,11 +145,11 @@ int main (int argc, char *argv[])
 
     /* Just in case we left an exposure going, end it
      */
-    if ((e = sbig_ccd_end_exposure (ccd)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_end_exposure (ccd, ABORT_DONT_END)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure");
     if (verbose)
         msg ("exposure: end");
-    if ((e = sbig_ccd_start_exposure (ccd, t)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_start_exposure (ccd, 0, t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure");
     if (verbose)
         msg ("exposure: start");
@@ -162,7 +162,7 @@ int main (int argc, char *argv[])
         else
             fprintf (stderr, "\n");
     } while (status != CS_INTEGRATION_COMPLETE);
-    if ((e = sbig_ccd_end_exposure (ccd)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure");
     if (verbose)
         msg ("exposure: end");
