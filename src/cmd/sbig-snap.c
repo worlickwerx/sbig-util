@@ -153,14 +153,13 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_ccd_start_exposure");
     if (verbose)
         msg ("exposure: start");
+    usleep (1E6*t);
     do {
         if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
             msg_exit ("sbig_ccd_start_exposure");
         fprintf (stderr, ".");
         if (status != CS_INTEGRATION_COMPLETE)
-            usleep ((t / 4) * 1000000);
-        else
-            fprintf (stderr, "\n");
+            usleep (500*1E3);
     } while (status != CS_INTEGRATION_COMPLETE);
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure");
