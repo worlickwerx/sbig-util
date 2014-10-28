@@ -74,11 +74,13 @@ int sbig_ccd_clr_exposure_flags (sbig_ccd_t ccd, ulong flags);
 
 /* Exposure control: start exposure, poll for status, then end exposure
  *  Status: CS_IDLE, CS_IN_PROGRESS, CS_INTEGRATING, CS_INTEGRATION_COMPLETE
+ * Flags for start_exposure: START_SKIP_VDD, START_MOTOR_ALWAYS_ON.
+ * Flags for end_exposure: ABORT_DONT_END, END_SKIP_DELAY
  * Ref SBIGUDrv sec 3.2.1, 3.2.2
  */
-int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime);
+int sbig_ccd_start_exposure (sbig_ccd_t ccd, ushort flags, double exposureTime);
 int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, PAR_COMMAND_STATUS *sp);
-int sbig_ccd_end_exposure (sbig_ccd_t ccd);
+int sbig_ccd_end_exposure (sbig_ccd_t ccd, ushort flags);
 
 /* Readout to internal buffer (start, iterate reading lines, stop).
  * Ref SBIGUDrv sec 3.2.3, 3.2.4, 3.2.5

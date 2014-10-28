@@ -299,9 +299,10 @@ static double min_exposure (sbig_ccd_t ccd)
     return m;
 }
 
-int sbig_ccd_start_exposure (sbig_ccd_t ccd, double exposureTime)
+int sbig_ccd_start_exposure (sbig_ccd_t ccd, unsigned short flags,
+                             double exposureTime)
 {
-    StartExposureParams2 in = { .ccd = ccd->ccd,
+    StartExposureParams2 in = { .ccd = ccd->ccd | flags,
                                 .abgState = ccd->abg_mode,
                                 .openShutter = ccd->shutter_mode,
                                 .readoutMode = ccd->readout_mode,
@@ -334,9 +335,9 @@ int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, PAR_COMMAND_STATUS *sp)
     return e;
 }
 
-int sbig_ccd_end_exposure (sbig_ccd_t ccd)
+int sbig_ccd_end_exposure (sbig_ccd_t ccd, ushort flags)
 {
-    EndExposureParams in = { .ccd = ccd->ccd };
+    EndExposureParams in = { .ccd = ccd->ccd | flags };
 
     return ccd->sb->fun (CC_END_EXPOSURE, &in, NULL);
 }
