@@ -89,8 +89,8 @@ int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
         free (ccd);
         return e;
     }
-    ccd->abg_mode = ABG_CLK_MED7;
-    ccd->shutter_mode = SC_OPEN_SHUTTER; /* open during exp, close during ro */
+    ccd->abg_mode = ABG_LOW7;            /* ABG shut off during exposure */
+    ccd->shutter_mode = SC_OPEN_SHUTTER; /* open during exp, close during r/o */
 
     assert (ccd->info0.readoutModes > 0);
     ccd->readout_mode = ccd->info0.readoutInfo[0].mode;

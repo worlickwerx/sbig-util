@@ -33,7 +33,7 @@ int sbig_ccd_get_info4 (sbig_ccd_t ccd, GetCCDInfoResults4 *info);
 /* Get/set ccd anti-blooming gate state (used on next exposure/readout)
  *  ABG_LOW7, ABG_CLK_LOW7, ABG_CLK_MED7, ABG_CLK_HI7
  * Only affects TC211 tracking CCD on ST-7/8/etc and imaging CCD on PixCel255.
- * Default: ABG_CLK_MED7
+ * Default: ABG_LOW7.
  */
 int sbig_ccd_set_abg (sbig_ccd_t ccd, ABG_STATE7 state);
 int sbig_ccd_get_abg (sbig_ccd_t ccd, ABG_STATE7 *statep);
