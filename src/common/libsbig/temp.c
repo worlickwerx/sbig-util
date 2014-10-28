@@ -39,16 +39,10 @@ int sbig_temp_set (sbig_t sb, TEMPERATURE_REGULATION reg, double ccdSetpoint)
     return sb->fun (CC_SET_TEMPERATURE_REGULATION2, &in, NULL); 
 }
 
-int sbig_temp_get_stat (sbig_t sb, QueryTemperatureStatusResults *stat)
-{
-    QueryTemperatureStatusParams in = { .request = TEMP_STATUS_STANDARD };
-    return sb->fun (CC_QUERY_TEMPERATURE_STATUS, &in, stat); 
-}
-
-int sbig_temp_get_stat2 (sbig_t sb, QueryTemperatureStatusResults2 *stat2)
+int sbig_temp_get_info (sbig_t sb, QueryTemperatureStatusResults2 *info)
 {
     QueryTemperatureStatusParams in = { .request = TEMP_STATUS_ADVANCED};
-    return sb->fun (CC_QUERY_TEMPERATURE_STATUS, &in, stat2); 
+    return sb->fun (CC_QUERY_TEMPERATURE_STATUS, &in, info); 
 }
 
 /*

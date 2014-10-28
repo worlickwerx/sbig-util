@@ -11,8 +11,7 @@ int sbig_temp_set (sbig_t sb, TEMPERATURE_REGULATION reg, double ccdSetpoint);
 
 /* Query temperature status
  */
-int sbig_temp_get_stat (sbig_t sb, QueryTemperatureStatusResults *stat);
-int sbig_temp_get_stat2 (sbig_t sb, QueryTemperatureStatusResults2 *stat2);
+int sbig_temp_get_info (sbig_t sb, QueryTemperatureStatusResults2 *info);
 
 #endif
 
