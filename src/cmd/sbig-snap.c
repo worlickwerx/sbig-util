@@ -40,13 +40,14 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-#define OPTIONS "ht:d:C:D"
+#define OPTIONS "ht:d:C:Dr:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"dark",          no_argument,           0, 'D'},
     {"exposure-time", required_argument,     0, 't'},
     {"image-directory", required_argument,   0, 'd'},
     {"chip",          required_argument,     0, 'C'},
+    {"resolution",    required_argument,     0, 'r'},
     {0, 0, 0, 0},
 };
 
@@ -60,6 +61,7 @@ void usage (void)
 "  -d, --image-directory DIR  where to put images (default /mnt/img)\n"
 "  -C, --ccd-chip CHIP        use imaging, tracking, or ext-tracking\n"
 "  -D, --dark                 take a dark frame\n"
+"  -r, --resolution RES       select hi, med, or lo resolution\n"
 );
     exit (1);
 }
@@ -80,6 +82,7 @@ int main (int argc, char *argv[])
     double t = 1.0;
     bool verbose = true;
     bool dark = false;
+    READOUT_BINNING_MODE readout_mode = RM_1X1; /* high res */
 
     log_init ("sbig-info");
 
@@ -105,6 +108,16 @@ int main (int argc, char *argv[])
                 break;
             case 'D': /* --dark */
                 dark = true;
+                break;
+            case 'r': /* --resolution hi|med|lo */
+                if (!strcmp (optarg, "hi"))
+                    readout_mode = RM_1X1;
+                else if (!strcmp (optarg, "med"))
+                    readout_mode = RM_2X2;
+                else if (!strcmp (optarg, "lo"))
+                    readout_mode = RM_3X3;
+                else
+                    msg_exit ("resolution can be hi, med, or lo");
                 break;
             case 'h': /* --help */
             default:
@@ -137,7 +150,7 @@ int main (int argc, char *argv[])
         msg ("Link established to %s", sbig_strcam (type));
     if ((e = sbig_ccd_create (sb, chip, &ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_ccd_set_readout_mode (ccd, RM_1X1)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_set_readout_mode (ccd, readout_mode)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode");
     if ((e = sbig_ccd_set_shutter_mode (ccd,
                     dark ? SC_CLOSE_SHUTTER : SC_OPEN_SHUTTER)) != CE_NO_ERROR)
@@ -148,7 +161,8 @@ int main (int argc, char *argv[])
     if ((e = sbig_ccd_end_exposure (ccd, ABORT_DONT_END)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure");
     if (verbose)
-        msg ("exposure: end");
+        msg ("exposure: abort (just in case)");
+
     if ((e = sbig_ccd_start_exposure (ccd, 0, t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure");
     if (verbose)
