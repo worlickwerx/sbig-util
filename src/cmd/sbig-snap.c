@@ -151,36 +151,37 @@ int main (int argc, char *argv[])
     if ((e = sbig_ccd_create (sb, chip, &ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_ccd_set_readout_mode (ccd, readout_mode)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_set_readout_mode");
+        msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_ccd_set_shutter_mode (ccd,
                     dark ? SC_CLOSE_SHUTTER : SC_OPEN_SHUTTER)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_set_shutter_mode");
+        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
 
     /* Just in case we left an exposure going, end it
      */
     if ((e = sbig_ccd_end_exposure (ccd, ABORT_DONT_END)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_end_exposure");
+        msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
     if (verbose)
         msg ("exposure: abort (just in case)");
 
     if ((e = sbig_ccd_start_exposure (ccd, 0, t)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_start_exposure");
+        msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
     if (verbose)
         msg ("exposure: start");
     usleep (1E6*t);
     do {
         if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
-            msg_exit ("sbig_ccd_start_exposure");
+            msg_exit ("sbig_get_exposure_status: %s", sbig_get_error_string (sb, e));
         fprintf (stderr, ".");
         if (status != CS_INTEGRATION_COMPLETE)
             usleep (500*1E3);
     } while (status != CS_INTEGRATION_COMPLETE);
+    fprintf (stderr, "\n");
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_end_exposure");
+        msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
     if (verbose)
         msg ("exposure: end");
     if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_end_exposure");
+        msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
     if (verbose) {
         unsigned short max;
         unsigned short top, left, h, w;
