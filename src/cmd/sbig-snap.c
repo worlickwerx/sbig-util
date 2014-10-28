@@ -83,6 +83,7 @@ int main (int argc, char *argv[])
     bool verbose = true;
     bool dark = false;
     READOUT_BINNING_MODE readout_mode = RM_1X1; /* high res */
+    QueryTemperatureStatusResults2 temp;
 
     log_init ("sbig-info");
 
@@ -155,6 +156,18 @@ int main (int argc, char *argv[])
     if ((e = sbig_ccd_set_shutter_mode (ccd,
                     dark ? SC_CLOSE_SHUTTER : SC_OPEN_SHUTTER)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
+
+    /* Stash away temp info at start of exposure.
+     */
+    if ((e = sbig_temp_get_info (sb, &temp)) != CE_NO_ERROR)
+        msg_exit ("sbig_temp_get_info: %s", sbig_get_error_string (sb, e));
+    if (verbose) {
+        msg ("cooler: %s setpoint %.2fC ccd %.2fC ambient %.2fC",
+             temp.coolingEnabled ? "enabled" : "disabled",
+             temp.ccdSetpoint,
+             temp.imagingCCDTemperature,
+             temp.ambientTemperature);
+    }
 
     /* Just in case we left an exposure going, end it
      */
