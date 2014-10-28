@@ -13,7 +13,8 @@ bin_PROGRAMS = sbig
 sbigbin_PROGRAMS = \
 	sbig-info \
 	sbig-cfw \
-	sbig-snap
+	sbig-snap \
+	sbig-cooler
 
 LDADD = \
 	$(top_builddir)/src/common/libsbig/libsbig.la \
