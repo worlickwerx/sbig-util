@@ -92,8 +92,17 @@ int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
     ccd->abg_mode = ABG_LOW7;            /* ABG shut off during exposure */
     ccd->shutter_mode = SC_OPEN_SHUTTER; /* open during exp, close during r/o */
 
+    /* Default to the first readout mode camera selects.
+     * On the ST-8 at least this is RM_1X1.
+     * N.B. readout_mode == readoutInfo->mode not readoutInfo index.
+     * Use lookup_roinfo() to find index of a particular RM_ mode.
+     */
     assert (ccd->info0.readoutModes > 0);
     ccd->readout_mode = ccd->info0.readoutInfo[0].mode;
+
+    /* Default to full frame for this readout mode.
+     * top, left, height, width are in binned pixels
+     */
     ccd->top = 0;
     ccd->left = 0;
     ccd->height = ccd->info0.readoutInfo[0].height;
