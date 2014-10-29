@@ -41,7 +41,7 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-#define OPTIONS "ht:d:C:r:n:D:"
+#define OPTIONS "ht:d:C:r:n:D:m:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -65,6 +65,7 @@ void usage (void)
 "  -r, --resolution RES       select hi, med, or lo resolution\n"
 "  -n, --count N              take N exposures\n"
 "  -D, --time-delta N         increase exposure time by N on each exposure\n"
+"  -m, --message string       add annotation to FITS file\n"
 );
     exit (1);
 }
@@ -88,11 +89,15 @@ int main (int argc, char *argv[])
     QueryTemperatureStatusResults2 temp;
     int i, count = 1;
     double time_delta = 0;
+    char *message = NULL;
 
     log_init ("sbig-info");
 
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
+            case 'm': /* --message string */
+                message = optarg;
+                break;
             case 'n': /* --count N */
                 count = strtoul (optarg, NULL, 10);
                 break;
@@ -254,11 +259,12 @@ int main (int argc, char *argv[])
         fits_create_img(fptr, USHORT_IMG, 2, naxes, &fstatus);
         fits_write_img(fptr, TUSHORT, 1, height*width, data, &fstatus);
 
-        /* FIXME write header */
         fits_write_key (fptr, TDOUBLE, "EXPTIME", &t,
                         "Exposure in seconds", &fstatus);
         fits_write_key (fptr, TDOUBLE, "CCD-TEMP", &temp.imagingCCDTemperature,
                         "CCD temp in degress C", &fstatus);
+        if (message)
+            fits_write_key (fptr, TSTRING, "COMMENT", message, "", &fstatus);
 
         fits_close_file (fptr, &fstatus);
         if (fstatus) {
