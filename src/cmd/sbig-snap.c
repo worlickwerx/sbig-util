@@ -36,14 +36,22 @@
 #include <sys/param.h>
 #include <time.h>
 #include <fitsio.h>
+#include <math.h>
 
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-void snap (sbig_t sb, CCD_REQUEST chip, READOUT_BINNING_MODE readout_mode,
-           double t, int count, double time_delta, const char *imagedir,
-           char *message, bool verbose);
+typedef struct snap_struct {
+    CCD_REQUEST chip;
+    READOUT_BINNING_MODE readout_mode;
+    double t;
+    int count;
+    double time_delta;
+    const char *imagedir;
+    const char *message;
+    bool verbose;
+} snap_t;
 
 #define OPTIONS "ht:d:C:r:n:D:m:"
 static const struct option longopts[] = {
@@ -57,7 +65,9 @@ static const struct option longopts[] = {
     {0, 0, 0, 0},
 };
 
-char *ctime_iso8601_now (char *buf, size_t sz);
+char *ctime_iso8601 (time_t t, char *buf, size_t sz);
+void snap_one (sbig_t sb, snap_t snap);
+void snap_series (sbig_t sb, snap_t snap);
 
 void usage (void)
 {
@@ -79,56 +89,59 @@ int main (int argc, char *argv[])
     const char *sbig_udrv = getenv ("SBIG_UDRV");
     int e, ch;
     sbig_t sb;
+    snap_t opt;
     CAMERA_TYPE type;
-    CCD_REQUEST chip = CCD_IMAGING;
-    READOUT_BINNING_MODE readout_mode = RM_1X1; /* high res */
-    char *imagedir = "/mnt/img";
-    double t = 1.0;
-    bool verbose = true;
-    int count = 1;
-    double time_delta = 0;
-    char *message = NULL;
 
     log_init ("sbig-snap");
 
+    memset (&opt, 0, sizeof (opt)); /* Set some defaults: */
+    opt.chip = CCD_IMAGING;         /* main imaging ccd */
+    opt.readout_mode = RM_1X1;      /* high resolution */
+    opt.imagedir = "/mnt/img";      /* where to write files */
+    opt.t = 1.0;                    /* 1s exposure time */
+    opt.count = 1;                  /* one exposure */
+    opt.verbose = true;
+    
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
             case 'm': /* --message string */
-                message = optarg;
+                opt.message = optarg;
                 break;
             case 'n': /* --count N */
-                count = strtoul (optarg, NULL, 10);
+                opt.count = strtoul (optarg, NULL, 10);
                 break;
             case 'D': /* --time-delta N */
-                time_delta = strtod (optarg, NULL);
+                opt.time_delta = strtod (optarg, NULL);
+                if (opt.time_delta < 0 || opt.time_delta > 86400)
+                    msg_exit ("error parsing --time-delta argument");
                 break;
             case 't': /* --exposure-time SEC */
-                t = strtod (optarg, NULL);
-                if (t < 0 || t > 86400)
+                opt.t = strtod (optarg, NULL);
+                if (opt.t < 0 || opt.t > 86400)
                     msg_exit ("error parsing --exposure-time argument");
                 break;
             case 'C': /* --ccd-chip CHIP */
                 if (!strcmp (optarg, "imaging"))
-                    chip = CCD_IMAGING;
+                    opt.chip = CCD_IMAGING;
                 else if (!strcmp (optarg, "tracking"))
-                    chip = CCD_TRACKING;
+                    opt.chip = CCD_TRACKING;
                 else if (!strcmp (optarg, "ext-tracking"))
-                    chip = CCD_EXT_TRACKING;
+                    opt.chip = CCD_EXT_TRACKING;
                 else
-                    msg_exit ("error parsing --ccd-chip argument");
+                    msg_exit ("error parsing --ccd-chip argument (imaging, tracking, ext-tracking)");
                 break;
             case 'd': /* --image-directory DIR */
-                imagedir = optarg;
+                opt.imagedir = optarg;
                 break;
             case 'r': /* --resolution hi|med|lo */
                 if (!strcmp (optarg, "hi"))
-                    readout_mode = RM_1X1;
+                    opt.readout_mode = RM_1X1;
                 else if (!strcmp (optarg, "med"))
-                    readout_mode = RM_2X2;
+                    opt.readout_mode = RM_2X2;
                 else if (!strcmp (optarg, "lo"))
-                    readout_mode = RM_3X3;
+                    opt.readout_mode = RM_3X3;
                 else
-                    msg_exit ("resolution can be hi, med, or lo");
+                    msg_exit ("error parsing --resolution (hi, med, lo)");
                 break;
             case 'h': /* --help */
             default:
@@ -153,15 +166,16 @@ int main (int argc, char *argv[])
      */
     if ((e = sbig_open_device (sb, DEV_USB1)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
-    if (verbose)
+    if (opt.verbose)
         msg ("Device open");
     if ((e = sbig_establish_link (sb, &type)) != CE_NO_ERROR)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
-    if (verbose)
+    if (opt.verbose)
         msg ("Link established to %s", sbig_strcam (type));
 
-    snap (sb, chip, readout_mode, t, count, time_delta, imagedir, message,
-          verbose);
+    /* Take pictures.
+     */
+    snap_series (sb, opt);
 
     /* Clean up.
      * N.B. this does not reset the camera's TE cooler
@@ -174,149 +188,201 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-void snap (sbig_t sb, CCD_REQUEST chip, READOUT_BINNING_MODE readout_mode,
-           double t, int count, double time_delta, const char *imagedir,
-           char *message, bool verbose)
+/* Wait for an exposure in progress to complete.
+ * We avoid polling the camera until the requested exposure time
+ * has elapsed, though I'm not sure if that's helpful.
+ */
+void exposure_wait (sbig_t sb, sbig_ccd_t ccd, snap_t opt)
 {
-    int e, i;
-    QueryTemperatureStatusResults2 temp;
     PAR_COMMAND_STATUS status;
-    sbig_ccd_t ccd;
-    char filename[PATH_MAX];
-    char date[64];
+    int e;
 
-    if ((e = sbig_ccd_create (sb, chip, &ccd)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_ccd_set_readout_mode (ccd, readout_mode)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
+    usleep (1E6 * opt.t);
+    do {
+        if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
+            msg_exit ("sbig_get_exposure_status: %s", sbig_get_error_string (sb, e));
+        if (opt.verbose)
+            fprintf (stderr, ".");
+        if (status != CS_INTEGRATION_COMPLETE)
+            usleep (1E3 * 500); /* 500ms */
+    } while (status != CS_INTEGRATION_COMPLETE);
+    if (opt.verbose)
+        fprintf (stderr, "\n");
+}
 
-    for (i = 0; i < count; i++) {
+/* Take a dark frame and leave it in the sbig_ccd_t buffer
+ * for subtraction from LF
+ */
+void snap_DF (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+{
+    int e;
 
-    snprintf (filename, sizeof (filename), "%s/%s_%s.fits",
-              imagedir, "LF",
-              ctime_iso8601_now (date, sizeof (date)));
+    if ((e = sbig_ccd_set_shutter_mode (ccd, SC_CLOSE_SHUTTER)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
+    if ((e = sbig_ccd_start_exposure (ccd, 0, opt.t)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
+    if (opt.verbose)
+        msg ("exposure: start DF #%d (%.2fs)", seq, opt.t);
+    exposure_wait (sb, ccd, opt);
+    if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
+    if (opt.verbose)
+        msg ("exposure: end DF #%d", seq);
+    if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
+    if (opt.verbose)
+        msg ("readout: DF #%d complete", seq);
+}
 
+/* Like dark frame, except shutter open, and readout with sutraction of DF.
+ * At the end, image has overwritten DF in sbig_ccd_t buffer.
+ */
+void snap_LF (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+{
+    int e;
 
-    /* Stash away temp info at start of exposure.
-     */
+    if ((e = sbig_ccd_set_shutter_mode (ccd, SC_OPEN_SHUTTER)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
+    if ((e = sbig_ccd_start_exposure (ccd, 0, opt.t)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
+    if (opt.verbose)
+        msg ("exposure: start LF #%d (%.2fs)", seq, opt.t);
+    exposure_wait (sb, ccd, opt);
+    if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
+    if (opt.verbose)
+        msg ("exposure: end LF #%d", seq);
+    if ((e = sbig_ccd_readout_subtract (ccd)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_readout_subtract: %s", sbig_get_error_string (sb, e));
+    if (opt.verbose)
+        msg ("readout LF #%d complete", seq);
+}
+
+double snap_temp (sbig_t sb, snap_t opt)
+{
+    QueryTemperatureStatusResults2 temp;
+    int e;
     if ((e = sbig_temp_get_info (sb, &temp)) != CE_NO_ERROR)
         msg_exit ("sbig_temp_get_info: %s", sbig_get_error_string (sb, e));
-    if (verbose) {
+    if (opt.verbose) {
         msg ("cooler: %s setpoint %.2fC ccd %.2fC ambient %.2fC",
              temp.coolingEnabled ? "enabled" : "disabled",
              temp.ccdSetpoint,
              temp.imagingCCDTemperature,
              temp.ambientTemperature);
     }
+    return temp.imagingCCDTemperature;
+}
 
-    /* Just in case we left an exposure going, end it
+void write_fits (sbig_t sb, sbig_ccd_t ccd, snap_t opt, time_t lf_start,
+              double temp, const char *filename, fitsfile *fptr, int *fstatus)
+{
+    ushort height, width;
+    ushort *data = sbig_ccd_get_data (ccd, &height, &width);
+    long naxes[2] = { width, height };
+
+    fits_create_img (fptr, USHORT_IMG, 2, naxes, fstatus);
+    fits_write_img (fptr, TUSHORT, 1, height * width, data, fstatus);
+
+    if (opt.message)
+        fits_write_key (fptr, TSTRING, "COMMENT", (char *)opt.message, "",
+                        fstatus);
+    fits_write_key (fptr, TDOUBLE, "EXPTIME", &opt.t,
+                    "Exposure in seconds", fstatus);
+    fits_write_key (fptr, TDOUBLE, "CCD-TEMP", &temp,
+                    "CCD temp in degress C", fstatus);
+
+    fits_close_file (fptr, fstatus);
+    if (*fstatus) {
+        fits_report_error (stderr, *fstatus);
+        exit (1);
+    }
+    if (opt.verbose)
+        msg ("wrote %hux%hu image to %s", height, width, filename);
+}
+
+void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+{
+    double dt, temp_lf, temp_df;
+    char filename[PATH_MAX];
+    char date[64];
+    time_t t;
+    fitsfile *fptr;
+    int fstatus = 0;
+
+    /* Create FITS file and deal with file creation errors before
+     * starting integration.
+     * FIXME: file naming assumes image cycle time is >1s
+     */
+    t = time (NULL);
+    snprintf (filename, sizeof (filename), "%s/%s_%s.fits",
+              opt.imagedir, "LF",
+              ctime_iso8601 (t, date, sizeof (date)));
+
+    (void)unlink (filename);
+    fits_create_file (&fptr, filename, &fstatus);
+    if (fstatus) {
+        fits_report_error (stderr, fstatus);
+        exit(1);
+    }
+
+    /* Dark frame
+     */
+    do {
+        temp_df = snap_temp (sb, opt);
+        snap_DF (sb, ccd, opt, seq);
+
+        temp_lf = snap_temp (sb, opt);
+        dt = fabs (temp_df - temp_lf);
+        if (dt > 1) /* FIXME: 1C threshold is somewhat arbitrary */
+            msg ("Retaking DF as CCD temp was not stable");
+    } while (dt > 1);
+    t = time (NULL); /* Record begining of LF for FITS */
+    snap_LF (sb, ccd, opt, seq);
+
+    /* Write output file
+     */
+    write_fits (sb, ccd, opt, t, temp_lf, filename, fptr, &fstatus);
+}
+
+void snap_series (sbig_t sb, snap_t opt)
+{
+    int e, i;
+    sbig_ccd_t ccd;
+
+    if ((e = sbig_ccd_create (sb, opt.chip, &ccd)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
+
+    /* Abort any in-progress exposure
      */
     if ((e = sbig_ccd_end_exposure (ccd, ABORT_DONT_END)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if (verbose)
+    if (opt.verbose)
         msg ("exposure: abort (just in case)");
+    /* FIXME: could verify that camera is idle here */
 
-
-    /* Take dark frame
+    /* Set up the readout mode which we hold constant over a series.
      */
-    if ((e = sbig_ccd_set_shutter_mode (ccd, SC_CLOSE_SHUTTER)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_ccd_start_exposure (ccd, 0, t)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
-    if (verbose)
-        msg ("exposure: start DF %.2fs", t);
-    usleep (1E6*t);
-    do {
-        if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
-            msg_exit ("sbig_get_exposure_status: %s", sbig_get_error_string (sb, e));
-        fprintf (stderr, ".");
-        if (status != CS_INTEGRATION_COMPLETE)
-            usleep (500*1E3);
-    } while (status != CS_INTEGRATION_COMPLETE);
-    fprintf (stderr, "\n");
-    if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if (verbose)
-        msg ("exposure: end DF");
-    if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
-    if (verbose)
-        msg ("DF readout complete");
+    if ((e = sbig_ccd_set_readout_mode (ccd, opt.readout_mode)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
 
-    /* Take auto-subtracted light frame
+    /* Take series of images and write them out as FITS files.
      */
-    if ((e = sbig_ccd_set_shutter_mode (ccd, SC_OPEN_SHUTTER)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_ccd_start_exposure (ccd, 0, t)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
-    if (verbose)
-        msg ("exposure: start LF %.2fs", t);
-    usleep (1E6*t);
-    do {
-        if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
-            msg_exit ("sbig_get_exposure_status: %s", sbig_get_error_string (sb, e));
-        fprintf (stderr, ".");
-        if (status != CS_INTEGRATION_COMPLETE)
-            usleep (500*1E3);
-    } while (status != CS_INTEGRATION_COMPLETE);
-    fprintf (stderr, "\n");
-    if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if (verbose)
-        msg ("exposure: end LF");
-    if ((e = sbig_ccd_readout_subtract (ccd)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_readout_subtract: %s", sbig_get_error_string (sb, e));
-    if (verbose)
-        msg ("LF readout complete");
-
-    /* Write FITS file 
-     */
-    if (1) { /* FIXME */
-        fitsfile *fptr;
-        int fstatus = 0;
-        ushort height, width;
-        ushort *data = sbig_ccd_get_data (ccd, &height, &width);
-        long naxes[2] = { width, height };
-
-        (void)unlink (filename);
-        fits_create_file (&fptr, filename, &fstatus);
-        if (fstatus) {
-            fits_report_error (stderr, fstatus);
-            exit(1);
-        }
-        fits_create_img(fptr, USHORT_IMG, 2, naxes, &fstatus);
-        fits_write_img(fptr, TUSHORT, 1, height*width, data, &fstatus);
-
-        fits_write_key (fptr, TDOUBLE, "EXPTIME", &t,
-                        "Exposure in seconds", &fstatus);
-        fits_write_key (fptr, TDOUBLE, "CCD-TEMP", &temp.imagingCCDTemperature,
-                        "CCD temp in degress C", &fstatus);
-        if (message)
-            fits_write_key (fptr, TSTRING, "COMMENT", message, "", &fstatus);
-
-        fits_close_file (fptr, &fstatus);
-        if (fstatus) {
-            fits_report_error (stderr, fstatus);
-            exit (1);
-        }
-        if (verbose)
-            msg ("wrote %hux%hu image to %s", height, width, filename);
-    }
-
-    t += time_delta;
+    for (i = 0; i < opt.count; i++) {
+        snap_one_autodark (sb, ccd, opt, i);
+        opt.t += opt.time_delta;
     }
 
     sbig_ccd_destroy (ccd);
 }
 
-char *ctime_iso8601_now (char *buf, size_t sz)
+char *ctime_iso8601 (time_t t, char *buf, size_t sz)
 {
     struct tm tm;
-    time_t now = time (NULL);
 
     memset (buf, 0, sz);
 
-    if (!localtime_r (&now, &tm))
+    if (!localtime_r (&t, &tm))
         return (NULL);
     strftime (buf, sz, "%FT%T", &tm);
 
