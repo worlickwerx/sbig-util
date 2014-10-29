@@ -41,6 +41,10 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
+void snap (sbig_t sb, CCD_REQUEST chip, READOUT_BINNING_MODE readout_mode,
+           double t, int count, double time_delta, const char *imagedir,
+           char *message, bool verbose);
+
 #define OPTIONS "ht:d:C:r:n:D:m:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
@@ -72,26 +76,20 @@ void usage (void)
 
 int main (int argc, char *argv[])
 {
-    sbig_t sb;
     const char *sbig_udrv = getenv ("SBIG_UDRV");
-    int e;
-    int ch;
-    sbig_ccd_t ccd;
+    int e, ch;
+    sbig_t sb;
     CAMERA_TYPE type;
     CCD_REQUEST chip = CCD_IMAGING;
-    PAR_COMMAND_STATUS status;
+    READOUT_BINNING_MODE readout_mode = RM_1X1; /* high res */
     char *imagedir = "/mnt/img";
-    char filename[PATH_MAX];
-    char date[64];
     double t = 1.0;
     bool verbose = true;
-    READOUT_BINNING_MODE readout_mode = RM_1X1; /* high res */
-    QueryTemperatureStatusResults2 temp;
-    int i, count = 1;
+    int count = 1;
     double time_delta = 0;
     char *message = NULL;
 
-    log_init ("sbig-info");
+    log_init ("sbig-snap");
 
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
@@ -140,6 +138,8 @@ int main (int argc, char *argv[])
     if (optind != argc)
         usage ();
 
+    /* Connect to driver
+     */
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
     if (!(sb = sbig_new ()))
@@ -149,6 +149,8 @@ int main (int argc, char *argv[])
     if ((e = sbig_open_driver (sb)) != CE_NO_ERROR)
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
 
+    /* Open camera
+     */
     if ((e = sbig_open_device (sb, DEV_USB1)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if (verbose)
@@ -157,6 +159,32 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
     if (verbose)
         msg ("Link established to %s", sbig_strcam (type));
+
+    snap (sb, chip, readout_mode, t, count, time_delta, imagedir, message,
+          verbose);
+
+    /* Clean up.
+     * N.B. this does not reset the camera's TE cooler
+     */
+    if ((e = sbig_close_device (sb)) != 0)
+        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
+
+    sbig_destroy (sb);
+    log_fini ();
+    return 0;
+}
+
+void snap (sbig_t sb, CCD_REQUEST chip, READOUT_BINNING_MODE readout_mode,
+           double t, int count, double time_delta, const char *imagedir,
+           char *message, bool verbose)
+{
+    int e, i;
+    QueryTemperatureStatusResults2 temp;
+    PAR_COMMAND_STATUS status;
+    sbig_ccd_t ccd;
+    char filename[PATH_MAX];
+    char date[64];
+
     if ((e = sbig_ccd_create (sb, chip, &ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_ccd_set_readout_mode (ccd, readout_mode)) != CE_NO_ERROR)
@@ -279,12 +307,6 @@ int main (int argc, char *argv[])
     }
 
     sbig_ccd_destroy (ccd);
-    if ((e = sbig_close_device (sb)) != 0)
-        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
-
-    sbig_destroy (sb);
-    log_fini ();
-    return 0;
 }
 
 char *ctime_iso8601_now (char *buf, size_t sz)
