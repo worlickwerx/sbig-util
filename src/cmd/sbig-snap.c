@@ -41,13 +41,15 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-#define OPTIONS "ht:d:C:r:"
+#define OPTIONS "ht:d:C:r:n:D:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
     {"image-directory", required_argument,   0, 'd'},
     {"chip",          required_argument,     0, 'C'},
     {"resolution",    required_argument,     0, 'r'},
+    {"count",         required_argument,     0, 'n'},
+    {"time-delta",    required_argument,     0, 'D'},
     {0, 0, 0, 0},
 };
 
@@ -61,6 +63,8 @@ void usage (void)
 "  -d, --image-directory DIR  where to put images (default /mnt/img)\n"
 "  -C, --ccd-chip CHIP        use imaging, tracking, or ext-tracking\n"
 "  -r, --resolution RES       select hi, med, or lo resolution\n"
+"  -n, --count N              take N exposures\n"
+"  -D, --time-delta N         increase exposure time by N on each exposure\n"
 );
     exit (1);
 }
@@ -82,11 +86,19 @@ int main (int argc, char *argv[])
     bool verbose = true;
     READOUT_BINNING_MODE readout_mode = RM_1X1; /* high res */
     QueryTemperatureStatusResults2 temp;
+    int i, count = 1;
+    double time_delta = 0;
 
     log_init ("sbig-info");
 
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
+            case 'n': /* --count N */
+                count = strtoul (optarg, NULL, 10);
+                break;
+            case 'D': /* --time-delta N */
+                time_delta = strtod (optarg, NULL);
+                break;
             case 't': /* --exposure-time SEC */
                 t = strtod (optarg, NULL);
                 if (t < 0 || t > 86400)
@@ -123,10 +135,6 @@ int main (int argc, char *argv[])
     if (optind != argc)
         usage ();
 
-    snprintf (filename, sizeof (filename), "%s/%s_%s.fits",
-              imagedir, "LF",
-              ctime_iso8601_now (date, sizeof (date)));
-
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
     if (!(sb = sbig_new ()))
@@ -148,6 +156,13 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_ccd_set_readout_mode (ccd, readout_mode)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
+
+    for (i = 0; i < count; i++) {
+
+    snprintf (filename, sizeof (filename), "%s/%s_%s.fits",
+              imagedir, "LF",
+              ctime_iso8601_now (date, sizeof (date)));
+
 
     /* Stash away temp info at start of exposure.
      */
@@ -252,6 +267,9 @@ int main (int argc, char *argv[])
         }
         if (verbose)
             msg ("wrote %hux%hu image to %s", height, width, filename);
+    }
+
+    t += time_delta;
     }
 
     sbig_ccd_destroy (ccd);
