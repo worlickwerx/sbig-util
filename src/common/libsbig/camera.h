@@ -86,6 +86,7 @@ int sbig_ccd_end_exposure (sbig_ccd_t ccd, ushort flags);
  * Ref SBIGUDrv sec 3.2.3, 3.2.4, 3.2.5
  */
 int sbig_ccd_readout (sbig_ccd_t ccd);
+int sbig_ccd_readout_subtract (sbig_ccd_t ccd);
 
 /* Get reference to internal buffer, a sequence of rows, pixels.
  */

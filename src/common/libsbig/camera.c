@@ -369,6 +369,14 @@ static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, ushort *buf)
     return ccd->sb->fun (CC_READOUT_LINE, &in, buf);
 }
 
+static int read_subtract_line (sbig_ccd_t ccd, ushort start, ushort len, ushort *buf)
+{
+    ReadoutLineParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
+                             .pixelStart = start, .pixelLength = len };
+
+    return ccd->sb->fun (CC_READ_SUBTRACT_LINE, &in, buf);
+}
+
 int sbig_ccd_readout (sbig_ccd_t ccd)
 {
     ushort *pp = ccd->frame;
@@ -379,6 +387,24 @@ int sbig_ccd_readout (sbig_ccd_t ccd)
     e = start_readout (ccd);
     for (i = 0; e == CE_NO_ERROR && i < ccd->height; i++) {
         e = readout_line (ccd, ccd->left, ccd->width, pp);
+        pp += ccd->width;
+    }
+    if (e == CE_NO_ERROR)
+        e = end_readout (ccd);
+
+    return e;
+}
+
+int sbig_ccd_readout_subtract (sbig_ccd_t ccd)
+{
+    ushort *pp = ccd->frame;
+    int i, e;
+
+    assert (pp != NULL);
+
+    e = start_readout (ccd);
+    for (i = 0; e == CE_NO_ERROR && i < ccd->height; i++) {
+        e = read_subtract_line (ccd, ccd->left, ccd->width, pp);
         pp += ccd->width;
     }
     if (e == CE_NO_ERROR)
