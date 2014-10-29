@@ -457,6 +457,13 @@ error:
     return CE_OS_ERROR;
 }
 
+ushort *sbig_ccd_get_data (sbig_ccd_t ccd, ushort *height, ushort *width)
+{
+    *height = ccd->height;
+    *width = ccd->width;
+    return ccd->frame;
+}
+
 int sbig_ccd_get_max (sbig_ccd_t ccd, ushort *maxp)
 {
     int i, j;

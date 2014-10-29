@@ -87,10 +87,9 @@ int sbig_ccd_end_exposure (sbig_ccd_t ccd, ushort flags);
  */
 int sbig_ccd_readout (sbig_ccd_t ccd);
 
-/* Copy from internal buffer to memory, as a sequence of rows, pixels
- * in host byte order. Buffer len must == height*width (use get_window above)
+/* Get reference to internal buffer, a sequence of rows, pixels.
  */
-int sbig_ccd_writemem (sbig_ccd_t ccd, ushort *buf, int len);
+ushort *sbig_ccd_get_data (sbig_ccd_t ccd, ushort *height, ushort *width);
 
 /* Copy from internal buffer to a PGM file
  * Ref: netpbm.sourceforge.net/doc/pgm.html
