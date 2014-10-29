@@ -180,7 +180,7 @@ int main (int argc, char *argv[])
     if ((e = sbig_ccd_start_exposure (ccd, 0, t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
     if (verbose)
-        msg ("exposure: start");
+        msg ("exposure: start %.2fs", t);
     usleep (1E6*t);
     do {
         if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
@@ -218,12 +218,24 @@ int main (int argc, char *argv[])
 
         (void)unlink (filename);
         fits_create_file (&fptr, filename, &fstatus);
+        if (fstatus) {
+            fits_report_error (stderr, fstatus);
+            exit(1);
+        }
         fits_create_img(fptr, USHORT_IMG, 2, naxes, &fstatus);
         fits_write_img(fptr, TUSHORT, 1, height*width, data, &fstatus);
+
         /* FIXME write header */
+        fits_write_key (fptr, TDOUBLE, "EXPTIME", &t,
+                        "Exposure in seconds", &fstatus);
+        fits_write_key (fptr, TDOUBLE, "CCD-TEMP", &temp.imagingCCDTemperature,
+                        "CCD temp in degress C", &fstatus);
+
         fits_close_file (fptr, &fstatus);
-        if (fstatus)
+        if (fstatus) {
             fits_report_error (stderr, fstatus);
+            exit (1);
+        }
         if (verbose)
             msg ("wrote image to %s", filename);
     }
