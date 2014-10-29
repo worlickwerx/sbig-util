@@ -41,10 +41,9 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-#define OPTIONS "ht:d:C:Dr:"
+#define OPTIONS "ht:d:C:r:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
-    {"dark",          no_argument,           0, 'D'},
     {"exposure-time", required_argument,     0, 't'},
     {"image-directory", required_argument,   0, 'd'},
     {"chip",          required_argument,     0, 'C'},
@@ -61,7 +60,6 @@ void usage (void)
 "  -t, --exposure-time DOUBLE exposure time in seconds (default 1.0)\n"
 "  -d, --image-directory DIR  where to put images (default /mnt/img)\n"
 "  -C, --ccd-chip CHIP        use imaging, tracking, or ext-tracking\n"
-"  -D, --dark                 take a dark frame\n"
 "  -r, --resolution RES       select hi, med, or lo resolution\n"
 );
     exit (1);
@@ -82,7 +80,6 @@ int main (int argc, char *argv[])
     char date[64];
     double t = 1.0;
     bool verbose = true;
-    bool dark = false;
     READOUT_BINNING_MODE readout_mode = RM_1X1; /* high res */
     QueryTemperatureStatusResults2 temp;
 
@@ -108,9 +105,6 @@ int main (int argc, char *argv[])
             case 'd': /* --image-directory DIR */
                 imagedir = optarg;
                 break;
-            case 'D': /* --dark */
-                dark = true;
-                break;
             case 'r': /* --resolution hi|med|lo */
                 if (!strcmp (optarg, "hi"))
                     readout_mode = RM_1X1;
@@ -130,7 +124,7 @@ int main (int argc, char *argv[])
         usage ();
 
     snprintf (filename, sizeof (filename), "%s/%s_%s.fits",
-              imagedir, dark ? "DF" : "LF",
+              imagedir, "LF",
               ctime_iso8601_now (date, sizeof (date)));
 
     if (!sbig_udrv)
@@ -154,9 +148,6 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_ccd_set_readout_mode (ccd, readout_mode)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_ccd_set_shutter_mode (ccd,
-                    dark ? SC_CLOSE_SHUTTER : SC_OPEN_SHUTTER)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
 
     /* Stash away temp info at start of exposure.
      */
@@ -177,10 +168,15 @@ int main (int argc, char *argv[])
     if (verbose)
         msg ("exposure: abort (just in case)");
 
+
+    /* Take dark frame
+     */
+    if ((e = sbig_ccd_set_shutter_mode (ccd, SC_CLOSE_SHUTTER)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_ccd_start_exposure (ccd, 0, t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
     if (verbose)
-        msg ("exposure: start %.2fs", t);
+        msg ("exposure: start DF %.2fs", t);
     usleep (1E6*t);
     do {
         if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
@@ -193,19 +189,37 @@ int main (int argc, char *argv[])
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
     if (verbose)
-        msg ("exposure: end");
+        msg ("exposure: end DF");
     if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
+    if (verbose)
+        msg ("DF readout complete");
+
+    /* Take auto-subtracted light frame
+     */
+    if ((e = sbig_ccd_set_shutter_mode (ccd, SC_OPEN_SHUTTER)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
+    if ((e = sbig_ccd_start_exposure (ccd, 0, t)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
+    if (verbose)
+        msg ("exposure: start LF %.2fs", t);
+    usleep (1E6*t);
+    do {
+        if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
+            msg_exit ("sbig_get_exposure_status: %s", sbig_get_error_string (sb, e));
+        fprintf (stderr, ".");
+        if (status != CS_INTEGRATION_COMPLETE)
+            usleep (500*1E3);
+    } while (status != CS_INTEGRATION_COMPLETE);
+    fprintf (stderr, "\n");
+    if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if (verbose) {
-        unsigned short max;
-        unsigned short top, left, h, w;
-        if ((e = sbig_ccd_get_max (ccd, &max)) != CE_NO_ERROR)
-            msg_exit ("sbig_ccd_get_max");
-        msg ("readout complete (max pixel %hu)", max);
-        if ((e = sbig_ccd_get_window (ccd, &top, &left, &h, &w)) != CE_NO_ERROR)
-            msg_exit ("sbig_ccd_get_window"); 
-        msg ("image is %hux%hu", h, w); /* FIXME */
-    }
+    if (verbose)
+        msg ("exposure: end LF");
+    if ((e = sbig_ccd_readout_subtract (ccd)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_readout_subtract: %s", sbig_get_error_string (sb, e));
+    if (verbose)
+        msg ("LF readout complete");
 
     /* Write FITS file 
      */
@@ -237,7 +251,7 @@ int main (int argc, char *argv[])
             exit (1);
         }
         if (verbose)
-            msg ("wrote image to %s", filename);
+            msg ("wrote %hux%hu image to %s", height, width, filename);
     }
 
     sbig_ccd_destroy (ccd);
