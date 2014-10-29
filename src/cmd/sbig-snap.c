@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <sys/param.h>
 #include <time.h>
+#include <fitsio.h>
 
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
@@ -128,7 +129,7 @@ int main (int argc, char *argv[])
     if (optind != argc)
         usage ();
 
-    snprintf (filename, sizeof (filename), "%s/%s_%s.png",
+    snprintf (filename, sizeof (filename), "%s/%s_%s.fits",
               imagedir, dark ? "DF" : "LF",
               ctime_iso8601_now (date, sizeof (date)));
 
@@ -206,10 +207,26 @@ int main (int argc, char *argv[])
         msg ("image is %hux%hu", h, w); /* FIXME */
     }
 
-    if ((e = sbig_ccd_writepgm (ccd, filename)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_writepgm %s", filename);
-    if (verbose)
-        msg ("wrote image to %s", filename);
+    /* Write FITS file 
+     */
+    if (1) { /* FIXME */
+        fitsfile *fptr;
+        int fstatus = 0;
+        ushort height, width;
+        ushort *data = sbig_ccd_get_data (ccd, &height, &width);
+        long naxes[2] = { width, height };
+
+        (void)unlink (filename);
+        fits_create_file (&fptr, filename, &fstatus);
+        fits_create_img(fptr, USHORT_IMG, 2, naxes, &fstatus);
+        fits_write_img(fptr, TUSHORT, 1, height*width, data, &fstatus);
+        /* FIXME write header */
+        fits_close_file (fptr, &fstatus);
+        if (fstatus)
+            fits_report_error (stderr, fstatus);
+        if (verbose)
+            msg ("wrote image to %s", filename);
+    }
 
     sbig_ccd_destroy (ccd);
     if ((e = sbig_close_device (sb)) != 0)
