@@ -1,4 +1,4 @@
-=== Example config file
+### Example config file
 
 ```
 [system]
