@@ -1,9 +1,7 @@
 typedef struct sbfits_struct *sbfits_t;
 
-sbfits_t sbfits_create (const char *imagedir, char *prefix, int *fits_status);
-int sbfits_close (sbfits_t sbf, int *fits_status);
-
-int sbfits_get_error (sbfits_t sbf);
+sbfits_t sbfits_create (const char *imagedir, char *prefix);
+int sbfits_close (sbfits_t sbf);
 
 const char *sbfits_get_filename (sbfits_t sbf);
 

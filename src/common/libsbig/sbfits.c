@@ -79,7 +79,7 @@ static char *gmtime_str (time_t t, char *buf, int sz)
     return buf;
 }
 
-sbfits_t sbfits_create (const char *imagedir, char *prefix, int *fits_status)
+sbfits_t sbfits_create (const char *imagedir, char *prefix)
 {
     sbfits_t sbf = xzmalloc (sizeof (*sbf));
     char buf[64];
@@ -100,31 +100,21 @@ sbfits_t sbfits_create (const char *imagedir, char *prefix, int *fits_status)
         goto error;
     return sbf;
 error:
-    if (fits_status)
-        *fits_status = sbf->status;
     if (sbf)
         free (sbf);
     return NULL;
 }
 
-int sbfits_close (sbfits_t sbf, int *fits_status)
+int sbfits_close (sbfits_t sbf)
 {
     int rc = -1;
     fits_close_file (sbf->fptr, &sbf->status);
-    if (sbf->status) {
-        if (fits_status)
-            *fits_status = sbf->status;
+    if (sbf->status)
         goto done;
-    }
     rc = 0;
 done:
     free (sbf);
     return rc;
-}
-
-int sbfits_get_error (sbfits_t sbf)
-{
-    return sbf->status;
 }
 
 const char *sbfits_get_filename (sbfits_t sbf)
