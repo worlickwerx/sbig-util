@@ -40,7 +40,6 @@
 
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
-#include "src/common/libutil/bcd.h"
 
 typedef struct snap_struct {
     CCD_REQUEST chip;
@@ -190,8 +189,7 @@ int main (int argc, char *argv[])
 }
 
 /* Wait for an exposure in progress to complete.
- * We avoid polling the camera until the requested exposure time
- * has elapsed, though I'm not sure if that's helpful.
+ * We avoid polling the camera excessively.
  */
 void exposure_wait (sbig_t sb, sbig_ccd_t ccd, snap_t opt)
 {
@@ -211,56 +209,55 @@ void exposure_wait (sbig_t sb, sbig_ccd_t ccd, snap_t opt)
         fprintf (stderr, "\n");
 }
 
-/* Take a dark frame and leave it in the sbig_ccd_t buffer
- * for subtraction from LF
+typedef enum { SNAP_DF, SNAP_LF, SNAP_LF_SUB } snap_type_t;
+
+/* Take a picture:
+ * SNAP_DF: take a dark frame
+ * SNAP_LF: take a light frame
+ * SNAP_LF_SUB: take a light frame, subtracting previous DF during readout
  */
-void snap_DF (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+void snap (sbig_t sb, sbig_ccd_t ccd, snap_t opt, snap_type_t type, int seq)
 {
     int e;
 
-    if ((e = sbig_ccd_set_shutter_mode (ccd, SC_CLOSE_SHUTTER)) != CE_NO_ERROR)
+    /* Set shutter mode
+     */
+    if (type == SNAP_DF)
+        e = sbig_ccd_set_shutter_mode (ccd, SC_CLOSE_SHUTTER);
+    else
+        e = sbig_ccd_set_shutter_mode (ccd, SC_OPEN_SHUTTER);
+    if (e != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
+
+    /* Start exposure, then wait for it to finish.
+     */
     if ((e = sbig_ccd_start_exposure (ccd, 0, opt.t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
-        msg ("exposure: start DF #%d (%.2fs)", seq, opt.t);
+        msg ("exposure: start %s #%d (%.2fs)", type == SNAP_DF ? "DF" : "LF",
+             seq, opt.t);
     exposure_wait (sb, ccd, opt);
+
+    /* Finalize exposure, then read out from camera to sbig_ccd_t internal
+     * buffer.  Subtract a previous DF left there if type is SNAP_LF_SUB.
+     */
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
-        msg ("exposure: end DF #%d", seq);
-    if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
-        msg ("readout: DF #%d complete", seq);
-}
-
-/* Like dark frame, except shutter open.
- * If 'subtract' is true, DF in the sbig_ccd_t buffer is subtracted from LF
- * during readout, and LF overrwrites DF.
- */
-void snap_LF (sbig_t sb, sbig_ccd_t ccd, snap_t opt, bool subtract, int seq)
-{
-    int e;
-
-    if ((e = sbig_ccd_set_shutter_mode (ccd, SC_OPEN_SHUTTER)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_ccd_start_exposure (ccd, 0, opt.t)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
-        msg ("exposure: start LF #%d (%.2fs)", seq, opt.t);
-    exposure_wait (sb, ccd, opt);
-    if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
-        msg ("exposure: end LF #%d", seq);
-    e = subtract ? sbig_ccd_readout_subtract (ccd) : sbig_ccd_readout (ccd);
+        msg ("exposure: end %s #%d", type == SNAP_DF ? "DF" : "LF", seq);
+    if (type == SNAP_LF_SUB)
+        e = sbig_ccd_readout_subtract (ccd);
+    else
+        e = sbig_ccd_readout (ccd);
     if (e != CE_NO_ERROR)
         msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
-        msg ("readout LF #%d complete", seq);
+        msg ("readout: %s%s #%d complete", type == SNAP_DF ? "DF" : "LF",
+             type == SNAP_LF_SUB ? " (subtracted)" : "", seq);
 }
 
+/* Return current CCD temperature in degrees C
+ */
 double snap_temp (sbig_t sb, snap_t opt)
 {
     QueryTemperatureStatusResults2 temp;
@@ -277,6 +274,8 @@ double snap_temp (sbig_t sb, snap_t opt)
     return temp.imagingCCDTemperature;
 }
 
+/* Write contents of internal sbig_ccd_t buffer to a FITS file.
+ */
 void write_fits (sbig_t sb, sbig_ccd_t ccd, snap_t opt,
                  time_t t_create, time_t t_obs,
                  double temp, const char *filename,
@@ -293,13 +292,6 @@ void write_fits (sbig_t sb, sbig_ccd_t ccd, snap_t opt,
     if (opt.message)
         fits_write_key (fptr, TSTRING, "COMMENT", (char *)opt.message, "",
                         fstatus);
-
-    /* On dates:
-     * DATE-OBS: start of LF integration
-     * DATE:     date the FITS file is written
-     * Dates will be in UTC, in the form: yyyy-mm-ddTHH:MM:SS[.sss]
-     * See http://hesarc.gsfc.nasa.gov/docs/fcg/standard_dict.html
-     */
     fits_write_key(fptr, TSTRING, "DATE", /* matches filename */
                    gmtime_str (t_create, date, sizeof (date)),
                    "GMT date when this file created", fstatus);
@@ -350,7 +342,7 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
      */
     do {
         temp_df = snap_temp (sb, opt);
-        snap_DF (sb, ccd, opt, seq);
+        snap (sb, ccd, opt, SNAP_DF, seq);
 
         temp_lf = snap_temp (sb, opt);
         dt = fabs (temp_df - temp_lf);
@@ -358,7 +350,7 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
             msg ("Retaking DF as CCD temp was not stable");
     } while (dt > 1);
     t_obs = time (NULL);
-    snap_LF (sb, ccd, opt, true, seq);
+    snap (sb, ccd, opt, SNAP_LF_SUB, seq);
 
     /* Write output file
      */
@@ -382,12 +374,13 @@ void snap_series (sbig_t sb, snap_t opt)
         msg ("exposure: abort (just in case)");
     /* FIXME: could verify that camera is idle here */
 
-    /* Set up the readout mode which we hold constant over a series.
+    /* Set up the readout binning mode which we hold constant over a series.
      */
     if ((e = sbig_ccd_set_readout_mode (ccd, opt.readout_mode)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
 
     /* Take series of images and write them out as FITS files.
+     * Optionally increase the exposure time by time_delta on each exposure.
      */
     for (i = 0; i < opt.count; i++) {
         snap_one_autodark (sb, ccd, opt, i);
@@ -397,6 +390,9 @@ void snap_series (sbig_t sb, snap_t opt)
     sbig_ccd_destroy (ccd);
 }
 
+/* Produce a GMT string appropriate for FITS file name, DATE, or DATE-OBS
+ * given a time_t.
+ */
 char *gmtime_str (time_t t, char *buf, size_t sz)
 {
     struct tm tm;
