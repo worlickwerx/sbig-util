@@ -62,6 +62,10 @@ struct sbfits_struct {
     const char *telescope;       /* (opt) telescope/lens used */
     const char *filter;          /* (opt) filter used */
     const char *observer;        /* (opt) name of observer */
+    const char *latitude;        /* (opt) site latitude (+DD:MM:SS.SSSS) */
+    const char *longitude;       /* (opt) site longitude (+DDD:MM:SS.SSS) */
+    const char *sitename;        /* (opt) site name */
+    double elevation;
     ushort *data;                /* image data */
     ushort height, width;        /* size of image data */
     int top, left;               /* subframe origin */
@@ -199,6 +203,14 @@ void sbfits_set_aperture_area (sbfits_t sbf, double d)
     sbf->aperture_area = d;
 }
 
+void sbfits_set_site (sbfits_t sbf, const char *name,
+                      const char *lat, const char *lng, double elev)
+{
+    sbf->sitename = name;
+    sbf->latitude = lat;
+    sbf->longitude = lng;
+    sbf->elevation = elev;
+}
 
 void sbfits_set_annotation (sbfits_t sbf, const char *str)
 {
@@ -237,6 +249,8 @@ static int sbfits_write_header (sbfits_t sbf)
     fits_write_key (sbf->fptr, TSTRING, "COMMENT", 
                     " http://www.sbig.com/pdffiles/SBFITSEXT_1r0.pdf",
                     "", &sbf->status);
+    fits_write_key(sbf->fptr, TSTRING, "SBSTDVER", "SBFITSEXT Version 1.0",
+                    "SBIG FITS extensions ver", &sbf->status);
     if (sbf->annotation)
         fits_write_key (sbf->fptr, TSTRING, "COMMENT", (char *)sbf->annotation,
                         "", &sbf->status);
@@ -253,18 +267,30 @@ static int sbfits_write_header (sbfits_t sbf)
     fits_write_key (sbf->fptr, TDOUBLE, "CCD-TEMP", &sbf->temperature,
                     "CCD temp in degress C", &sbf->status);
 
+    if (sbf->sitename)
+        fits_write_key(sbf->fptr, TSTRING, "SITENAME", (char *)sbf->sitename,
+                       "Site name", &sbf->status);
+    fits_write_key(sbf->fptr, TDOUBLE, "SITEELEV", &sbf->elevation,
+                   "Site elevation in meters", &sbf->status);
+    if (sbf->latitude)
+        fits_write_key(sbf->fptr, TSTRING, "SITELAT", (char *)sbf->latitude,
+                       "Site latitude in degrees", &sbf->status);
+    if (sbf->longitude)
+        fits_write_key(sbf->fptr, TSTRING, "SITELONG", (char *)sbf->longitude,
+                       "Site longitude in degrees west of zero", &sbf->status);
+
     if (sbf->object)
         fits_write_key(sbf->fptr, TSTRING, "OBJECT", (char *)sbf->object,
-                       "", &sbf->status);
+                       "Name of object imaged", &sbf->status);
     if (sbf->telescope)
         fits_write_key(sbf->fptr, TSTRING, "TELESCOP", (char *)sbf->telescope,
-                       "", &sbf->status);
+                       "Telescope model", &sbf->status);
     if (sbf->filter)
         fits_write_key(sbf->fptr, TSTRING, "FILTER", (char *)sbf->filter, 
                        "Optical filter name", &sbf->status);
     if (sbf->observer)
         fits_write_key(sbf->fptr, TSTRING, "OBSERVER", (char *)sbf->observer,
-                       "", &sbf->status);
+                       "Telescope operator", &sbf->status);
 
     fits_write_key(sbf->fptr, TSTRING, "INSTRUME", sbf->info0.name,
                    "Camera Model", &sbf->status);
@@ -315,17 +341,18 @@ static int sbfits_write_header (sbfits_t sbf)
                    "Subframe origin y_pos", &sbf->status);
     fits_write_key(sbf->fptr, TUSHORT, "RESMODE", &sbf->readout_mode,
                     "Resolution mode", &sbf->status);
-    fits_write_key(sbf->fptr, TSTRING, "SBSTDVER", "SBFITSEXT Version 1.0",
-                    "SBIG FITS extensions ver", &sbf->status);
     fits_write_key(sbf->fptr, TUSHORT, "SNAPSHOT", &sbf->num_exposures,
                     "Number images coadded", &sbf->status);
 
-    fits_write_key(sbf->fptr, TDOUBLE, "FOCALLEN", &sbf->focal_length,
-                   "Focal length in mm", &sbf->status);
-    fits_write_key(sbf->fptr, TDOUBLE, "APTDIA", &sbf->aperture_diameter,
-                   "Aperture diameter in mm", &sbf->status);
-    fits_write_key(sbf->fptr, TDOUBLE, "APTAREA", &sbf->aperture_area,
-                   "Aperture area in sq-mm", &sbf->status);
+    if (sbf->focal_length > 0)
+        fits_write_key(sbf->fptr, TDOUBLE, "FOCALLEN", &sbf->focal_length,
+                       "Focal length in mm", &sbf->status);
+    if (sbf->aperture_diameter > 0)
+        fits_write_key(sbf->fptr, TDOUBLE, "APTDIA", &sbf->aperture_diameter,
+                       "Aperture diameter in mm", &sbf->status);
+    if (sbf->aperture_area > 0)
+        fits_write_key(sbf->fptr, TDOUBLE, "APTAREA", &sbf->aperture_area,
+                       "Aperture area in sq-mm", &sbf->status);
 
     return sbf->status ? -1 : 0;
 }

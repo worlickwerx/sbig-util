@@ -21,6 +21,8 @@ void sbfits_set_annotation (sbfits_t sbf, const char *str);
 void sbfits_set_focal_length (sbfits_t sbf, double n);
 void sbfits_set_aperture_diameter (sbfits_t sbf, double n);
 void sbfits_set_aperture_area (sbfits_t sbf, double n);
+void sbfits_set_site (sbfits_t sbf, const char *name,
+                      const char *lat, const char *lng, double elevation);
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
