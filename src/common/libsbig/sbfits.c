@@ -53,14 +53,14 @@ struct sbfits_struct {
     time_t t_create;             /* time of file creation */
     time_t t_obs;                /* time of observation */
     char filename[PATH_MAX];     /* full path of output file */
-    char *annotation;            /* (opt) an extra note from teh observer */
+    const char *annotation;      /* (opt) an extra note from teh observer */
     double exposure_time;        /* length of exposure in seconds */
     ushort num_exposures;        /* number of exposures co-added */
     double temperature;          /* temperature of CCD at start of exp */
-    char *object;                /* (opt) name of object being studied */
-    char *telescope;             /* (opt) telescope/lens used */
-    char *filter;                /* (opt) filter used */
-    char *observer;              /* (opt) name of observer */
+    const char *object;          /* (opt) name of object being studied */
+    const char *telescope;       /* (opt) telescope/lens used */
+    const char *filter;          /* (opt) filter used */
+    const char *observer;        /* (opt) name of observer */
     ushort *data;                /* image data */
     ushort height, width;        /* size of image data */
     int top, left;               /* subframe origin */
@@ -79,7 +79,7 @@ static char *gmtime_str (time_t t, char *buf, int sz)
     return buf;
 }
 
-sbfits_t sbfits_create (const char *imagedir, char *prefix)
+sbfits_t sbfits_create (const char *imagedir, const char *prefix)
 {
     sbfits_t sbf = xzmalloc (sizeof (*sbf));
     char buf[64];
@@ -117,11 +117,6 @@ done:
     return rc;
 }
 
-const char *sbfits_get_filename (sbfits_t sbf)
-{
-    return sbf->filename;
-}
-
 void sbfits_set_ccdinfo (sbfits_t sbf, sbig_ccd_t ccd)
 {
     ushort top, left, height, width;
@@ -140,22 +135,22 @@ void sbfits_set_num_exposures (sbfits_t sbf, ushort num_exposures)
     sbf->num_exposures = num_exposures;
 }
 
-void sbfits_set_observer (sbfits_t sbf, char *observer)
+void sbfits_set_observer (sbfits_t sbf, const char *observer)
 {
     sbf->observer = observer;
 }
 
-void sbfits_set_telescope (sbfits_t sbf, char *telescope)
+void sbfits_set_telescope (sbfits_t sbf, const char *telescope)
 {
     sbf->telescope = telescope;
 }
 
-void sbfits_set_filter (sbfits_t sbf, char *filter)
+void sbfits_set_filter (sbfits_t sbf, const char *filter)
 {
     sbf->filter = filter;
 }
 
-void sbfits_set_object (sbfits_t sbf, char *object)
+void sbfits_set_object (sbfits_t sbf, const char *object)
 {
     sbf->object = object ;
 }
@@ -165,7 +160,7 @@ void sbfits_set_temperature (sbfits_t sbf, double temperature)
     sbf->temperature = temperature;
 }
 
-void sbfits_set_annotation (sbfits_t sbf, char *str)
+void sbfits_set_annotation (sbfits_t sbf, const char *str)
 {
     sbf->annotation = str;
 }
@@ -203,7 +198,7 @@ static int sbfits_write_header (sbfits_t sbf)
                     " http://www.sbig.com/pdffiles/SBFITSEXT_1r0.pdf",
                     "", &sbf->status);
     if (sbf->annotation)
-        fits_write_key (sbf->fptr, TSTRING, "COMMENT", sbf->annotation,
+        fits_write_key (sbf->fptr, TSTRING, "COMMENT", (char *)sbf->annotation,
                         "", &sbf->status);
 
     fits_write_key(sbf->fptr, TSTRING, "DATE",
@@ -219,16 +214,16 @@ static int sbfits_write_header (sbfits_t sbf)
                     "CCD temp in degress C", &sbf->status);
 
     if (sbf->object)
-        fits_write_key(sbf->fptr, TSTRING, "OBJECT",   sbf->object,
+        fits_write_key(sbf->fptr, TSTRING, "OBJECT", (char *)sbf->object,
                        "", &sbf->status);
     if (sbf->telescope)
-        fits_write_key(sbf->fptr, TSTRING, "TELESCOP", sbf->telescope,
+        fits_write_key(sbf->fptr, TSTRING, "TELESCOP", (char *)sbf->telescope,
                        "", &sbf->status);
     if (sbf->filter)
-        fits_write_key(sbf->fptr, TSTRING, "FILTER", sbf->filter, 
+        fits_write_key(sbf->fptr, TSTRING, "FILTER", (char *)sbf->filter, 
                        "Optical filter name", &sbf->status);
     if (sbf->observer)
-        fits_write_key(sbf->fptr, TSTRING, "OBSERVER", sbf->observer,
+        fits_write_key(sbf->fptr, TSTRING, "OBSERVER", (char *)sbf->observer,
                        "", &sbf->status);
 
     fits_write_key(sbf->fptr, TSTRING, "INSTRUME", sbf->info0.name,
