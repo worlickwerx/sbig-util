@@ -42,6 +42,7 @@
 #include "src/common/libsbig/sbfits.h"
 
 typedef struct snap_struct {
+    SBIG_DEVICE_TYPE device;
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
     double t;
@@ -51,6 +52,10 @@ typedef struct snap_struct {
     const char *message;
     bool verbose;
 } snap_t;
+
+/* FIXME: add 1/2 and 1/4 (centered) subframe modes */
+/* FIXME: add fast cycling focus mode */
+/* FIXME: add image monitoring for focus/centering (show contrast FOM) */
 
 #define OPTIONS "ht:d:C:r:n:D:m:"
 static const struct option longopts[] = {
@@ -92,6 +97,7 @@ int main (int argc, char *argv[])
     log_init ("sbig-snap");
 
     memset (&opt, 0, sizeof (opt)); /* Set some defaults: */
+    opt.device = DEV_USB1;          /* hardwired for USB (FIXME) */
     opt.chip = CCD_IMAGING;         /* main imaging ccd */
     opt.readout_mode = RM_1X1;      /* high resolution */
     opt.imagedir = "/mnt/img";      /* where to write files */
@@ -160,9 +166,8 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
 
     /* Open camera
-     * FIXME: should allow more options than DEV_USB1
      */
-    if ((e = sbig_open_device (sb, DEV_USB1)) != CE_NO_ERROR)
+    if ((e = sbig_open_device (sb, opt.device)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
         msg ("Device open");
