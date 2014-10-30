@@ -37,10 +37,10 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-void show_cfw_info (sbig_t sb, int ac, char **av);
+void show_cfw_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av);
 void show_driver_info (sbig_t sb, int ac, char **av);
-void show_ccd_info (sbig_t sb, CCD_REQUEST chip, int ac, char **av);
-void show_cooler_info (sbig_t sb, int ac, char **av);
+void show_ccd_info (sbig_t sb, SBIG_DEVICE_TYPE device, CCD_REQUEST chip, int ac, char **av);
+void show_cooler_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av);
 
 #define OPTIONS "h"
 static const struct option longopts[] = {
@@ -64,9 +64,11 @@ int main (int argc, char *argv[])
 {
     sbig_t sb;
     const char *sbig_udrv = getenv ("SBIG_UDRV");
+    const char *sbig_device = getenv ("SBIG_DEVICE");
     int e;
     int ch;
     char *cmd;
+    SBIG_DEVICE_TYPE device;
 
     log_init ("sbig-info");
 
@@ -83,6 +85,9 @@ int main (int argc, char *argv[])
 
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
+    if (!sbig_device)
+        msg_exit ("SBIG_DEVICE is not set");
+    device = sbig_devstr (sbig_device);
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != 0)
@@ -91,15 +96,15 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
 
     if (!strcmp (cmd, "imaging-ccd"))
-        show_ccd_info (sb, CCD_IMAGING, argc - optind, argv + optind);
+        show_ccd_info (sb, device, CCD_IMAGING, argc - optind, argv + optind);
     else if (!strcmp (cmd, "tracking-ccd"))
-        show_ccd_info (sb, CCD_TRACKING, argc - optind, argv + optind);
+        show_ccd_info (sb, device, CCD_TRACKING, argc - optind, argv + optind);
     else if (!strcmp (cmd, "driver"))
         show_driver_info (sb, argc - optind, argv + optind);
     else if (!strcmp (cmd, "cfw"))
-        show_cfw_info (sb, argc - optind, argv + optind);
+        show_cfw_info (sb, device, argc - optind, argv + optind);
     else if (!strcmp (cmd, "cooler"))
-        show_cooler_info (sb, argc - optind, argv + optind);
+        show_cooler_info (sb, device, argc - optind, argv + optind);
     else
         usage ();
 
@@ -108,13 +113,13 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-void show_cooler_info (sbig_t sb, int ac, char **av)
+void show_cooler_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av)
 {
     QueryTemperatureStatusResults2 info;
     CAMERA_TYPE type;
     int e;
 
-    if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
+    if ((e = sbig_open_device (sb, device)) != 0)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
@@ -161,7 +166,7 @@ void show_driver_info (sbig_t sb, int ac, char **av)
     msg ("maxreq:  %d", info.maxRequest);
 }
 
-void show_cfw_info (sbig_t sb, int ac, char **av)
+void show_cfw_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av)
 {
     int e;
     ulong fwrev, numpos;
@@ -169,7 +174,7 @@ void show_cfw_info (sbig_t sb, int ac, char **av)
     CFW_MODEL_SELECT model;
     if (ac != 0)
         msg_exit ("cfw takes no arguments");
-    if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
+    if ((e = sbig_open_device (sb, device)) != 0)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
@@ -183,7 +188,8 @@ void show_cfw_info (sbig_t sb, int ac, char **av)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
 }
 
-void show_ccd_info (sbig_t sb, CCD_REQUEST chip, int ac, char **av)
+void show_ccd_info (sbig_t sb, SBIG_DEVICE_TYPE device,
+                    CCD_REQUEST chip, int ac, char **av)
 {
     int i, e;
     CAMERA_TYPE type;
@@ -193,7 +199,7 @@ void show_ccd_info (sbig_t sb, CCD_REQUEST chip, int ac, char **av)
 
     if (ac != 0)
         msg_exit ("device takes no arguments");
-    if ((e = sbig_open_device (sb, DEV_USB1)) != 0)
+    if ((e = sbig_open_device (sb, device)) != 0)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
