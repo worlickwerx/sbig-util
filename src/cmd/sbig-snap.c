@@ -72,7 +72,7 @@ typedef struct snap_struct {
 /* FIXME: add fast cycling focus mode */
 /* FIXME: add image monitoring for focus/centering (show contrast FOM) */
 
-#define OPTIONS "ht:d:C:r:n:D:m:c:O:f"
+#define OPTIONS "ht:d:C:r:n:D:m:O:f"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -82,7 +82,6 @@ static const struct option longopts[] = {
     {"count",         required_argument,     0, 'n'},
     {"time-delta",    required_argument,     0, 'D'},
     {"message",       required_argument,     0, 'm'},
-    {"config",        required_argument,     0, 'c'},
     {"object",        required_argument,     0, 'O'},
     {"force",         no_argument,           0, 'f'},
     {0, 0, 0, 0},
@@ -103,7 +102,6 @@ void usage (void)
 "  -n, --count N              take N exposures\n"
 "  -D, --time-delta N         increase exposure time by N on each exposure\n"
 "  -m, --message string       add annotation to FITS file\n"
-"  -c, --config FILENAME      use a config file other than the default\n"
 "  -O, --object NAME          name of object being observed (e.g. M33)\n"
 "  -f, --force                press on even if FITS header will be incomplete\n"
 );
@@ -113,11 +111,11 @@ void usage (void)
 int main (int argc, char *argv[])
 {
     const char *sbig_udrv = getenv ("SBIG_UDRV");
+    const char *config_filename = getenv ("SBIG_CONFIG_FILE");
     int e, ch;
     sbig_t sb;
     snap_t opt;
     CAMERA_TYPE type;
-    char *config_filename = NULL;
     bool force = false;
 
     log_init ("sbig-snap");
@@ -135,22 +133,8 @@ int main (int argc, char *argv[])
 
     /* Override defaults with config file
      */
-    while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
-        switch (ch) {
-            case 'c': /* --config FILE */
-                config_filename = xstrdup (optarg);
-                break;
-        default:
-            break;
-        }
-    }
-    if (!config_filename) {
-        struct passwd *pw = getpwuid (getuid ());
-        if (!pw)
-            msg_exit ("Who are you?");
-        if (asprintf (&config_filename, "%s/.sbig/config.ini", pw->pw_dir) < 0)
-            oom ();
-    }
+    if (!config_filename)
+        msg_exit ("SBIG_CONFIG_FILE is not set");
     if (ini_parse (config_filename, config_cb, &opt) < 0)
         msg ("cannot load %s", config_filename);
 
@@ -290,32 +274,7 @@ int config_cb (void *user, const char *section, const char *name,
                 free (opt->imagedir);
             opt->imagedir = xstrdup (value);
         } else if (!strcmp (name, "device")) {
-            if (!strcmp (value, "USB"))
-                opt->device = DEV_USB;
-            else if (!strcmp (value, "USB1"))
-                opt->device = DEV_USB1;
-            else if (!strcmp (value, "USB2"))
-                opt->device = DEV_USB2;
-            else if (!strcmp (value, "USB3"))
-                opt->device = DEV_USB3;
-            else if (!strcmp (value, "USB4"))
-                opt->device = DEV_USB4;
-            else if (!strcmp (value, "USB5"))
-                opt->device = DEV_USB5;
-            else if (!strcmp (value, "USB6"))
-                opt->device = DEV_USB6;
-            else if (!strcmp (value, "USB7"))
-                opt->device = DEV_USB7;
-            else if (!strcmp (value, "USB8"))
-                opt->device = DEV_USB8;
-            else if (!strcmp (value, "LPT1"))
-                opt->device = DEV_LPT1;
-            else if (!strcmp (value, "LPT2"))
-                opt->device = DEV_LPT2;
-            else if (!strcmp (value, "LPT3"))
-                opt->device = DEV_LPT3;
-            else if (!strcmp (value, "ETH"))
-                opt->device = DEV_ETH;
+            opt->device = sbig_devstr (value);
         }
     } else if (!strcmp (section, "cfw")) {
         /* XXX set filter to slot mapping here */
