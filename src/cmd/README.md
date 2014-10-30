@@ -4,6 +4,7 @@
 [system]
 device = USB1               ; USB1 thru USB8, ...
 imagedir = /tmp             ; FITS files will be created here
+;sbigudrv = /usr/local/lib/libsbigudrv.so
 
 [cfw]
 slot1 = Astrodon Tru-balance E-series NIR blocked R
@@ -12,10 +13,10 @@ slot3 = Astrodon Tru-balance E-series NIR blocked B
 slot4 = Astrodon Tru-balance E-series NIR blocked L
 
 [config]
-observer = Jim Garlick     ; Observer
+observer = Jim Garlick     ; Telescope operator
 ;filter = cfw               ; Filter selected by CFW
-filter = Astrodon Tru-balance E-series NIR blocked L
-telescope = Nikkor-Q       ; Telescope (Nikon adapter with filter at f/4)
+filter = Astrodon Tru-balance E-series NIR blocked L ; Fixed filter
+telescope = Nikkor-Q       ; Telescope (CLA-7 Nikon adapter, stopped at f/4)
 focal_length = 135         ; Focal length of the telescope in mm
 aperture_diameter = 33     ; Aperture diameter of the telescope in mm
 aperture_area = 854.86     ; Aperture area in sq-mm (correct for obstruction)
