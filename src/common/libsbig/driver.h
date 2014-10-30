@@ -37,6 +37,11 @@ int sbig_set_driver_handle (); // unimplemented
  */
 int sbig_query_cmd_status (sbig_t sb, ushort cmd, ushort *outp);
 
+/* Convert string to device type and vv
+ */
+const char *sbig_strdev (SBIG_DEVICE_TYPE type);
+SBIG_DEVICE_TYPE sbig_devstr (const char *str);
+
 #endif
 
 /*
