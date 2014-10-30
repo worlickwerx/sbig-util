@@ -62,6 +62,10 @@ typedef struct snap_struct {
     double focal_length;
     double aperture_diameter;
     double aperture_area;
+    char *sitename;
+    char *latitude;
+    char *longitude;
+    double elevation;
 } snap_t;
 
 /* FIXME: add 1/2 and 1/4 (centered) subframe modes */
@@ -263,6 +267,12 @@ int main (int argc, char *argv[])
         free (opt.filter);
     if (opt.imagedir)
         free (opt.imagedir);
+    if (opt.sitename)
+        free (opt.sitename);
+    if (opt.latitude)
+        free (opt.latitude);
+    if (opt.longitude)
+        free (opt.longitude);
 
     sbig_destroy (sb);
     log_fini ();
@@ -296,6 +306,15 @@ int config_cb (void *user, const char *section, const char *name,
             opt->aperture_diameter = strtod (value, NULL);
         else if (!strcmp (name, "aperture_area"))
             opt->aperture_area = strtod (value, NULL);
+    } else if (!strcmp (section, "site")) {
+        if (!strcmp (name, "name"))
+            opt->sitename = xstrdup (value);
+        else if (!strcmp (name, "elevation"))
+            opt->elevation = strtod (value, NULL);
+        else if (!strcmp (name, "latitude"))
+            opt->latitude = xstrdup (value);
+        else if (!strcmp (name, "longitude"))
+            opt->longitude = xstrdup (value);
     }
 
     return 0; /* 0=success, 1=error */
@@ -424,6 +443,8 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     sbfits_set_aperture_diameter (sbf, opt.aperture_diameter);
     sbfits_set_aperture_area (sbf, opt.aperture_area);
     sbfits_set_object (sbf, opt.object);
+    sbfits_set_site (sbf, opt.sitename, opt.latitude, opt.longitude,
+                     opt.elevation);
 
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
