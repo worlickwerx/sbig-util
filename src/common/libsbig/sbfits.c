@@ -50,6 +50,7 @@
 struct sbfits_struct {
     fitsfile *fptr;
     int status;
+    char error_string[31];       /* buffer for err str (<=30 chars per docs) */
     time_t t_create;             /* time of file creation */
     time_t t_obs;                /* time of observation */
     char filename[PATH_MAX];     /* full path of output file */
@@ -79,33 +80,54 @@ static char *gmtime_str (time_t t, char *buf, int sz)
     return buf;
 }
 
-sbfits_t sbfits_create (const char *imagedir, const char *prefix)
+sbfits_t sbfits_create (void)
 {
     sbfits_t sbf = xzmalloc (sizeof (*sbf));
+    sbf->num_exposures = 1;
+    return sbf;
+}
+
+void sbfits_destroy (sbfits_t sbf)
+{
+    free (sbf);
+}
+
+int sbfits_create_file (sbfits_t sbf, const char *imagedir,
+                                           const char *prefix)
+{
     char buf[64];
     int n;
+    int rc = -1;
 
-    sbf->num_exposures = 1;
     sbf->t_create = time (NULL);
     n = snprintf (sbf->filename, sizeof (sbf->filename),
                   "%s/%s_%s.fits", imagedir, prefix,
                   gmtime_str (sbf->t_create, buf, sizeof (buf)));
     if (n >= sizeof (sbf->filename)) {
         errno = EINVAL;
-        goto error;
+        goto done;
     }
     (void)unlink (sbf->filename);
     fits_create_file (&sbf->fptr, sbf->filename, &sbf->status);
     if (sbf->status)
-        goto error;
-    return sbf;
-error:
-    if (sbf)
-        free (sbf);
-    return NULL;
+        goto done;
+    rc = 0;
+done:
+    return rc;
 }
 
-int sbfits_close (sbfits_t sbf)
+const char *sbfits_get_filename (sbfits_t sbf)
+{
+    return sbf->filename;
+}
+
+const char *sbfits_get_errstr (sbfits_t sbf)
+{
+    fits_get_errstatus (sbf->status, sbf->error_string);
+    return sbf->error_string;
+}
+
+int sbfits_close_file (sbfits_t sbf)
 {
     int rc = -1;
     fits_close_file (sbf->fptr, &sbf->status);
@@ -113,7 +135,6 @@ int sbfits_close (sbfits_t sbf)
         goto done;
     rc = 0;
 done:
-    free (sbf);
     return rc;
 }
 
