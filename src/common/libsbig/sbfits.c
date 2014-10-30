@@ -326,7 +326,7 @@ static int sbfits_write_header (sbfits_t sbf)
     fits_write_key(sbf->fptr, TSTRING, "SWCREAT", "?", "", &sbf->status);
 #endif
 
-int sbfits_write (sbfits_t sbf)
+int sbfits_write_file (sbfits_t sbf)
 {
     if (sbfits_write_image (sbf) < 0)
         return -1;
