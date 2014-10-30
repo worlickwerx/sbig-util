@@ -66,6 +66,7 @@ static const struct option longopts[] = {
     {"resolution",    required_argument,     0, 'r'},
     {"count",         required_argument,     0, 'n'},
     {"time-delta",    required_argument,     0, 'D'},
+    {"message",       required_argument,     0, 'm'},
     {0, 0, 0, 0},
 };
 
@@ -286,7 +287,7 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
      */
     sbf = sbfits_create ();
     if (sbfits_create_file (sbf, opt.imagedir, "LF") < 0)
-        err_exit ("sbfits_create: %s", sbfits_get_errstr (sbf));
+        msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
 
     /* Dark frame
      */
