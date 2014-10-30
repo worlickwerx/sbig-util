@@ -68,7 +68,7 @@ typedef struct snap_struct {
 /* FIXME: add fast cycling focus mode */
 /* FIXME: add image monitoring for focus/centering (show contrast FOM) */
 
-#define OPTIONS "ht:d:C:r:n:D:m:c:O:"
+#define OPTIONS "ht:d:C:r:n:D:m:c:O:f"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -80,6 +80,7 @@ static const struct option longopts[] = {
     {"message",       required_argument,     0, 'm'},
     {"config",        required_argument,     0, 'c'},
     {"object",        required_argument,     0, 'O'},
+    {"force",         no_argument,           0, 'f'},
     {0, 0, 0, 0},
 };
 
@@ -100,6 +101,7 @@ void usage (void)
 "  -m, --message string       add annotation to FITS file\n"
 "  -c, --config FILENAME      use a config file other than the default\n"
 "  -O, --object NAME          name of object being observed (e.g. M33)\n"
+"  -f, --force                press on even if FITS header will be incomplete\n"
 );
     exit (1);
 }
@@ -112,6 +114,7 @@ int main (int argc, char *argv[])
     snap_t opt;
     CAMERA_TYPE type;
     char *config_filename = NULL;
+    bool force = false;
 
     log_init ("sbig-snap");
 
@@ -145,15 +148,18 @@ int main (int argc, char *argv[])
             oom ();
     }
     if (ini_parse (config_filename, config_cb, &opt) < 0)
-        msg ("Warning: cannot load %s, FITS header may be incomplete",
-             config_filename);
+        msg ("cannot load %s", config_filename);
 
     /* Override defaults and config file with command line
      */
     optind = 0;
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
+            case 'f': /* --force */
+                force = true; 
+                break;
             case 'c': /* --config FILE */
+                /* already parsed in first pass */
                 break;
             case 'O': /* --object NAME */
                 opt.object = optarg;
@@ -206,6 +212,16 @@ int main (int argc, char *argv[])
     }
     if (optind != argc)
         usage ();
+
+    /* Verify we have all the info we need for a complete FITS header.
+     */
+    if (!force) {
+        if (!opt.object)
+            msg_exit ("Please specify --object or --force");
+        if (!opt.telescope || !opt.observer || opt.focal_length == 0
+                || opt.aperture_diameter == 0 || opt.aperture_area == 0)
+            msg_exit ("Please populate config file or --force");
+    }
 
     /* Connect to driver
      */
