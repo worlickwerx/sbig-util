@@ -36,7 +36,7 @@
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
 
-#define OPTIONS "h"
+#define OPTIONS "+h"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {0, 0, 0, 0},
@@ -45,9 +45,8 @@ static const struct option longopts[] = {
 void usage (void)
 {
     fprintf (stderr,
-"Usage: sbig-cooler [OPTIONS] mode setpoint\n"
-"  where mode is: off|on|override|freeze|unfreeze|auto|noauto\n"
-"  and setpoint is in degrees C (sbig recommends 30 degrees below ambient)\n"
+"Usage: sbig-cooler on setpoint-degrees-C\n"
+"                   off\n"
 );
     exit (1);
 }
@@ -61,8 +60,8 @@ int main (int argc, char *argv[])
     int ch;
     CAMERA_TYPE type;
     SBIG_DEVICE_TYPE device;
-    double setpoint;
-    char *modestr;
+    double setpoint = 0;
+    char *modestr = NULL;
     TEMPERATURE_REGULATION mode;
 
     log_init ("sbig-cooler");
@@ -74,9 +73,10 @@ int main (int argc, char *argv[])
                 usage ();
         }
     }
-    if (optind != argc - 2)
+    if (optind < argc)
+        modestr = argv[optind++];
+    if (!modestr)
         usage ();
-    modestr = argv[optind++];
     if (!strcmp (modestr, "off"))
         mode = REGULATION_OFF;
     else if (!strcmp (modestr, "on"))
@@ -93,7 +93,8 @@ int main (int argc, char *argv[])
         mode = REGULATION_DISABLE_AUTOFREEZE;
     else
         usage ();
-    setpoint = strtod (argv[optind++], NULL);
+    if (optind < argc)
+        setpoint = strtod (argv[optind++], NULL);
 
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
