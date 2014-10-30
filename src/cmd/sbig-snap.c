@@ -65,7 +65,7 @@ static const struct option longopts[] = {
     {0, 0, 0, 0},
 };
 
-char *ctime_iso8601 (time_t t, char *buf, size_t sz);
+char *gmtime_str (time_t t, char *buf, size_t sz);
 void snap_one (sbig_t sb, snap_t snap);
 void snap_series (sbig_t sb, snap_t snap);
 
@@ -163,6 +163,7 @@ int main (int argc, char *argv[])
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
 
     /* Open camera
+     * FIXME: should allow more options than DEV_USB1
      */
     if ((e = sbig_open_device (sb, DEV_USB1)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
@@ -234,10 +235,11 @@ void snap_DF (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
         msg ("readout: DF #%d complete", seq);
 }
 
-/* Like dark frame, except shutter open, and readout with sutraction of DF.
- * At the end, image has overwritten DF in sbig_ccd_t buffer.
+/* Like dark frame, except shutter open.
+ * If 'subtract' is true, DF in the sbig_ccd_t buffer is subtracted from LF
+ * during readout, and LF overrwrites DF.
  */
-void snap_LF (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+void snap_LF (sbig_t sb, sbig_ccd_t ccd, snap_t opt, bool subtract, int seq)
 {
     int e;
 
@@ -252,8 +254,9 @@ void snap_LF (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
         msg ("exposure: end LF #%d", seq);
-    if ((e = sbig_ccd_readout_subtract (ccd)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_readout_subtract: %s", sbig_get_error_string (sb, e));
+    e = subtract ? sbig_ccd_readout_subtract (ccd) : sbig_ccd_readout (ccd);
+    if (e != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
         msg ("readout LF #%d complete", seq);
 }
@@ -274,12 +277,15 @@ double snap_temp (sbig_t sb, snap_t opt)
     return temp.imagingCCDTemperature;
 }
 
-void write_fits (sbig_t sb, sbig_ccd_t ccd, snap_t opt, time_t lf_start,
-              double temp, const char *filename, fitsfile *fptr, int *fstatus)
+void write_fits (sbig_t sb, sbig_ccd_t ccd, snap_t opt,
+                 time_t t_create, time_t t_obs,
+                 double temp, const char *filename,
+                 fitsfile *fptr, int *fstatus)
 {
     ushort height, width;
     ushort *data = sbig_ccd_get_data (ccd, &height, &width);
     long naxes[2] = { width, height };
+    char date[64];
 
     fits_create_img (fptr, USHORT_IMG, 2, naxes, fstatus);
     fits_write_img (fptr, TUSHORT, 1, height * width, data, fstatus);
@@ -287,6 +293,20 @@ void write_fits (sbig_t sb, sbig_ccd_t ccd, snap_t opt, time_t lf_start,
     if (opt.message)
         fits_write_key (fptr, TSTRING, "COMMENT", (char *)opt.message, "",
                         fstatus);
+
+    /* On dates:
+     * DATE-OBS: start of LF integration
+     * DATE:     date the FITS file is written
+     * Dates will be in UTC, in the form: yyyy-mm-ddTHH:MM:SS[.sss]
+     * See http://hesarc.gsfc.nasa.gov/docs/fcg/standard_dict.html
+     */
+    fits_write_key(fptr, TSTRING, "DATE", /* matches filename */
+                   gmtime_str (t_create, date, sizeof (date)),
+                   "GMT date when this file created", fstatus);
+    fits_write_key(fptr, TSTRING, "DATE-OBS",
+                   gmtime_str (t_obs, date, sizeof (date)),
+                   "GMT start of exposure", fstatus);
+
     fits_write_key (fptr, TDOUBLE, "EXPTIME", &opt.t,
                     "Exposure in seconds", fstatus);
     fits_write_key (fptr, TDOUBLE, "CCD-TEMP", &temp,
@@ -306,7 +326,7 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     double dt, temp_lf, temp_df;
     char filename[PATH_MAX];
     char date[64];
-    time_t t;
+    time_t t_create, t_obs;
     fitsfile *fptr;
     int fstatus = 0;
 
@@ -314,10 +334,10 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
      * starting integration.
      * FIXME: file naming assumes image cycle time is >1s
      */
-    t = time (NULL);
+    t_create = time (NULL);
     snprintf (filename, sizeof (filename), "%s/%s_%s.fits",
               opt.imagedir, "LF",
-              ctime_iso8601 (t, date, sizeof (date)));
+              gmtime_str (t_create, date, sizeof (date)));
 
     (void)unlink (filename);
     fits_create_file (&fptr, filename, &fstatus);
@@ -337,12 +357,13 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
         if (dt > 1) /* FIXME: 1C threshold is somewhat arbitrary */
             msg ("Retaking DF as CCD temp was not stable");
     } while (dt > 1);
-    t = time (NULL); /* Record begining of LF for FITS */
-    snap_LF (sb, ccd, opt, seq);
+    t_obs = time (NULL);
+    snap_LF (sb, ccd, opt, true, seq);
 
     /* Write output file
      */
-    write_fits (sb, ccd, opt, t, temp_lf, filename, fptr, &fstatus);
+    write_fits (sb, ccd, opt, t_create, t_obs, temp_lf, filename,
+                fptr, &fstatus);
 }
 
 void snap_series (sbig_t sb, snap_t opt)
@@ -376,13 +397,13 @@ void snap_series (sbig_t sb, snap_t opt)
     sbig_ccd_destroy (ccd);
 }
 
-char *ctime_iso8601 (time_t t, char *buf, size_t sz)
+char *gmtime_str (time_t t, char *buf, size_t sz)
 {
     struct tm tm;
 
     memset (buf, 0, sz);
 
-    if (!localtime_r (&t, &tm))
+    if (!gmtime_r (&t, &tm))
         return (NULL);
     strftime (buf, sz, "%FT%T", &tm);
 
