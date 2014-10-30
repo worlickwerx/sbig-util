@@ -71,6 +71,9 @@ typedef struct snap_struct {
 /* FIXME: add 1/2 and 1/4 (centered) subframe modes */
 /* FIXME: add fast cycling focus mode */
 /* FIXME: add image monitoring for focus/centering (show contrast FOM) */
+/* FIXME: get TE freeze/unfreeze (or autofreeze) working */
+/* FIXME: take one DF and reuse during a fixed-time series */
+/* FIXME: handle filter = auto (get filter info from CFW + config) */
 
 #define OPTIONS "ht:d:C:r:n:D:m:O:f"
 static const struct option longopts[] = {
