@@ -35,11 +35,11 @@
 #include <unistd.h>
 #include <sys/param.h>
 #include <time.h>
-#include <fitsio.h>
-#include <math.h>
+#include <math.h> /* fabs */
 
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
+#include "src/common/libsbig/sbfits.h"
 
 typedef struct snap_struct {
     CCD_REQUEST chip;
@@ -64,8 +64,6 @@ static const struct option longopts[] = {
     {0, 0, 0, 0},
 };
 
-char *gmtime_str (time_t t, char *buf, size_t sz);
-void snap_one (sbig_t sb, snap_t snap);
 void snap_series (sbig_t sb, snap_t snap);
 
 void usage (void)
@@ -274,69 +272,16 @@ double snap_temp (sbig_t sb, snap_t opt)
     return temp.imagingCCDTemperature;
 }
 
-/* Write contents of internal sbig_ccd_t buffer to a FITS file.
- */
-void write_fits (sbig_t sb, sbig_ccd_t ccd, snap_t opt,
-                 time_t t_create, time_t t_obs,
-                 double temp, const char *filename,
-                 fitsfile *fptr, int *fstatus)
-{
-    ushort height, width;
-    ushort *data = sbig_ccd_get_data (ccd, &height, &width);
-    long naxes[2] = { width, height };
-    char date[64];
-
-    fits_create_img (fptr, USHORT_IMG, 2, naxes, fstatus);
-    fits_write_img (fptr, TUSHORT, 1, height * width, data, fstatus);
-
-    if (opt.message)
-        fits_write_key (fptr, TSTRING, "COMMENT", (char *)opt.message, "",
-                        fstatus);
-    fits_write_key(fptr, TSTRING, "DATE", /* matches filename */
-                   gmtime_str (t_create, date, sizeof (date)),
-                   "GMT date when this file created", fstatus);
-    fits_write_key(fptr, TSTRING, "DATE-OBS",
-                   gmtime_str (t_obs, date, sizeof (date)),
-                   "GMT start of exposure", fstatus);
-
-    fits_write_key (fptr, TDOUBLE, "EXPTIME", &opt.t,
-                    "Exposure in seconds", fstatus);
-    fits_write_key (fptr, TDOUBLE, "CCD-TEMP", &temp,
-                    "CCD temp in degress C", fstatus);
-
-    fits_close_file (fptr, fstatus);
-    if (*fstatus) {
-        fits_report_error (stderr, *fstatus);
-        exit (1);
-    }
-    if (opt.verbose)
-        msg ("wrote %hux%hu image to %s", height, width, filename);
-}
-
 void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
 {
     double dt, temp_lf, temp_df;
-    char filename[PATH_MAX];
-    char date[64];
-    time_t t_create, t_obs;
-    fitsfile *fptr;
-    int fstatus = 0;
+    sbfits_t sbf;
 
-    /* Create FITS file and deal with file creation errors before
-     * starting integration.
-     * FIXME: file naming assumes image cycle time is >1s
+    /* Create FITS file for output.
      */
-    t_create = time (NULL);
-    snprintf (filename, sizeof (filename), "%s/%s_%s.fits",
-              opt.imagedir, "LF",
-              gmtime_str (t_create, date, sizeof (date)));
-
-    (void)unlink (filename);
-    fits_create_file (&fptr, filename, &fstatus);
-    if (fstatus) {
-        fits_report_error (stderr, fstatus);
-        exit(1);
-    }
+    sbf = sbfits_create ();
+    if (sbfits_create_file (sbf, opt.imagedir, "LF") < 0)
+        err_exit ("sbfits_create: %s", sbfits_get_errstr (sbf));
 
     /* Dark frame
      */
@@ -349,13 +294,19 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
         if (dt > 1) /* FIXME: 1C threshold is somewhat arbitrary */
             msg ("Retaking DF as CCD temp was not stable");
     } while (dt > 1);
-    t_obs = time (NULL);
+
     snap (sb, ccd, opt, SNAP_LF_SUB, seq);
 
-    /* Write output file
+    /* Write out FITS file
      */
-    write_fits (sb, ccd, opt, t_create, t_obs, temp_lf, filename,
-                fptr, &fstatus);
+    sbfits_set_ccdinfo (sbf, ccd);
+    sbfits_set_temperature (sbf, temp_lf);
+    sbfits_set_annotation (sbf, opt.message);
+    if (sbfits_write_file (sbf) < 0)
+        err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
+    if (sbfits_close_file (sbf))
+        err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
+    sbfits_destroy (sbf);
 }
 
 void snap_series (sbig_t sb, snap_t opt)
@@ -388,22 +339,6 @@ void snap_series (sbig_t sb, snap_t opt)
     }
 
     sbig_ccd_destroy (ccd);
-}
-
-/* Produce a GMT string appropriate for FITS file name, DATE, or DATE-OBS
- * given a time_t.
- */
-char *gmtime_str (time_t t, char *buf, size_t sz)
-{
-    struct tm tm;
-
-    memset (buf, 0, sz);
-
-    if (!gmtime_r (&t, &tm))
-        return (NULL);
-    strftime (buf, sz, "%FT%T", &tm);
-
-    return (buf);
 }
 
 /*
