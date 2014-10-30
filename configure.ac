@@ -84,6 +84,7 @@ AC_CONFIG_FILES( \
   src/common/Makefile \
   src/common/libsbig/Makefile \
   src/common/libutil/Makefile \
+  src/common/libini/Makefile \
   src/cmd/Makefile \
 )
 
