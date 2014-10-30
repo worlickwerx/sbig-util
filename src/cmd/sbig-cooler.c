@@ -36,9 +36,6 @@
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
 
-void cfw_query (sbig_t sb, int ac, char **av);
-void cfw_goto (sbig_t sb, int ac, char **av);
-
 #define OPTIONS "h"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
@@ -48,7 +45,7 @@ static const struct option longopts[] = {
 void usage (void)
 {
     fprintf (stderr,
-"Usage: sbig-cooler mode setpoint\n"
+"Usage: sbig-cooler [OPTIONS] mode setpoint\n"
 "  where mode is: off|on|override|freeze|unfreeze|auto|noauto\n"
 "  and setpoint is in degrees C (sbig recommends 30 degrees below ambient)\n"
 );
@@ -57,11 +54,13 @@ void usage (void)
 
 int main (int argc, char *argv[])
 {
-    sbig_t sb;
     const char *sbig_udrv = getenv ("SBIG_UDRV");
+    const char *sbig_device = getenv ("SBIG_DEVICE");
+    sbig_t sb;
     int e;
     int ch;
     CAMERA_TYPE type;
+    SBIG_DEVICE_TYPE device;
     double setpoint;
     char *modestr;
     TEMPERATURE_REGULATION mode;
@@ -98,13 +97,16 @@ int main (int argc, char *argv[])
 
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
+    if (!sbig_device)
+        msg_exit ("SBIG_DEVICE is not set");
+    device = sbig_devstr (sbig_device);
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != CE_NO_ERROR)
         msg_exit ("%s", dlerror ());
     if ((e = sbig_open_driver (sb)) != CE_NO_ERROR)
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_open_device (sb, DEV_USB1)) != CE_NO_ERROR)
+    if ((e = sbig_open_device (sb, device)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != CE_NO_ERROR)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
