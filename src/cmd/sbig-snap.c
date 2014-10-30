@@ -284,12 +284,38 @@ int config_cb (void *user, const char *section, const char *name,
 {
     snap_t *opt = user;
 
-
     if (!strcmp (section, "system")) {
         if (!strcmp (name, "imagedir")) {
             if (opt->imagedir)
                 free (opt->imagedir);
             opt->imagedir = xstrdup (value);
+        } else if (!strcmp (name, "device")) {
+            if (!strcmp (value, "USB"))
+                opt->device = DEV_USB;
+            else if (!strcmp (value, "USB1"))
+                opt->device = DEV_USB1;
+            else if (!strcmp (value, "USB2"))
+                opt->device = DEV_USB2;
+            else if (!strcmp (value, "USB3"))
+                opt->device = DEV_USB3;
+            else if (!strcmp (value, "USB4"))
+                opt->device = DEV_USB4;
+            else if (!strcmp (value, "USB5"))
+                opt->device = DEV_USB5;
+            else if (!strcmp (value, "USB6"))
+                opt->device = DEV_USB6;
+            else if (!strcmp (value, "USB7"))
+                opt->device = DEV_USB7;
+            else if (!strcmp (value, "USB8"))
+                opt->device = DEV_USB8;
+            else if (!strcmp (value, "LPT1"))
+                opt->device = DEV_LPT1;
+            else if (!strcmp (value, "LPT2"))
+                opt->device = DEV_LPT2;
+            else if (!strcmp (value, "LPT3"))
+                opt->device = DEV_LPT3;
+            else if (!strcmp (value, "ETH"))
+                opt->device = DEV_ETH;
         }
     } else if (!strcmp (section, "cfw")) {
         /* XXX set filter to slot mapping here */
