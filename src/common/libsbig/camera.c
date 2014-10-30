@@ -31,6 +31,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <arpa/inet.h> /* htons */
+#include <time.h>
 
 #include "handle.h"
 #include "handle_impl.h"
@@ -52,6 +53,7 @@ struct sbig_ccd_struct {
     ushort *frame;
     ulong exp_flags;
     double exposureTime;
+    time_t exposureStart;
 };
 
 static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
@@ -318,6 +320,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t ccd, unsigned short flags,
         in.exposureTime = exposureTime * 100.0;
     in.exposureTime |= ccd->exp_flags;
     ccd->exposureTime = exposureTime; /* leave it here for stats later */
+    ccd->exposureStart = time (NULL);
     return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 
@@ -488,6 +491,16 @@ ushort *sbig_ccd_get_data (sbig_ccd_t ccd, ushort *height, ushort *width)
     *height = ccd->height;
     *width = ccd->width;
     return ccd->frame;
+}
+
+time_t sbig_ccd_get_start_time (sbig_ccd_t ccd)
+{
+    return ccd->exposureStart;
+}
+
+double sbig_ccd_get_exposure_time (sbig_ccd_t ccd)
+{
+    return ccd->exposureTime;
 }
 
 int sbig_ccd_get_max (sbig_ccd_t ccd, ushort *maxp)

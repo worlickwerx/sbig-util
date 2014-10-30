@@ -1,6 +1,8 @@
 #ifndef _SBIG_CAMERA_H
 #define _SBIG_CAMERA_H
 
+#include <time.h>
+
 #include "handle.h"
 #include "sbigudrv.h"
 
@@ -91,6 +93,14 @@ int sbig_ccd_readout_subtract (sbig_ccd_t ccd);
 /* Get reference to internal buffer, a sequence of rows, pixels.
  */
 ushort *sbig_ccd_get_data (sbig_ccd_t ccd, ushort *height, ushort *width);
+
+/* Get the system time recorded when start_exposure was called.
+ */
+time_t sbig_ccd_get_start_time (sbig_ccd_t ccd);
+
+/* Get the exposure time in seconds recorded when start_exposure was called.
+ */
+double sbig_ccd_get_exposure_time (sbig_ccd_t ccd);
 
 /* Copy from internal buffer to a PGM file
  * Ref: netpbm.sourceforge.net/doc/pgm.html
