@@ -67,6 +67,9 @@ struct sbfits_struct {
     int top, left;               /* subframe origin */
     READOUT_BINNING_MODE readout_mode;
     GetCCDInfoResults0 info0;
+    double focal_length;
+    double aperture_diameter;
+    double aperture_area;
 };
 
 static char *gmtime_str (time_t t, char *buf, int sz)
@@ -180,6 +183,22 @@ void sbfits_set_temperature (sbfits_t sbf, double temperature)
 {
     sbf->temperature = temperature;
 }
+
+void sbfits_set_focal_length (sbfits_t sbf, double d)
+{
+    sbf->focal_length = d;
+}
+
+void sbfits_set_aperture_diameter (sbfits_t sbf, double d)
+{
+    sbf->aperture_diameter = d;
+}
+
+void sbfits_set_aperture_area (sbfits_t sbf, double d)
+{
+    sbf->aperture_area = d;
+}
+
 
 void sbfits_set_annotation (sbfits_t sbf, const char *str)
 {
@@ -301,18 +320,19 @@ static int sbfits_write_header (sbfits_t sbf)
     fits_write_key(sbf->fptr, TUSHORT, "SNAPSHOT", &sbf->num_exposures,
                     "Number images coadded", &sbf->status);
 
+    fits_write_key(sbf->fptr, TDOUBLE, "FOCALLEN", &sbf->focal_length,
+                   "Focal length in mm", &sbf->status);
+    fits_write_key(sbf->fptr, TDOUBLE, "APTDIA", &sbf->aperture_diameter,
+                   "Aperture diameter in mm", &sbf->status);
+    fits_write_key(sbf->fptr, TDOUBLE, "APTAREA", &sbf->aperture_area,
+                   "Aperture area in sq-mm", &sbf->status);
+
     return sbf->status ? -1 : 0;
 }
 
     /* FIXME More header values to write!!
      */
 #if 0
-    fits_write_key(sbf->fptr, TDOUBLE, "FOCALLEN", &focal_len,
-                   "Focal length in mm", &sbf->status);
-    fits_write_key(sbf->fptr, TDOUBLE, "APTDIA", &apt_diam,
-                   "Aperture diameter in mm", &sbf->status);
-    fits_write_key(sbf->fptr, TDOUBLE, "APTAREA", &apt_area,
-                   "Aperture area in sq-mm", &sbf->status);
     fits_write_key(sbf->fptr, TLONG,   "CBLACK", &m_lBackground,
                    "BLACK ADU FOR DISPLAY", &sbf->status);
     fits_write_key(sbf->fptr, TLONG,   "CWHITE", &fitsWhite,
