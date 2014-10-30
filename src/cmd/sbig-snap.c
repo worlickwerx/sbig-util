@@ -34,12 +34,16 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <sys/param.h>
+#include <sys/types.h>
+#include <pwd.h>
 #include <time.h>
 #include <math.h> /* fabs */
 
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
+#include "src/common/libutil/xzmalloc.h"
 #include "src/common/libsbig/sbfits.h"
+#include "src/common/libini/ini.h"
 
 typedef struct snap_struct {
     SBIG_DEVICE_TYPE device;
@@ -48,16 +52,23 @@ typedef struct snap_struct {
     double t;
     int count;
     double time_delta;
-    const char *imagedir;
+    char *imagedir;
     const char *message;
     bool verbose;
+    char *observer;
+    char *telescope;
+    char *filter;
+    const char *object;
+    double focal_length;
+    double aperture_diameter;
+    double aperture_area;
 } snap_t;
 
 /* FIXME: add 1/2 and 1/4 (centered) subframe modes */
 /* FIXME: add fast cycling focus mode */
 /* FIXME: add image monitoring for focus/centering (show contrast FOM) */
 
-#define OPTIONS "ht:d:C:r:n:D:m:"
+#define OPTIONS "ht:d:C:r:n:D:m:c:O:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -67,10 +78,14 @@ static const struct option longopts[] = {
     {"count",         required_argument,     0, 'n'},
     {"time-delta",    required_argument,     0, 'D'},
     {"message",       required_argument,     0, 'm'},
+    {"config",        required_argument,     0, 'c'},
+    {"object",        required_argument,     0, 'O'},
     {0, 0, 0, 0},
 };
 
 void snap_series (sbig_t sb, snap_t snap);
+int config_cb (void *user, const char *section, const char *name,
+               const char *value);
 
 void usage (void)
 {
@@ -83,6 +98,8 @@ void usage (void)
 "  -n, --count N              take N exposures\n"
 "  -D, --time-delta N         increase exposure time by N on each exposure\n"
 "  -m, --message string       add annotation to FITS file\n"
+"  -c, --config FILENAME      use a config file other than the default\n"
+"  -O, --object NAME          name of object being observed (e.g. M33)\n"
 );
     exit (1);
 }
@@ -94,20 +111,53 @@ int main (int argc, char *argv[])
     sbig_t sb;
     snap_t opt;
     CAMERA_TYPE type;
+    char *config_filename = NULL;
 
     log_init ("sbig-snap");
 
-    memset (&opt, 0, sizeof (opt)); /* Set some defaults: */
-    opt.device = DEV_USB1;          /* hardwired for USB (FIXME) */
+    /* Set default option values.
+     */
+    memset (&opt, 0, sizeof (opt));
+    opt.device = DEV_USB1;          /* first USB device */
     opt.chip = CCD_IMAGING;         /* main imaging ccd */
     opt.readout_mode = RM_1X1;      /* high resolution */
-    opt.imagedir = "/mnt/img";      /* where to write files */
+    opt.imagedir = xstrdup("/mnt/img"); /* where to write files */
     opt.t = 1.0;                    /* 1s exposure time */
     opt.count = 1;                  /* one exposure */
     opt.verbose = true;
-    
+
+    /* Override defaults with config file
+     */
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
+            case 'c': /* --config FILE */
+                config_filename = xstrdup (optarg);
+                break;
+        default:
+            break;
+        }
+    }
+    if (!config_filename) {
+        struct passwd *pw = getpwuid (getuid ());
+        if (!pw)
+            msg_exit ("Who are you?");
+        if (asprintf (&config_filename, "%s/.sbig/config.ini", pw->pw_dir) < 0)
+            oom ();
+    }
+    if (ini_parse (config_filename, config_cb, &opt) < 0)
+        msg ("Warning: cannot load %s, FITS header may be incomplete",
+             config_filename);
+
+    /* Override defaults and config file with command line
+     */
+    optind = 0;
+    while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
+        switch (ch) {
+            case 'c': /* --config FILE */
+                break;
+            case 'O': /* --object NAME */
+                opt.object = optarg;
+                break;
             case 'm': /* --message string */
                 opt.message = optarg;
                 break;
@@ -135,7 +185,9 @@ int main (int argc, char *argv[])
                     msg_exit ("error parsing --ccd-chip argument (imaging, tracking, ext-tracking)");
                 break;
             case 'd': /* --image-directory DIR */
-                opt.imagedir = optarg;
+                if (opt.imagedir)
+                    free (opt.imagedir);
+                opt.imagedir = xstrdup (optarg);
                 break;
             case 'r': /* --resolution hi|med|lo */
                 if (!strcmp (optarg, "hi"))
@@ -187,9 +239,50 @@ int main (int argc, char *argv[])
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
 
+    if (opt.observer)
+        free (opt.observer);
+    if (opt.telescope)
+        free (opt.telescope);
+    if (opt.filter)
+        free (opt.filter);
+    if (opt.imagedir)
+        free (opt.imagedir);
+
     sbig_destroy (sb);
     log_fini ();
     return 0;
+}
+
+int config_cb (void *user, const char *section, const char *name,
+               const char *value)
+{
+    snap_t *opt = user;
+
+
+    if (!strcmp (section, "system")) {
+        if (!strcmp (name, "imagedir")) {
+            if (opt->imagedir)
+                free (opt->imagedir);
+            opt->imagedir = xstrdup (value);
+        }
+    } else if (!strcmp (section, "cfw")) {
+        /* XXX set filter to slot mapping here */
+    } else if (!strcmp (section, "config")) {
+        if (!strcmp (name, "observer"))
+            opt->observer = xstrdup (value);
+        else if (!strcmp (name, "telescope"))
+            opt->telescope = xstrdup (value);
+        else if (!strcmp (name, "filter"))
+            opt->filter = xstrdup (value);
+        else if (!strcmp (name, "focal_length"))
+            opt->focal_length = strtod (value, NULL);
+        else if (!strcmp (name, "aperture_diameter"))
+            opt->aperture_diameter = strtod (value, NULL);
+        else if (!strcmp (name, "aperture_area"))
+            opt->aperture_area = strtod (value, NULL);
+    }
+
+    return 0; /* 0=success, 1=error */
 }
 
 /* Wait for an exposure in progress to complete.
@@ -308,10 +401,20 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     sbfits_set_ccdinfo (sbf, ccd);
     sbfits_set_temperature (sbf, temp_lf);
     sbfits_set_annotation (sbf, opt.message);
+    sbfits_set_observer (sbf, opt.observer);
+    sbfits_set_telescope (sbf, opt.telescope);
+    sbfits_set_filter (sbf, opt.filter);
+    sbfits_set_focal_length (sbf, opt.focal_length);
+    sbfits_set_aperture_diameter (sbf, opt.aperture_diameter);
+    sbfits_set_aperture_area (sbf, opt.aperture_area);
+    sbfits_set_object (sbf, opt.object);
+
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
     if (sbfits_close_file (sbf))
         err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
+    if (opt.verbose)
+        msg ("wrote %s", sbfits_get_filename (sbf));
     sbfits_destroy (sbf);
 }
 
