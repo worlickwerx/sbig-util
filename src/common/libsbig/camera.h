@@ -67,6 +67,7 @@ int sbig_ccd_get_window (sbig_ccd_t ccd, ushort *topp, ushort *leftp,
                          ushort *heightp, ushort *widthp);
 
 /* Set window to a centered fraction of the area of the full frame.
+ * (0 < part <= 1.0)
  */
 int sbig_ccd_set_partial_frame (sbig_ccd_t ccd, double part);
 

@@ -49,6 +49,7 @@ typedef struct snap_struct {
     SBIG_DEVICE_TYPE device;
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
+    double partial;
     double t;
     int count;
     double time_delta;
@@ -70,14 +71,13 @@ typedef struct snap_struct {
 
 const char *software_name = "sbig-util 0.1.0";
 
-/* FIXME: add 1/2 and 1/4 (centered) subframe modes */
 /* FIXME: add fast cycling focus mode */
 /* FIXME: add image monitoring for focus/centering (show contrast FOM) */
 /* FIXME: get TE freeze/unfreeze (or autofreeze) working */
 /* FIXME: take one DF and reuse during a fixed-time series */
 /* FIXME: handle filter = auto (get filter info from CFW + config) */
 
-#define OPTIONS "ht:d:C:r:n:D:m:O:f"
+#define OPTIONS "ht:d:C:r:n:D:m:O:fp:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -89,6 +89,7 @@ static const struct option longopts[] = {
     {"message",       required_argument,     0, 'm'},
     {"object",        required_argument,     0, 'O'},
     {"force",         no_argument,           0, 'f'},
+    {"partial",       required_argument,     0, 'p'},
     {0, 0, 0, 0},
 };
 
@@ -109,6 +110,7 @@ void usage (void)
 "  -m, --message string       add annotation to FITS file\n"
 "  -O, --object NAME          name of object being observed (e.g. M33)\n"
 "  -f, --force                press on even if FITS header will be incomplete\n"
+"  -p, --partial N            take centered partial frame (0 < N <= 1.0)\n"
 );
     exit (1);
 }
@@ -135,6 +137,7 @@ int main (int argc, char *argv[])
     opt.t = 1.0;                    /* 1s exposure time */
     opt.count = 1;                  /* one exposure */
     opt.verbose = true;
+    opt.partial = 1.0;
 
     /* Override defaults with config file
      */
@@ -148,6 +151,11 @@ int main (int argc, char *argv[])
     optind = 0;
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
+            case 'p': /* --partial */
+                opt.partial = strtod (optarg, NULL); 
+                if (opt.partial <= 0)
+                    usage ();
+                break;
             case 'f': /* --force */
                 force = true; 
                 break;
@@ -467,6 +475,10 @@ void snap_series (sbig_t sb, snap_t opt)
      */
     if ((e = sbig_ccd_set_readout_mode (ccd, opt.readout_mode)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
+    if (opt.partial < 1.0) {
+        if ((e = sbig_ccd_set_partial_frame (ccd, opt.partial)) != CE_NO_ERROR)
+            msg_exit ("sbig_ccd_set_partial_frame: %s", sbig_get_error_string (sb, e));
+    }
 
     /* Take series of images and write them out as FITS files.
      * Optionally increase the exposure time by time_delta on each exposure.

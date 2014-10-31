@@ -206,10 +206,12 @@ int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep)
 }
 
 /* Calculate centered fractional edge for one dimension of subframe.
- * F is the fraction of the area of the rectangle to use in the subframe.
- * m is the full frame maximum.
- * a is the origin of the subframe
- * Return value is the length of the subframe.
+ * F = fraction of the area of the rectangle to use in the subframe.
+ * m = full frame maximum.
+ * a = origin of the subframe
+ * Return value = length of the subframe.
+ * +------------+----------+-------------+
+ * 0            a          b             m
  */
 static double cfe (double m, double F, double *a)
 {

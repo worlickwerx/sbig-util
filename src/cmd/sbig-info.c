@@ -244,7 +244,6 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
 
     fov_height = (sensor_height * 3478.0 / focal_length);
     fov_width = (sensor_width * 3478.0 / focal_length);
-
     msg ("field of view: %.2f'H x %.2f'W", fov_height, fov_width);
     if (fov_height > 60)
         msg ("  or: %.2f x %.2f degrees", fov_height/60, fov_width/60);
