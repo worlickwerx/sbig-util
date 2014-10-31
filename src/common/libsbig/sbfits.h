@@ -23,6 +23,8 @@ void sbfits_set_aperture_diameter (sbfits_t sbf, double n);
 void sbfits_set_aperture_area (sbfits_t sbf, double n);
 void sbfits_set_site (sbfits_t sbf, const char *name,
                       const char *lat, const char *lng, double elevation);
+void sbfits_set_swcreate (sbfits_t sbf, const char *swcreate);
+void sbfits_set_history (sbfits_t sbf, const char *swmodify, const char *str);
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

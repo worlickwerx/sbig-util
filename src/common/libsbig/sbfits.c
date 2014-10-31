@@ -65,6 +65,9 @@ struct sbfits_struct {
     const char *latitude;        /* (opt) site latitude (+DD:MM:SS.SSSS) */
     const char *longitude;       /* (opt) site longitude (+DDD:MM:SS.SSS) */
     const char *sitename;        /* (opt) site name */
+    const char *swcreate;        /* software that created image */
+    const char *swmodify;        /* software that modified image */
+    const char *history;         /* history (goes with swmodify) */
     double elevation;
     ushort *data;                /* image data */
     ushort height, width;        /* size of image data */
@@ -217,6 +220,17 @@ void sbfits_set_annotation (sbfits_t sbf, const char *str)
     sbf->annotation = str;
 }
 
+void sbfits_set_history (sbfits_t sbf, const char *swmodify, const char *str)
+{
+    sbf->swmodify = swmodify;
+    sbf->history = str;
+}
+
+void sbfits_set_swcreate (sbfits_t sbf, const char *swcreate)
+{
+    sbf->swcreate = swcreate;
+}
+
 static int sbfits_write_image (sbfits_t sbf)
 {
     long naxes[2] = { sbf->width, sbf->height };
@@ -266,6 +280,15 @@ static int sbfits_write_header (sbfits_t sbf)
                     "Exposure in seconds", &sbf->status);
     fits_write_key (sbf->fptr, TDOUBLE, "CCD-TEMP", &sbf->temperature,
                     "CCD temp in degress C", &sbf->status);
+    if (sbf->swcreate)
+        fits_write_key (sbf->fptr, TSTRING, "SWCREATE", (char *)sbf->swcreate,
+                        "Software that created this image", &sbf->status);
+    if (sbf->swmodify)
+        fits_write_key (sbf->fptr, TSTRING, "SWMODIFY", (char *)sbf->swmodify,
+                        "Software that modified this image", &sbf->status);
+    if (sbf->history)
+        fits_write_key (sbf->fptr, TSTRING, "HISTORY", (char *)sbf->history,
+                        "How modified", &sbf->status);
 
     if (sbf->sitename)
         fits_write_key(sbf->fptr, TSTRING, "SITENAME", (char *)sbf->sitename,
