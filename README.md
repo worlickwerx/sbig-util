@@ -191,7 +191,7 @@ extensions described in
 These mandatory headers are not yet being generated:
 
 ```
-CBLACK, CWHITE, PEDESTAL, DATAMAX, SWCREATE, SWMODIFY
+CBLACK, CWHITE, PEDESTAL, DATAMAX
 ```
 
 And the following optional headers:
@@ -213,10 +213,13 @@ BSCALE  =                    1 / default scaling factor
 COMMENT = 'SBIG FITS header format per:'                                        
 COMMENT = ' http://www.sbig.com/pdffiles/SBFITSEXT_1r0.pdf'                     
 SBSTDVER= 'SBFITSEXT Version 1.0' / SBIG FITS extensions ver                    
-DATE    = '2014-10-30T22:01:06' / GMT date when this file created               
-DATE-OBS= '2014-10-30T22:01:13' / GMT start of exposure                         
+DATE    = '2014-10-31T03:46:59' / GMT date when this file created               
+DATE-OBS= '2014-10-31T03:47:05' / GMT start of exposure                         
 EXPTIME =                   1. / Exposure in seconds                            
-CCD-TEMP=      26.827323877487 / CCD temp in degress C                          
+CCD-TEMP=     28.6799553145234 / CCD temp in degress C                          
+SWCREATE= 'sbig-util 0.1.0'    / Software that created this image               
+SWMODIFY= 'sbig-util 0.1.0'    / Software that modified this image              
+HISTORY = 'Dark Subtraction'   / How modified                                   
 SITENAME= 'Carnelian Bay, CA'  / Site name                                      
 SITEELEV=                1928. / Site elevation in meters                       
 SITELAT = '+39:13:36.6636'     / Site latitude in degrees                       
