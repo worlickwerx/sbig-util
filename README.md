@@ -95,7 +95,7 @@ make
 You can get your camera connected and run
 ```
 cd src/cmd
-./sbig info imaging-ccd
+./sbig info ccd imaging
 ```
 which should display information about your camera.  For example
 my ST-8 looks like this:
@@ -126,8 +126,8 @@ sbig-info: frame-buffer:      no
 sbig-info: use-startexp2:     no
 ```
 
-`sbig info` can also query information about the tracking-ccd,
-cfw (filter wheel), cooler, and driver.
+`sbig info` can also query information about the tracking hcd,
+cfw (filter wheel), cooler, driver, and calculate camera field of view.
 
 ### Running sbig-cooler
 
