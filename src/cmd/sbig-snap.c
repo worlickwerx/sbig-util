@@ -71,12 +71,6 @@ typedef struct snap_struct {
 
 const char *software_name = "sbig-util 0.1.0";
 
-/* FIXME: add fast cycling focus mode */
-/* FIXME: add image monitoring for focus/centering (show contrast FOM) */
-/* FIXME: get TE freeze/unfreeze (or autofreeze) working */
-/* FIXME: take one DF and reuse during a fixed-time series */
-/* FIXME: handle filter = auto (get filter info from CFW + config) */
-
 #define OPTIONS "ht:d:C:r:n:D:m:O:fp:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
@@ -133,7 +127,7 @@ int main (int argc, char *argv[])
     opt.device = DEV_USB1;          /* first USB device */
     opt.chip = CCD_IMAGING;         /* main imaging ccd */
     opt.readout_mode = RM_1X1;      /* high resolution */
-    opt.imagedir = xstrdup("/mnt/img"); /* where to write files */
+    opt.imagedir = xstrdup("/tmp"); /* where to write files */
     opt.t = 1.0;                    /* 1s exposure time */
     opt.count = 1;                  /* one exposure */
     opt.verbose = true;
