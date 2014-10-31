@@ -68,6 +68,8 @@ typedef struct snap_struct {
     double elevation;
 } snap_t;
 
+const char *software_name = "sbig-util 0.1.0";
+
 /* FIXME: add 1/2 and 1/4 (centered) subframe modes */
 /* FIXME: add fast cycling focus mode */
 /* FIXME: add image monitoring for focus/centering (show contrast FOM) */
@@ -433,6 +435,8 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     sbfits_set_object (sbf, opt.object);
     sbfits_set_site (sbf, opt.sitename, opt.latitude, opt.longitude,
                      opt.elevation);
+    sbfits_set_swcreate (sbf, software_name);
+    sbfits_set_history (sbf, software_name, "Dark Subtraction");
 
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
