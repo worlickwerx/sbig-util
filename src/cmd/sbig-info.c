@@ -37,10 +37,13 @@
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 
-void show_cfw_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av);
-void show_driver_info (sbig_t sb, int ac, char **av);
-void show_ccd_info (sbig_t sb, SBIG_DEVICE_TYPE device, CCD_REQUEST chip, int ac, char **av);
-void show_cooler_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av);
+void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
+                    int ac, char **av);
+void show_driver_info (const char *sbig_udrv, int ac, char **av);
+void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
+                    CCD_REQUEST chip, int ac, char **av);
+void show_cooler_info (const char *sbig_udrv, const char *sbig_device,
+                       int ac, char **av);
 
 #define OPTIONS "h"
 static const struct option longopts[] = {
@@ -62,13 +65,10 @@ void usage (void)
 
 int main (int argc, char *argv[])
 {
-    sbig_t sb;
     const char *sbig_udrv = getenv ("SBIG_UDRV");
     const char *sbig_device = getenv ("SBIG_DEVICE");
-    int e;
     int ch;
     char *cmd;
-    SBIG_DEVICE_TYPE device;
 
     log_init ("sbig-info");
 
@@ -87,35 +87,48 @@ int main (int argc, char *argv[])
         msg_exit ("SBIG_UDRV is not set");
     if (!sbig_device)
         msg_exit ("SBIG_DEVICE is not set");
-    device = sbig_devstr (sbig_device);
+
+    if (!strcmp (cmd, "imaging-ccd")) {
+        show_ccd_info (sbig_udrv, sbig_device, CCD_IMAGING,
+                       argc - optind, argv + optind);
+    } else if (!strcmp (cmd, "tracking-ccd")) {
+        show_ccd_info (sbig_udrv, sbig_device, CCD_TRACKING,
+                       argc - optind, argv + optind);
+    } else if (!strcmp (cmd, "driver")) {
+        show_driver_info (sbig_udrv, argc - optind, argv + optind);
+    } else if (!strcmp (cmd, "cfw")) {
+        show_cfw_info (sbig_udrv, sbig_device, argc - optind, argv + optind);
+    } else if (!strcmp (cmd, "cooler")) {
+        show_cooler_info(sbig_udrv, sbig_device, argc - optind, argv + optind);;
+    } else
+        usage ();
+
+    log_fini ();
+    return 0;
+}
+
+sbig_t init_driver (const char *sbig_udrv)
+{
+    int e;
+    sbig_t sb;
+
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != 0)
         msg_exit ("%s", dlerror ());
     if ((e = sbig_open_driver (sb)) != 0)
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
-
-    if (!strcmp (cmd, "imaging-ccd"))
-        show_ccd_info (sb, device, CCD_IMAGING, argc - optind, argv + optind);
-    else if (!strcmp (cmd, "tracking-ccd"))
-        show_ccd_info (sb, device, CCD_TRACKING, argc - optind, argv + optind);
-    else if (!strcmp (cmd, "driver"))
-        show_driver_info (sb, argc - optind, argv + optind);
-    else if (!strcmp (cmd, "cfw"))
-        show_cfw_info (sb, device, argc - optind, argv + optind);
-    else if (!strcmp (cmd, "cooler"))
-        show_cooler_info (sb, device, argc - optind, argv + optind);
-    else
-        usage ();
-
-    sbig_destroy (sb);
-    log_fini ();
-    return 0;
+    return sb;
 }
 
-void show_cooler_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av)
+void fini_driver (sbig_t sb)
 {
-    QueryTemperatureStatusResults2 info;
+    sbig_destroy (sb);
+}
+
+void init_device (sbig_t sb, const char *sbig_device)
+{
+    SBIG_DEVICE_TYPE device = sbig_devstr (sbig_device);
     CAMERA_TYPE type;
     int e;
 
@@ -123,6 +136,24 @@ void show_cooler_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
+}
+
+void fini_device (sbig_t sb)
+{
+    int e;
+    if ((e = sbig_close_device (sb)) != 0)
+        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
+}
+
+void show_cooler_info (const char *sbig_udrv, const char *sbig_device,
+                       int ac, char **av)
+{
+    sbig_t sb;
+    QueryTemperatureStatusResults2 info;
+    int e;
+
+    sb = init_driver (sbig_udrv);
+    init_device (sb, sbig_device);
 
     if ((e = sbig_temp_get_info (sb, &info)) != CE_NO_ERROR)
         msg_exit ("sbig_temp_get_info: %s", sbig_get_error_string (sb, e));
@@ -146,38 +177,46 @@ void show_cooler_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av)
     msg ("fan pwr:              %.0f%%", info.fanPower);
     msg ("fan speed:            %.0fRPM", info.fanSpeed);
 
-    if ((e = sbig_close_device (sb)) != 0)
-        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
+    fini_device (sb);
+    fini_driver (sb);
 }
 
-void show_driver_info (sbig_t sb, int ac, char **av)
+void show_driver_info (const char *sbig_udrv, int ac, char **av)
 {
     GetDriverInfoResults0 info;
     int e;
     char version[16];
+    sbig_t sb;
 
     if (ac != 0)
         msg_exit ("driver takes no arguments");
+
+    sb = init_driver (sbig_udrv);
+
     if ((e = sbig_get_driver_info (sb, DRIVER_STD, &info)) != 0)
         msg_exit ("sbig_get_driver_info: %s", sbig_get_error_string (sb, e));
     bcd4str (info.version, version, sizeof (version));
     msg ("version: %s", version);
     msg ("name:    %s", info.name);
     msg ("maxreq:  %d", info.maxRequest);
+
+    fini_driver (sb);
 }
 
-void show_cfw_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av)
+void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
+                    int ac, char **av)
 {
     int e;
     ulong fwrev, numpos;
-    CAMERA_TYPE type;
     CFW_MODEL_SELECT model;
+    sbig_t sb;
+
     if (ac != 0)
         msg_exit ("cfw takes no arguments");
-    if ((e = sbig_open_device (sb, device)) != 0)
-        msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_establish_link (sb, &type)) != 0)
-        msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
+
+    sb = init_driver (sbig_udrv);
+    init_device (sb, sbig_device);
+
     if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos)) != 0)
         msg_exit ("sbig_cfw_get_info: %s", sbig_get_error_string (sb, e));
     msg ("model:            %s", sbig_strcfw (model));
@@ -186,23 +225,26 @@ void show_cfw_info (sbig_t sb, SBIG_DEVICE_TYPE device, int ac, char **av)
 
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
+
+    fini_device (sb);
+    fini_driver (sb);
 }
 
-void show_ccd_info (sbig_t sb, SBIG_DEVICE_TYPE device,
+void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
                     CCD_REQUEST chip, int ac, char **av)
 {
     int i, e;
-    CAMERA_TYPE type;
     GetCCDInfoResults0 info;
     char version[16];
     sbig_ccd_t ccd;
+    sbig_t sb;
 
     if (ac != 0)
         msg_exit ("device takes no arguments");
-    if ((e = sbig_open_device (sb, device)) != 0)
-        msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_establish_link (sb, &type)) != 0)
-        msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
+
+    sb = init_driver (sbig_udrv);
+    init_device (sb, sbig_device);
+
     if ((e = sbig_ccd_create (sb, chip, &ccd)))
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_ccd_get_info0 (ccd, &info)) != 0)
@@ -258,6 +300,9 @@ void show_ccd_info (sbig_t sb, SBIG_DEVICE_TYPE device,
     sbig_ccd_destroy (ccd);
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
+
+    fini_device (sb);
+    fini_driver (sb);
 }
 
 /*
