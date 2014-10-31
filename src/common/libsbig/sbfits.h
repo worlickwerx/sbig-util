@@ -16,7 +16,7 @@ void sbfits_set_observer (sbfits_t sbf, const char *observer);
 void sbfits_set_telescope (sbfits_t sbf, const char *telescope);
 void sbfits_set_filter (sbfits_t sbf, const char *filter);
 void sbfits_set_object (sbfits_t sbf, const char *object);
-void sbfits_set_temperature (sbfits_t sbf, double temperature);
+void sbfits_set_temperature (sbfits_t sbf, double setpoint, double temperature);
 void sbfits_set_annotation (sbfits_t sbf, const char *str);
 void sbfits_set_focal_length (sbfits_t sbf, double n);
 void sbfits_set_aperture_diameter (sbfits_t sbf, double n);

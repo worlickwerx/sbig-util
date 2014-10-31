@@ -58,6 +58,7 @@ struct sbfits_struct {
     double exposure_time;        /* length of exposure in seconds */
     ushort num_exposures;        /* number of exposures co-added */
     double temperature;          /* temperature of CCD at start of exp */
+    double setpoint;             /* setpoint of CCD */
     const char *object;          /* (opt) name of object being studied */
     const char *telescope;       /* (opt) telescope/lens used */
     const char *filter;          /* (opt) filter used */
@@ -186,8 +187,9 @@ void sbfits_set_object (sbfits_t sbf, const char *object)
     sbf->object = object ;
 }
 
-void sbfits_set_temperature (sbfits_t sbf, double temperature)
+void sbfits_set_temperature (sbfits_t sbf, double setpoint, double temperature)
 {
+    sbf->setpoint = setpoint;
     sbf->temperature = temperature;
 }
 
@@ -280,6 +282,8 @@ static int sbfits_write_header (sbfits_t sbf)
                     "Exposure in seconds", &sbf->status);
     fits_write_key (sbf->fptr, TDOUBLE, "CCD-TEMP", &sbf->temperature,
                     "CCD temp in degress C", &sbf->status);
+    fits_write_key (sbf->fptr, TDOUBLE, "SET-TEMP", &sbf->setpoint,
+                    "Setpoint for CCD temp in degress C", &sbf->status);
     if (sbf->swcreate)
         fits_write_key (sbf->fptr, TSTRING, "SWCREATE", (char *)sbf->swcreate,
                         "Software that created this image", &sbf->status);
