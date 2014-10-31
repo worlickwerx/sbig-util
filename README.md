@@ -125,8 +125,9 @@ sbig-info: frame-buffer:      no
 sbig-info: use-startexp2:     no
 ```
 
-`sbig info` can also query information about the tracking hcd,
-cfw (filter wheel), cooler, driver, and calculate angular field of view.
+`sbig info` can also query information about the tracking ccd,
+cfw (filter wheel), cooler, driver, and calculate angular field of view
+for a given focal length telescope.
 
 ### Running sbig-cooler
 
