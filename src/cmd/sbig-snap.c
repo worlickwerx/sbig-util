@@ -101,13 +101,13 @@ void usage (void)
 {
     fprintf (stderr,
 "Usage: sbig-snap [OPTIONS]\n"
-"  -t, --exposure-time DOUBLE exposure time in seconds (default 1.0)\n"
+"  -t, --exposure-time SEC    exposure time in seconds (default 1.0)\n"
 "  -d, --image-directory DIR  where to put images (default /mnt/img)\n"
 "  -C, --ccd-chip CHIP        use imaging, tracking, or ext-tracking\n"
 "  -r, --resolution RES       select hi, med, or lo resolution\n"
 "  -n, --count N              take N exposures\n"
 "  -D, --time-delta N         increase exposure time by N on each exposure\n"
-"  -m, --message string       add annotation to FITS file\n"
+"  -m, --message string       add COMMENT to FITS file\n"
 "  -O, --object NAME          name of object being observed (e.g. M33)\n"
 "  -f, --force                press on even if FITS header will be incomplete\n"
 "  -p, --partial N            take centered partial frame (0 < N <= 1.0)\n"
@@ -153,7 +153,7 @@ int main (int argc, char *argv[])
         switch (ch) {
             case 'p': /* --partial */
                 opt.partial = strtod (optarg, NULL); 
-                if (opt.partial <= 0)
+                if (opt.partial <= 0 || opt.partial > 1.0)
                     usage ();
                 break;
             case 'f': /* --force */
