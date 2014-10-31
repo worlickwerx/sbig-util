@@ -409,7 +409,9 @@ double snap_temp (sbig_t sb, snap_t opt, double *setpoint)
 void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
 {
     double dt, temp_lf, temp_df, setpoint;
+    long cwhite, cblack;
     sbfits_t sbf;
+    int e;
 
     /* Create FITS file for output.
      */
@@ -431,6 +433,9 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
 
     snap (sb, ccd, opt, SNAP_LF_SUB, seq);
 
+    if ((e = sbig_ccd_auto_contrast (ccd, &cwhite, &cblack)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_auto_contrast: %s", sbig_get_error_string (sb, e));
+
     /* Write out FITS file
      */
     sbfits_set_ccdinfo (sbf, ccd);
@@ -447,6 +452,8 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
                      opt.elevation);
     sbfits_set_swcreate (sbf, software_name);
     sbfits_set_history (sbf, software_name, "Dark Subtraction");
+    sbfits_set_contrast (sbf, cblack, cwhite);
+    sbfits_set_pedestal (sbf, -100); /* readout_subtract does this */
 
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
