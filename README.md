@@ -3,9 +3,8 @@
 sbig-util is a set of Linux command line tools for controlling cameras
 from the Santa Barbara Instrument group.  The goal is to develop a simple
 tool that can directly control a camera and filter wheel in the field
-during an astrophotography session.  Perhaps our tool can be a building
-block for more complex, process-oriented software, or serve as another
-demo for using the SBIG SDK.
+during an astrophotography session, and be part of a workflow that
+includes other AIPS tools such as [ds9](http://ds9.si.edu).
 
 sbig-util includes a copy of the SBIG Linux Development Kit
 as a convenience.  You may configure sbig-util to use either this copy,
