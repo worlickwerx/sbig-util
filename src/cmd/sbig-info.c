@@ -36,14 +36,23 @@
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
+#include "src/common/libini/ini.h"
+
+typedef struct {
+    double focal_length;
+} opt_t;
 
 void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
                     int ac, char **av);
 void show_driver_info (const char *sbig_udrv, int ac, char **av);
 void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
-                    CCD_REQUEST chip, int ac, char **av);
+                    int ac, char **av);
 void show_cooler_info (const char *sbig_udrv, const char *sbig_device,
                        int ac, char **av);
+void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
+               int ac, char **av);
+int config_cb (void *user, const char *section, const char *name,
+               const char *value);
 
 #define OPTIONS "h"
 static const struct option longopts[] = {
@@ -55,10 +64,10 @@ void usage (void)
 {
     fprintf (stderr,
 "Usage: sbig-info driver\n"
-"       sbig-info imaging-ccd\n"
-"       sbig-info tracking-ccd\n"
+"       sbig-info ccd {tracking|imaging}\n"
 "       sbig-info cfw\n"
 "       sbig-info cooler\n"
+"       sbig-info fov {tracking|imaging} [focal-length]\n"
 );
     exit (1);
 }
@@ -67,10 +76,14 @@ int main (int argc, char *argv[])
 {
     const char *sbig_udrv = getenv ("SBIG_UDRV");
     const char *sbig_device = getenv ("SBIG_DEVICE");
+    const char *config_filename = getenv ("SBIG_CONFIG_FILE");
     int ch;
     char *cmd;
+    opt_t opt;
 
     log_init ("sbig-info");
+
+    memset (&opt, 0, sizeof (opt));
 
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
@@ -87,23 +100,35 @@ int main (int argc, char *argv[])
         msg_exit ("SBIG_UDRV is not set");
     if (!sbig_device)
         msg_exit ("SBIG_DEVICE is not set");
+    if (!config_filename)
+        msg_exit ("SBIG_CONFIG_FILE is not set");
+    (void)ini_parse (config_filename, config_cb, &opt);
 
-    if (!strcmp (cmd, "imaging-ccd")) {
-        show_ccd_info (sbig_udrv, sbig_device, CCD_IMAGING,
-                       argc - optind, argv + optind);
-    } else if (!strcmp (cmd, "tracking-ccd")) {
-        show_ccd_info (sbig_udrv, sbig_device, CCD_TRACKING,
-                       argc - optind, argv + optind);
+    if (!strcmp (cmd, "ccd")) {
+        show_ccd_info (sbig_udrv, sbig_device, argc - optind, argv + optind);
     } else if (!strcmp (cmd, "driver")) {
         show_driver_info (sbig_udrv, argc - optind, argv + optind);
     } else if (!strcmp (cmd, "cfw")) {
         show_cfw_info (sbig_udrv, sbig_device, argc - optind, argv + optind);
     } else if (!strcmp (cmd, "cooler")) {
         show_cooler_info(sbig_udrv, sbig_device, argc - optind, argv + optind);;
+    } else if (!strcmp (cmd, "fov")) {
+        show_fov (sbig_udrv, sbig_device, opt, argc - optind, argv + optind);
     } else
         usage ();
 
     log_fini ();
+    return 0;
+}
+
+int config_cb (void *user, const char *section, const char *name,
+               const char *value)
+{
+    opt_t *opt = user;
+    if (!strcmp (section, "config")) {
+        if (!strcmp (name, "focal_length"))
+            opt->focal_length = strtod (value, NULL);
+    }
     return 0;
 }
 
@@ -143,6 +168,78 @@ void fini_device (sbig_t sb)
     int e;
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
+}
+
+static int lookup_readoutmode_index (GetCCDInfoResults0 info,
+                                     READOUT_BINNING_MODE mode)
+{
+    int i;
+    for (i = 0; i < info.readoutModes; i++) {
+        if (info.readoutInfo[i].mode == mode)
+            return i;
+    }
+    return -1;
+}
+
+void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
+               int ac, char **av)
+{
+    sbig_t sb;
+    double fov_height, fov_width; /* field of view in arcseconds */
+    double sensor_width, sensor_height; /* sensor dims in mm */
+    double focal_length;
+    int e, rm_index;
+    sbig_ccd_t ccd;
+    CCD_REQUEST chip;
+    READOUT_BINNING_MODE readout_mode = RM_1X1;
+    GetCCDInfoResults0 info;
+
+    if (ac != 1 && ac != 2)
+        usage ();
+    if (!strcmp (av[0], "tracking"))
+        chip = CCD_TRACKING;
+    else if (!strcmp (av[0], "imaging"))
+        chip = CCD_IMAGING;
+    else
+        usage ();
+    if (ac == 2)
+        focal_length = strtod (av[1], NULL);
+    else {    
+        if (opt.focal_length == 0)
+            msg_exit("Please set focal_length");
+        focal_length = opt.focal_length;
+    }
+    msg ("focal length: %.2fmm", focal_length);
+
+    sb = init_driver (sbig_udrv);
+    init_device (sb, sbig_device);
+
+    if ((e = sbig_ccd_create (sb, chip, &ccd)))
+        msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
+    if ((e = sbig_ccd_get_info0 (ccd, &info)) != 0)
+        msg_exit ("sbig_ccd_get_info: %s", sbig_get_error_string (sb, e));
+
+    rm_index = lookup_readoutmode_index (info, readout_mode);
+    if (rm_index < 0)
+        msg_exit ("could not look up readout mode!");
+
+    sensor_height = 1E-3 * info.readoutInfo[rm_index].height
+                  * bcd6_2 (info.readoutInfo[rm_index].pixelHeight);
+    sensor_width = 1E-3 * info.readoutInfo[rm_index].width
+                 * bcd6_2 (info.readoutInfo[rm_index].pixelWidth);
+    msg ("sensor: %.2fmm H x %.2fmm W",
+         sensor_height, sensor_width);
+
+    fov_height = 3478 * (sensor_height / focal_length);
+    fov_width = 3478 * (sensor_width / focal_length);
+
+    msg ("field of view: %.2f'H x %.2f'W", fov_height, fov_width);
+    if (fov_height > 60)
+        msg ("           or: %.2f x %.2f degrees", fov_height/60, fov_width/60);
+
+    sbig_ccd_destroy (ccd);
+    fini_device (sb);
+    fini_driver (sb);
 }
 
 void show_cooler_info (const char *sbig_udrv, const char *sbig_device,
@@ -223,24 +320,28 @@ void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
     msg ("firmware-version: %lu", fwrev);
     msg ("num-positions:    %lu", numpos);
 
-    if ((e = sbig_close_device (sb)) != 0)
-        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
-
     fini_device (sb);
     fini_driver (sb);
 }
 
 void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
-                    CCD_REQUEST chip, int ac, char **av)
+                    int ac, char **av)
 {
     int i, e;
     GetCCDInfoResults0 info;
     char version[16];
     sbig_ccd_t ccd;
     sbig_t sb;
+    CCD_REQUEST chip;
 
-    if (ac != 0)
-        msg_exit ("device takes no arguments");
+    if (ac != 1)
+        usage ();
+    if (!strcmp (av[0], "tracking"))
+        chip = CCD_TRACKING;
+    else if (!strcmp (av[0], "imaging"))
+        chip = CCD_IMAGING;
+    else
+        usage ();
 
     sb = init_driver (sbig_udrv);
     init_device (sb, sbig_device);
@@ -298,9 +399,6 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
                                       ? "yes" : "no");
     }
     sbig_ccd_destroy (ccd);
-    if ((e = sbig_close_device (sb)) != 0)
-        msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
-
     fini_device (sb);
     fini_driver (sb);
 }
