@@ -388,7 +388,7 @@ void snap (sbig_t sb, sbig_ccd_t ccd, snap_t opt, snap_type_t type, int seq)
 
 /* Return current CCD temperature in degrees C
  */
-double snap_temp (sbig_t sb, snap_t opt)
+double snap_temp (sbig_t sb, snap_t opt, double *setpoint)
 {
     QueryTemperatureStatusResults2 temp;
     int e;
@@ -401,12 +401,14 @@ double snap_temp (sbig_t sb, snap_t opt)
              temp.imagingCCDTemperature,
              temp.ambientTemperature);
     }
+    if (setpoint)
+        *setpoint = temp.ccdSetpoint;
     return temp.imagingCCDTemperature;
 }
 
 void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
 {
-    double dt, temp_lf, temp_df;
+    double dt, temp_lf, temp_df, setpoint;
     sbfits_t sbf;
 
     /* Create FITS file for output.
@@ -418,10 +420,10 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     /* Dark frame
      */
     do {
-        temp_df = snap_temp (sb, opt);
+        temp_df = snap_temp (sb, opt, NULL);
         snap (sb, ccd, opt, SNAP_DF, seq);
 
-        temp_lf = snap_temp (sb, opt);
+        temp_lf = snap_temp (sb, opt, &setpoint);
         dt = fabs (temp_df - temp_lf);
         if (dt > 1) /* FIXME: 1C threshold is somewhat arbitrary */
             msg ("Retaking DF as CCD temp was not stable");
@@ -432,7 +434,7 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     /* Write out FITS file
      */
     sbfits_set_ccdinfo (sbf, ccd);
-    sbfits_set_temperature (sbf, temp_lf);
+    sbfits_set_temperature (sbf, setpoint, temp_lf);
     sbfits_set_annotation (sbf, opt.message);
     sbfits_set_observer (sbf, opt.observer);
     sbfits_set_telescope (sbf, opt.telescope);
