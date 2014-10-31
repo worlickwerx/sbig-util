@@ -400,16 +400,12 @@ static int sbfits_write_header (sbfits_t sbf)
                     "White ADU for display", &sbf->status);
     fits_write_key(sbf->fptr, TLONG,   "PEDESTAL", &sbf->pedestal,
                     "Add to ADU for 0-base", &sbf->status);
-
+#if 0
+    fits_write_key(sbf->fptr, TUSHORT, "DATAMAX", &sbf->saturation_level,
+                    "Saturation level", &sbf->status);
+#endif
     return sbf->status ? -1 : 0;
 }
-
-    /* FIXME More header values to write!!
-     */
-#if 0
-    fits_write_key(sbf->fptr, TUSHORT, "DATAMAX", &m_uSaturationLevel,
-                    "SATURATION LEVEL", &sbf->status);
-#endif
 
 int sbfits_write_file (sbfits_t sbf)
 {
