@@ -4,8 +4,14 @@ sbig-util is a set of Linux command line tools for controlling cameras
 from the Santa Barbara Instrument group.  The goal is to develop a simple
 tool that can directly control a camera and filter wheel in the field
 during an astrophotography session, and be part of a workflow that
-includes other AIPS tools such as [ds9](http://ds9.si.edu).  It's
-a work in progress and presently has quite minimal capabilities.
+includes other AIPS tools such as [ds9](http://ds9.si.edu).  It is a
+fairly new work in progress and provides only basic functionality and
+rather narrow testing with the hardware at hand.
+
+If you use `sbig-utils` on a camera other than the ST-8 with any success,
+please open a github issue tracker to tell me to update this document.
+If you have any problems or feature requests, please open an issue or
+submit a github pull request.
 
 sbig-util includes a copy of the SBIG Linux Development Kit
 as a convenience.  You may configure sbig-util to use either this copy,
@@ -22,10 +28,11 @@ SDK drop dated 2014-10-26T18-10 built for
 * 32-bit x86
 * 64-bit x86
 
-As I understand it all builds were on Debian 7 derived distros
+As I understand it, the SDK builds were on Debian 7 derived distros
 (Raspbian for arm v6, Ubuntu 14.04 for the rest).  My testing thus
-far is on a BeagleBone black (ARM) running Debian 7.0 (Wheezy),
-with an SBIG ST-8XME USB camera and CFW-10 filter wheel.
+far is on a BeagleBone black (ARM) running Debian 7.0 (Wheezy)
+and a VMWare virtual machine (64-bit x86) running Ubuntu 14.04.
+My SBIG hardware an ST-8XME USB camera and CFW-10 filter wheel.
 
 ### Prerequisites
 
