@@ -32,6 +32,7 @@
 #include <stdbool.h>
 #include <arpa/inet.h> /* htons */
 #include <time.h>
+#include <math.h>
 
 #include "handle.h"
 #include "handle_impl.h"
@@ -201,6 +202,32 @@ int sbig_ccd_set_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND mode)
 int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep)
 {
     *modep = ccd->shutter_mode;
+    return CE_NO_ERROR;
+}
+
+/* Calculate centered fractional edge for one dimension of subframe.
+ * F is the fraction of the area of the rectangle to use in the subframe.
+ * m is the full frame maximum.
+ * a is the origin of the subframe
+ * Return value is the length of the subframe.
+ */
+static double cfe (double m, double F, double *a)
+{
+    double b = m * (sqrt(F) + 1) / 2;
+    *a = m - b;
+    return (b - *a);
+}
+
+int sbig_ccd_set_partial_frame (sbig_ccd_t ccd, double part)
+{
+    int ro_index = lookup_roinfo (ccd, ccd->readout_mode);
+    double top, left;
+
+    ccd->height = cfe (ccd->info0.readoutInfo[ro_index].height, part, &top);
+    ccd->top = top;
+    ccd->width = cfe (ccd->info0.readoutInfo[ro_index].width, part, &left);
+    ccd->left = left;
+    realloc_frame (ccd);
     return CE_NO_ERROR;
 }
 

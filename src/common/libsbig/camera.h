@@ -66,6 +66,10 @@ int sbig_ccd_set_window (sbig_ccd_t ccd, ushort top, ushort left,
 int sbig_ccd_get_window (sbig_ccd_t ccd, ushort *topp, ushort *leftp,
                          ushort *heightp, ushort *widthp);
 
+/* Set window to a centered fraction of the area of the full frame.
+ */
+int sbig_ccd_set_partial_frame (sbig_ccd_t ccd, double part);
+
 /* Set/clear exposure flags:
  *  EXP_FAST_READOUT, EXP_DUAL_CHANNEL_MODE, EXP_WAIT_FOR_TRIGGER_IN,
  *  EXP_LIGHT_CLEAR, EXP_RIPPLE CORRECTION (for STF-8050/4070 only)
