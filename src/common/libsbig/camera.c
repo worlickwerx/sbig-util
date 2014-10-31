@@ -546,6 +546,61 @@ int sbig_ccd_get_max (sbig_ccd_t ccd, ushort *maxp)
     return CE_NO_ERROR;
 }
 
+/* Borrowed from CSBIGImg::AutoBackgroundAndRange() (sdk/app).
+ */
+int sbig_ccd_auto_contrast (sbig_ccd_t ccd, long *cblack, long *cwhite)
+{
+    ushort *pp = ccd->frame;
+    ulong hist[4096];
+    int i, j;
+    ulong totalPixels, histSum;
+    ulong s20, s99;
+    ushort p20, p99;
+    long back, range;
+
+    // calculate the pixel histogram with 4096 bins
+    memset(hist, 0, sizeof(hist));
+    for (i = 0; i < ccd->height; i++)
+            for (j = 0; j < ccd->width; j++)
+                    hist[(*pp++) >> 4]++;
+
+    // integrate the histogram and find the 20% and 99% points
+    totalPixels = (unsigned long)ccd->width * ccd->height;
+    s20 = (20 * totalPixels) / 100;
+    s99 = (99 * totalPixels) / 100;
+    histSum = 0;
+    p20 = p99 = 65535;
+    for (i = 0; i < 4096; i++) {
+            histSum += hist[i];
+            if (histSum >= s20 && p20 == 65535)
+                    p20 = i;
+            if (histSum >= s99 && p99 == 65535)
+                    p99 = i;
+    }
+
+    // set the range to 110% of the difference between
+    // the 99% and 20% histogram points, not letting
+    // it be too low or overflow unsigned short
+    range = (16L * (p99 - p20) * 11) / 10;
+    if (range < 64)
+            range = 64;
+    else if (range > 65536)
+            range = 65536;
+
+    // set the background to the 20% point lowered
+    // by 10% of the range so it's not completely
+    // black.  Also check for overrange and don't
+    // let a saturated image show up a black
+    back = 16L * p20 - range / 10;
+    if (p20 >= 4080)        // saturated image?
+            back = 16L * 4080 - range;
+
+    *cblack = back;
+    *cwhite = back + range;
+
+    return CE_NO_ERROR;
+}
+
 int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
 {
     EstablishLinkParams in = { .sbigUseOnly = 0 };
@@ -555,7 +610,6 @@ int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
         *type = out.cameraType;
     return e;
 }
-
 
 typedef struct {
     CAMERA_TYPE type;

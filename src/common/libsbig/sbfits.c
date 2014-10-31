@@ -78,6 +78,8 @@ struct sbfits_struct {
     double focal_length;
     double aperture_diameter;
     double aperture_area;
+    long cwhite, cblack;
+    long pedestal;
 };
 
 static char *gmtime_str (time_t t, char *buf, int sz)
@@ -233,6 +235,17 @@ void sbfits_set_swcreate (sbfits_t sbf, const char *swcreate)
     sbf->swcreate = swcreate;
 }
 
+void sbfits_set_contrast (sbfits_t sbf, ulong cblack, ulong cwhite)
+{
+    sbf->cblack = cblack;
+    sbf->cwhite = cwhite;
+}
+
+void sbfits_set_pedestal (sbfits_t sbf, ulong pedestal)
+{
+    sbf->pedestal = pedestal;
+}
+
 static int sbfits_write_image (sbfits_t sbf)
 {
     long naxes[2] = { sbf->width, sbf->height };
@@ -381,23 +394,21 @@ static int sbfits_write_header (sbfits_t sbf)
         fits_write_key(sbf->fptr, TDOUBLE, "APTAREA", &sbf->aperture_area,
                        "Aperture area in sq-mm", &sbf->status);
 
+    fits_write_key(sbf->fptr, TLONG,   "CBLACK", &sbf->cblack,
+                   "Black ADU for display", &sbf->status);
+    fits_write_key(sbf->fptr, TLONG,   "CWHITE", &sbf->cwhite,
+                    "White ADU for display", &sbf->status);
+    fits_write_key(sbf->fptr, TLONG,   "PEDESTAL", &sbf->pedestal,
+                    "Add to ADU for 0-base", &sbf->status);
+
     return sbf->status ? -1 : 0;
 }
 
     /* FIXME More header values to write!!
      */
 #if 0
-    fits_write_key(sbf->fptr, TLONG,   "CBLACK", &m_lBackground,
-                   "BLACK ADU FOR DISPLAY", &sbf->status);
-    fits_write_key(sbf->fptr, TLONG,   "CWHITE", &fitsWhite,
-                    "WHITE ADU FOR DISPLAY", &sbf->status);
-    fits_write_key(sbf->fptr, TLONG,   "PEDESTAL", &fitsPedestal,
-                    "ADD TO ADU FOR 0-BASE", &sbf->status);
     fits_write_key(sbf->fptr, TUSHORT, "DATAMAX", &m_uSaturationLevel,
                     "SATURATION LEVEL", &sbf->status);
-    fits_write_key(sbf->fptr, TSTRING, "SWACQIR", "?",
-                    "DATA ACQ SOFTWARE", &sbf->status);
-    fits_write_key(sbf->fptr, TSTRING, "SWCREAT", "?", "", &sbf->status);
 #endif
 
 int sbfits_write_file (sbfits_t sbf)

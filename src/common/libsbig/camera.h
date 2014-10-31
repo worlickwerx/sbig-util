@@ -114,6 +114,10 @@ int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename);
 
 int sbig_ccd_get_max (sbig_ccd_t ccd, ushort *max);
 
+/* Calculate CWHITE and CBLACK values from image data.
+ */
+int sbig_ccd_auto_contrast (sbig_ccd_t ccd, long *cblack, long *cwhite);
+
 #endif
 
 /*
