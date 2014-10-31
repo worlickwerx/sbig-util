@@ -67,7 +67,7 @@ void usage (void)
 "       sbig-info ccd {tracking|imaging}\n"
 "       sbig-info cfw\n"
 "       sbig-info cooler\n"
-"       sbig-info fov {tracking|imaging} [focal-length]\n"
+"       sbig-info fov {tracking|imaging} {lo|med|hi} [focal-length]\n"
 );
     exit (1);
 }
@@ -185,16 +185,18 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
                int ac, char **av)
 {
     sbig_t sb;
-    double fov_height, fov_width; /* field of view in arcseconds */
+    double focal_length;                /* telescope FL in mm */
+    double pixel_width, pixel_height;   /* pixel dims in um */
     double sensor_width, sensor_height; /* sensor dims in mm */
-    double focal_length;
+    double fov_height, fov_width;       /* field of view in arcseconds */
+    double vres, hres;                  /* pixel resolution in arcmin/pixel */
     int e, rm_index;
     sbig_ccd_t ccd;
     CCD_REQUEST chip;
-    READOUT_BINNING_MODE readout_mode = RM_1X1;
+    READOUT_BINNING_MODE readout_mode;
     GetCCDInfoResults0 info;
 
-    if (ac != 1 && ac != 2)
+    if (ac != 2 && ac != 3)
         usage ();
     if (!strcmp (av[0], "tracking"))
         chip = CCD_TRACKING;
@@ -202,8 +204,17 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
         chip = CCD_IMAGING;
     else
         usage ();
-    if (ac == 2)
-        focal_length = strtod (av[1], NULL);
+    if (!strcmp (av[1], "lo"))
+        readout_mode = RM_3X3; 
+    else if (!strcmp (av[1], "med"))
+        readout_mode = RM_2X2; 
+    else if (!strcmp (av[1], "hi"))
+        readout_mode = RM_1X1; 
+    else
+        usage ();
+
+    if (ac == 3)
+        focal_length = strtod (av[2], NULL);
     else {    
         if (opt.focal_length == 0)
             msg_exit("Please set focal_length");
@@ -223,19 +234,24 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
     if (rm_index < 0)
         msg_exit ("could not look up readout mode!");
 
-    sensor_height = 1E-3 * info.readoutInfo[rm_index].height
-                  * bcd6_2 (info.readoutInfo[rm_index].pixelHeight);
-    sensor_width = 1E-3 * info.readoutInfo[rm_index].width
-                 * bcd6_2 (info.readoutInfo[rm_index].pixelWidth);
-    msg ("sensor: %.2fmm H x %.2fmm W",
-         sensor_height, sensor_width);
+    pixel_height = bcd6_2 (info.readoutInfo[rm_index].pixelHeight);
+    pixel_width = bcd6_2 (info.readoutInfo[rm_index].pixelWidth);
+    msg ("pixel size: %.1fum H x %.1fum W", pixel_height, pixel_width);
 
-    fov_height = 3478 * (sensor_height / focal_length);
-    fov_width = 3478 * (sensor_width / focal_length);
+    sensor_height = pixel_height * 1E-3 * info.readoutInfo[rm_index].height;
+    sensor_width = pixel_width * 1E-3 * info.readoutInfo[rm_index].width;
+    msg ("sensor size: %.2fmm H x %.2fmm W", sensor_height, sensor_width);
+
+    fov_height = (sensor_height * 3478.0 / focal_length);
+    fov_width = (sensor_width * 3478.0 / focal_length);
 
     msg ("field of view: %.2f'H x %.2f'W", fov_height, fov_width);
     if (fov_height > 60)
-        msg ("           or: %.2f x %.2f degrees", fov_height/60, fov_width/60);
+        msg ("  or: %.2f x %.2f degrees", fov_height/60, fov_width/60);
+
+    vres = 206.265 * pixel_height / focal_length;
+    hres = 206.265 * pixel_width / focal_length;
+    msg ("pixel resolution: %.2f\"H x %.2f\"W", vres, hres);
 
     sbig_ccd_destroy (ccd);
     fini_device (sb);
