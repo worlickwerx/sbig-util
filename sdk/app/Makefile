@@ -2,8 +2,8 @@
 # The Makefile of SBIG Linux USB testing application.
 ####################################################################################
 # use:
-# make clean
-# make
+# make clean -f Makefile
+# make -f Makefile
 
 # Note: Linker uses shared libraries, so you should copy *.so library to the 
 # /usr/local/lib/ directory or soft link to it and update LD_LIBRARY_PATH. 
@@ -13,18 +13,14 @@ APP_NAME   = testapp
 APP_SRC    = testmain.cpp csbigcam.cpp csbigimg.cpp
 APP_OBJ    = testmain.o   csbigcam.o   csbigimg.o
 
-ARCHDIR    = $(PWD)/../libs/$(shell arch | sed -e 's/armv6l/arm_v6/' \
-                                               -e 's/armv7l/arm_v7/' \
-					       -e 's/armv8l/arm_v8/')
-					       
 # use if FITS stuff is installed
 #INCLUDE    = -I .ls -I /usr/include/libusb-1.0/ -I /data/fits/cfitsio
 #LIBRARY    = -L /usr/local/lib -L /data/fits/cfitsio/lib/
 
-INCLUDE    = -I /usr/include/libusb-1.0/
-LIBRARY    = -Wl,-rpath,$(ARCHDIR) -L$(ARCHDIR)
+INCLUDE    = -I .ls -I /usr/include/libusb-1.0/
+LIBRARY    = -L /usr/local/lib
 
-APP_FLAGS  = -O2 $(INCLUDE) -Wall
+APP_FLAGS  = -O2 $(INCLUDE) $(LIBRARY) -Wall
 ####################################################################################
 all: $(APP_NAME)
 ####################################################################################
@@ -34,7 +30,7 @@ all: $(APP_NAME)
 #	  chmod a+x $(APP_DEST)$(APP_NAME)
 
 $(APP_NAME): $(APP_OBJ)
-	  g++ $(APP_FLAGS) -o $(APP_DEST)$(APP_NAME) $(APP_OBJ) $(LIBRARY) -lsbigudrv -lm -lusb-1.0
+	  g++ $(APP_FLAGS) -o $(APP_DEST)$(APP_NAME) $(APP_OBJ) -lsbigudrv -lm -lusb-1.0
 	  chmod a+x $(APP_DEST)$(APP_NAME)
 
 testmain.o : testmain.cpp csbigcam.h csbigimg.h

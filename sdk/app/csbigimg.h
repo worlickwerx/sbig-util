@@ -22,7 +22,7 @@
 Compile Time Options
 
 */
-#define	INCLUDE_FITSIO	1		/* set to 1 to compile and link with FITSIO Library */
+//#define	INCLUDE_FITSIO	1		/* set to 1 to compile and link with FITSIO Library */
 
 
 #ifndef _LPARDRV_

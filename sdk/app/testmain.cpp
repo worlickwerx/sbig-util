@@ -52,38 +52,38 @@ PAR_ERROR openDevice(SBIG_DEVICE_TYPE dev);
 PAR_ERROR closeDevice();
 PAR_ERROR establishLink();
 
-PAR_ERROR startExposure(bool									dualChannelMode,
-												bool									fastReadout,
-												CCD_REQUEST 					ccd,
-												double 								expTime,
-												SHUTTER_COMMAND 			shutterCommand,
-												READOUT_BINNING_MODE 	readoutMode,
-												unsigned short 				top,
-												unsigned short 				left,
-												unsigned short 				height,
-												unsigned short 				width);
+PAR_ERROR startExposure(bool			dualChannelMode,
+			bool			fastReadout,
+			CCD_REQUEST 		ccd,
+			double 			expTime,
+			SHUTTER_COMMAND 	shutterCommand,
+			READOUT_BINNING_MODE 	readoutMode,
+			unsigned short 		top,
+			unsigned short 		left,
+			unsigned short 		height,
+			unsigned short 		width);
 
 PAR_ERROR endExposure(CCD_REQUEST ccd);
 
 PAR_ERROR monitorExposure();
 
-PAR_ERROR startReadout(CCD_REQUEST 					ccd,
-											 READOUT_BINNING_MODE readoutMode,
-											 unsigned short 			top,
-											 unsigned short 			left,
-											 unsigned short 			height,
-											 unsigned short 			width);
+PAR_ERROR startReadout(CCD_REQUEST 		ccd,
+                       READOUT_BINNING_MODE	readoutMode,
+                       unsigned short 		top,
+		       unsigned short 		left,
+		       unsigned short 		height,
+		       unsigned short 		width);
 
 PAR_ERROR	endReadout(CCD_REQUEST ccd);
 
-PAR_ERROR	ccdReadout(CSBIGImg*							pImg,
-										 bool 									dualChannelMode,
-										 CCD_REQUEST 						ccd,
-										 READOUT_BINNING_MODE		readoutMode,
-										 unsigned short 				top,
-										 unsigned short 				left,
-										 unsigned short 				height,
-										 unsigned short 				width);
+PAR_ERROR	ccdReadout(CSBIGImg*		pImg,
+			   bool 		dualChannelMode,
+			   CCD_REQUEST 		ccd,
+			   READOUT_BINNING_MODE	readoutMode,
+			   unsigned short 	top,
+			   unsigned short 	left,
+			   unsigned short 	height,
+			   unsigned short 	width);
 
 
 PAR_ERROR takeImage(int argc, char *argv[]);
@@ -96,37 +96,37 @@ PAR_ERROR cfwTest();
 PAR_ERROR cfwInit (unsigned short cfwModel, CFWResults* pRes);
 PAR_ERROR cfwGoto (unsigned short cfwModel, int cfwPosition, CFWResults* pRes);
 PAR_ERROR checkQueryTemperatureStatus();
-void 			cfwShowResults(CFWResults* pRes);
+void  	  cfwShowResults(CFWResults* pRes);
 PAR_ERROR readEeprom();
 PAR_ERROR getCcdInfo0(GetCCDInfoResults0* res);
 
-float 		bcd2float(unsigned short bcd);
+float 	  bcd2float(unsigned short bcd);
 
 int main(int argc, char *argv[])
 {
   grabImageTest(argc, argv);	// grabs image and save it in FITS or SBIG file format
-	//takeImage (argc, argv);		// just grab an image into memory
-  //fpsTest(argc, argv);			// measures frames per seconds
-	//queryUsbTest();						// tests query usb command
-	//queryEthernetTest();
-	//checkEthernetCameras();
-  //cfwTest();								// tests the color filter wheel
-	//checkQueryTemperatureStatus();
+  //takeImage (argc, argv);	// just grab an image into memory
+  //fpsTest(argc, argv);	// measures frames per seconds
+  //queryUsbTest();		// tests query usb command
+  //queryEthernetTest();        
+  //checkEthernetCameras();
+  //cfwTest();			// tests the color filter wheel
+  //checkQueryTemperatureStatus();
 }
 //==============================================================
 // GRAB IMAGE TEST
 //==============================================================
 PAR_ERROR grabImageTest(int argc, char *argv[])
 {
-	PAR_ERROR 			err = CE_NO_ERROR;
-	string					filePath, filePathName;
-	bool						bFitsType;
-	int							numOfImages;
-	bool						bLightFrame;
-	double					expTime;
-	int							rm;
+	PAR_ERROR 	err = CE_NO_ERROR;
+	string		filePath, filePathName;
+	bool		bFitsType;
+	int		numOfImages;
+	bool		bLightFrame;
+	double		expTime;
+	int		rm;
 	int             top, left, width, fullWidth, height, fullHeight;
-	bool						bFastReadout, bDualChannelMode;
+	bool		bFastReadout, bDualChannelMode;
 	SBIG_FILE_ERROR	ferr;
 
   if (argc != 13)
@@ -221,11 +221,11 @@ PAR_ERROR grabImageTest(int argc, char *argv[])
 	// update filepath:
 	if (bLightFrame)
 	{
-        filePath += "LF_";
+		filePath += "LF_";
 	}
 	else
 	{
-        filePath += "DF_";
+		filePath += "DF_";
 	}
 
 	// create SBIG Img object
@@ -261,18 +261,18 @@ PAR_ERROR grabImageTest(int argc, char *argv[])
 
 	if (width == 0)
 	{
-			width = fullWidth;
+		width = fullWidth;
 	}
 
 	if (height == 0)
 	{
-			height = fullHeight;
+		height = fullHeight;
 	}
 
 	pCam->SetSubFrame(left, top, width, height);
 	pImg->AllocateImageBuffer(height, width);
 
-  // take series of images
+	// take series of images
 	for (int i = 1; i <= numOfImages; i++)
 	{
 		do
@@ -306,37 +306,37 @@ PAR_ERROR grabImageTest(int argc, char *argv[])
 
 			char             timeBuf[128];
 			struct  tm*      pTm;
-
 			struct  timeval  tv;
 			struct  timezone tz;
+			
 			gettimeofday(&tv, &tz);
 			pTm = localtime(&(tv.tv_sec));
-	        sprintf(timeBuf, "%04d-%02d-%02dT%02d:%02d:%02d.%03ld",
-	                pTm->tm_year + 1900, pTm->tm_mon + 1, pTm->tm_mday,
-	                pTm->tm_hour,        pTm->tm_min,     pTm->tm_sec, (tv.tv_usec/1000));
+			sprintf(timeBuf, "%04d-%02d-%02dT%02d:%02d:%02d.%03ld",
+				pTm->tm_year + 1900, pTm->tm_mon + 1, pTm->tm_mday,
+				pTm->tm_hour,        pTm->tm_min,     pTm->tm_sec, (tv.tv_usec/1000));
 
-	        // create filePathName:
-	        filePathName = filePath;
-	        filePathName += timeBuf;
+			// create filePathName:
+			filePathName = filePath;
+			filePathName += timeBuf;
 
-	        if (bFitsType)
-	        {
-	        	filePathName += ".fits";
+			if (bFitsType)
+			{
+				filePathName += ".fits";
 				if ((ferr = pImg->SaveImage(filePathName.c_str(), SBIF_FITS)) != SBFE_NO_ERROR)
 				{
 					cout << "SBIF_FITS format save error: " << ferr << endl;
 					break;
 				}
-	        }
-	        else
-	        {
-	        	filePath += ".sbig";
-	        	if ((ferr = pImg->SaveImage(filePathName.c_str(), SBIF_COMPRESSED)) != SBFE_NO_ERROR)
+			}
+			else
+			{
+				filePathName += ".sbig";
+				if ((ferr = pImg->SaveImage(filePathName.c_str(), SBIF_COMPRESSED)) != SBFE_NO_ERROR)
 				{
 					cout << "SBIF_COMPRESSED format save error: " << ferr << endl;
 					break;
 				}
-	        }
+			}	
 
 			#ifndef CHECK_STI_FRAME_RATES
 			cout << "File saved as         : " << filePathName << endl;
@@ -386,20 +386,20 @@ PAR_ERROR grabImageTest(int argc, char *argv[])
 
 PAR_ERROR fpsTest(int argc, char *argv[])
 {
-	PAR_ERROR 			err = CE_NO_ERROR;
-	string					filePath, filePathName;
-	bool						bFitsType;
-	int							numOfImages;
-	bool						bLightFrame;
-	double					expTime;
+	PAR_ERROR 	err = CE_NO_ERROR;
+	string		filePath, filePathName;
+	bool		bFitsType;
+	int		numOfImages;
+	bool		bLightFrame;
+	double		expTime;
 	int             top, left, width, fullWidth, height, fullHeight;
-	bool						bFastReadout, bDualChannelMode;
-	int							rm;
+	bool		bFastReadout, bDualChannelMode;
+	int		rm;
 	SBIG_FILE_ERROR	ferr;
-	double 					fps;
-  struct timeval 	begin, end;
+	double 		fps;
+	struct timeval 	begin, end;
 
-  if (argc != 13)
+	if (argc != 13)
 	{
 		cout << "Application startup error: Bad number of input parameters. " << endl;
 		cout << "Format : ./testmain filePath               fileType imgCount imgType expTime rm  top left width heigh fr dcm" << endl;
@@ -488,11 +488,11 @@ PAR_ERROR fpsTest(int argc, char *argv[])
 	// update filepath:
 	if (bLightFrame)
 	{
-      filePath += "LF_";
+		filePath += "LF_";
 	}
 	else
 	{
-      filePath += "DF_";
+		filePath += "DF_";
 	}
 
 	// create SBIG Img object
@@ -527,20 +527,20 @@ PAR_ERROR fpsTest(int argc, char *argv[])
 
 	if (width == 0)
 	{
-			width = fullWidth;
+		width = fullWidth;
 	}
 
 	if (height == 0)
 	{
-			height = fullHeight;
+		height = fullHeight;
 	}
 
 	pCam->SetSubFrame(left, top, width, height);
 	pImg->AllocateImageBuffer(height, width);
 
-  gettimeofday(&begin, NULL);
+	gettimeofday(&begin, NULL);
 
-  // take series of images
+	// take series of images
 	for (int i = 1; i <= numOfImages; i++)
 	{			
 		do
@@ -569,32 +569,32 @@ PAR_ERROR fpsTest(int argc, char *argv[])
 			struct  timezone tz;
 			gettimeofday(&tv, &tz);
 			pTm = localtime(&(tv.tv_sec));
-	        sprintf(timeBuf, "%04d-%02d-%02dT%02d:%02d:%02d.%03ld",
+			sprintf(timeBuf, "%04d-%02d-%02dT%02d:%02d:%02d.%03ld",
 	                pTm->tm_year + 1900, pTm->tm_mon + 1, pTm->tm_mday,
 	                pTm->tm_hour,        pTm->tm_min,     pTm->tm_sec, (tv.tv_usec/1000));
 
-	        // create filePathName:
-	        filePathName = filePath;
-	        filePathName += timeBuf;
+			// create filePathName:
+			filePathName = filePath;
+			filePathName += timeBuf;
 
-	        if (bFitsType)
-	        {
-	        	filePathName += ".fits";
+			if (bFitsType)
+			{
+				filePathName += ".fits";
 				if ((ferr = pImg->SaveImage(filePathName.c_str(), SBIF_FITS)) != SBFE_NO_ERROR)
 				{
 					cout << "SBIF_FITS format save error: " << ferr << endl;
 					break;
 				}
-	        }
-	        else
-	        {
-	        	filePath += ".sbig";
-	        	if ((ferr = pImg->SaveImage(filePathName.c_str(), SBIF_COMPRESSED)) != SBFE_NO_ERROR)
+			}
+			else
+			{
+				filePathName += ".sbig";
+				if ((ferr = pImg->SaveImage(filePathName.c_str(), SBIF_COMPRESSED)) != SBFE_NO_ERROR)
 				{
 					cout << "SBIF_COMPRESSED format save error: " << ferr << endl;
 					break;
 				}
-	        }
+			}
 		}
 		while(0);
 		
@@ -646,10 +646,10 @@ PAR_ERROR fpsTest(int argc, char *argv[])
        	 	cout << "Readout mode                       : 1x1"              << endl;
           break;
      case RM_2X2:
-    	 		cout << "Readout mode                       : 2x2"              << endl;
+		cout << "Readout mode                       : 2x2"              << endl;
           break;
      default:
-    	 		cout << "Readout mode                       : bad parameter"    << endl;
+    	 	cout << "Readout mode                       : bad parameter"    << endl;
           break;
   }
 
@@ -662,8 +662,8 @@ PAR_ERROR fpsTest(int argc, char *argv[])
   cout.flags(originalFlags);
   cout.precision(originalPrecision);
 
-	cout << "The End..." << endl;
-	return (err);
+  cout << "The End..." << endl;
+  return (err);
 }
 //==============================================================
 // CFW TEST
