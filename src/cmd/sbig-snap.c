@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <sys/param.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <pwd.h>
 #include <time.h>
 #include <math.h> /* fabs */
@@ -67,11 +68,12 @@ typedef struct snap_struct {
     char *latitude;
     char *longitude;
     double elevation;
+    bool preview;
 } snap_t;
 
 const char *software_name = "sbig-util 0.1.0";
 
-#define OPTIONS "ht:d:C:r:n:D:m:O:fp:"
+#define OPTIONS "ht:d:C:r:n:D:m:O:fp:P"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -84,6 +86,7 @@ static const struct option longopts[] = {
     {"object",        required_argument,     0, 'O'},
     {"force",         no_argument,           0, 'f'},
     {"partial",       required_argument,     0, 'p'},
+    {"preview",       no_argument,           0, 'P'},
     {0, 0, 0, 0},
 };
 
@@ -105,6 +108,7 @@ void usage (void)
 "  -O, --object NAME          name of object being observed (e.g. M33)\n"
 "  -f, --force                press on even if FITS header will be incomplete\n"
 "  -p, --partial N            take centered partial frame (0 < N <= 1.0)\n"
+"  -P, --preview              preview image using ds9\n"
 );
     exit (1);
 }
@@ -149,6 +153,9 @@ int main (int argc, char *argv[])
                 opt.partial = strtod (optarg, NULL); 
                 if (opt.partial <= 0 || opt.partial > 1.0)
                     usage ();
+                break;
+            case 'P': /* --preview */
+                opt.preview = true;
                 break;
             case 'f': /* --force */
                 force = true; 
@@ -455,6 +462,29 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
         err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
     if (opt.verbose)
         msg ("wrote %s", sbfits_get_filename (sbf));
+
+    /* Preview file in ds9
+     */
+    if (opt.preview) {
+        char *cmd;
+        int status;
+        if (asprintf (&cmd, "xpaset ds9 fits <%s", sbfits_get_filename (sbf))<0)
+            oom ();
+        if ((status = system (cmd)) < 0)
+            err ("preview");
+        else if (WIFEXITED (status)) {
+            if (WEXITSTATUS (status) != 0)
+                msg ("preview: xpaset exited with rc=%d", WEXITSTATUS (status));
+        } else if (WIFSIGNALED (status)) {
+            msg ("preview: killed by %s", strsignal (WTERMSIG (status)));
+        } else if (WIFSTOPPED (status)) {
+            msg ("preview: stopped");
+        } else if (WIFCONTINUED (status)) {
+            msg ("preview: continued");
+        }
+        free (cmd);
+    }
+
     sbfits_destroy (sbf);
 }
 
