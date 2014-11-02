@@ -441,7 +441,8 @@ void update_fitsheader (sbig_t sb, sbfits_t sbf, sbig_ccd_t ccd, snap_t opt,
                      opt.elevation);
     sbfits_set_swcreate (sbf, software_name);
     sbfits_set_contrast (sbf, cblack, cwhite);
-
+    sbfits_set_imagetype (sbf, opt.image_type == SNAP_DF ? SBFITS_TYPE_DF
+                                                         : SBFITS_TYPE_LF);
     if ((e = sbig_ccd_auto_contrast (ccd, &cwhite, &cblack)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_auto_contrast: %s", sbig_get_error_string (sb, e));
     sbfits_set_contrast (sbf, cblack, cwhite);
