@@ -46,6 +46,8 @@
 #include "src/common/libsbig/sbfits.h"
 #include "src/common/libini/ini.h"
 
+typedef enum { SNAP_DF, SNAP_LF, SNAP_AUTO } snap_type_t;
+
 typedef struct snap_struct {
     SBIG_DEVICE_TYPE device;
     CCD_REQUEST chip;
@@ -69,11 +71,12 @@ typedef struct snap_struct {
     char *longitude;
     double elevation;
     bool preview;
+    snap_type_t image_type;
 } snap_t;
 
 const char *software_name = "sbig-util 0.1.0";
 
-#define OPTIONS "ht:d:C:r:n:D:m:O:fp:P"
+#define OPTIONS "ht:d:C:r:n:D:m:O:fp:PT:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -87,6 +90,7 @@ static const struct option longopts[] = {
     {"force",         no_argument,           0, 'f'},
     {"partial",       required_argument,     0, 'p'},
     {"preview",       no_argument,           0, 'P'},
+    {"image-type",    required_argument,     0, 'T'},
     {0, 0, 0, 0},
 };
 
@@ -109,6 +113,7 @@ void usage (void)
 "  -f, --force                press on even if FITS header will be incomplete\n"
 "  -p, --partial N            take centered partial frame (0 < N <= 1.0)\n"
 "  -P, --preview              preview image using ds9\n"
+"  -T, --image-type TYPE      take df, lf, or auto (default auto)\n"
 );
     exit (1);
 }
@@ -136,6 +141,7 @@ int main (int argc, char *argv[])
     opt.count = 1;                  /* one exposure */
     opt.verbose = true;
     opt.partial = 1.0;
+    opt.image_type = SNAP_AUTO;
 
     /* Override defaults with config file
      */
@@ -149,6 +155,16 @@ int main (int argc, char *argv[])
     optind = 0;
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
+            case 'T': /* --image-type DF|LF|AUTO */
+                if (!strcasecmp (optarg, "df"))
+                    opt.image_type = SNAP_DF;
+                else if (!strcasecmp (optarg, "lf"))
+                    opt.image_type = SNAP_LF;
+                else if (!strcasecmp (optarg, "auto"))
+                    opt.image_type = SNAP_LF;
+                else
+                    usage ();
+                break;
             case 'p': /* --partial */
                 opt.partial = strtod (optarg, NULL); 
                 if (opt.partial <= 0 || opt.partial > 1.0)
@@ -340,12 +356,10 @@ void exposure_wait (sbig_t sb, sbig_ccd_t ccd, snap_t opt)
         fprintf (stderr, "\n");
 }
 
-typedef enum { SNAP_DF, SNAP_LF, SNAP_LF_SUB } snap_type_t;
-
 /* Take a picture:
  * SNAP_DF: take a dark frame
  * SNAP_LF: take a light frame
- * SNAP_LF_SUB: take a light frame, subtracting previous DF during readout
+ * SNAP_AUTO: take a light frame, subtracting previous DF during readout
  */
 void snap (sbig_t sb, sbig_ccd_t ccd, snap_t opt, snap_type_t type, int seq)
 {
@@ -370,13 +384,13 @@ void snap (sbig_t sb, sbig_ccd_t ccd, snap_t opt, snap_type_t type, int seq)
     exposure_wait (sb, ccd, opt);
 
     /* Finalize exposure, then read out from camera to sbig_ccd_t internal
-     * buffer.  Subtract a previous DF left there if type is SNAP_LF_SUB.
+     * buffer.  Subtract a previous DF left there if type is SNAP_AUTO.
      */
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
         msg ("exposure: end %s #%d", type == SNAP_DF ? "DF" : "LF", seq);
-    if (type == SNAP_LF_SUB)
+    if (type == SNAP_AUTO)
         e = sbig_ccd_readout_subtract (ccd);
     else
         e = sbig_ccd_readout (ccd);
@@ -384,7 +398,7 @@ void snap (sbig_t sb, sbig_ccd_t ccd, snap_t opt, snap_type_t type, int seq)
         msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
         msg ("readout: %s%s #%d complete", type == SNAP_DF ? "DF" : "LF",
-             type == SNAP_LF_SUB ? " (subtracted)" : "", seq);
+             type == SNAP_AUTO ? " (subtracted)" : "", seq);
 }
 
 /* Return current CCD temperature in degrees C
@@ -481,13 +495,63 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
 
     /* Light frame, auto-subtracted
      */
-    snap (sb, ccd, opt, SNAP_LF_SUB, seq);
+    snap (sb, ccd, opt, SNAP_AUTO, seq);
 
     /* Write out FITS file, optionally preview
      */
     update_fitsheader (sb, sbf, ccd, opt, setpoint, temp_lf);
     sbfits_set_history (sbf, software_name, "Dark Subtraction");
     sbfits_set_pedestal (sbf, -100); /* readout_subtract does this */
+    if (sbfits_write_file (sbf) < 0)
+        err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
+    if (sbfits_close_file (sbf))
+        err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
+    if (opt.verbose)
+        msg ("wrote %s", sbfits_get_filename (sbf));
+    if (opt.preview)
+        preview_ds9 (sbf);
+    sbfits_destroy (sbf);
+}
+
+void snap_one_df (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+{
+    double temp, setpoint;
+    sbfits_t sbf;
+
+    sbf = sbfits_create ();
+    if (sbfits_create_file (sbf, opt.imagedir, "DF") < 0)
+        msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
+
+    temp = snap_temp (sb, opt, &setpoint);
+
+    snap (sb, ccd, opt, SNAP_DF, seq);
+
+    update_fitsheader (sb, sbf, ccd, opt, setpoint, temp);
+    if (sbfits_write_file (sbf) < 0)
+        err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
+    if (sbfits_close_file (sbf))
+        err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
+    if (opt.verbose)
+        msg ("wrote %s", sbfits_get_filename (sbf));
+    if (opt.preview)
+        preview_ds9 (sbf);
+    sbfits_destroy (sbf);
+}
+
+void snap_one_lf (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+{
+    double temp, setpoint;
+    sbfits_t sbf;
+
+    sbf = sbfits_create ();
+    if (sbfits_create_file (sbf, opt.imagedir, "LF") < 0)
+        msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
+
+    temp = snap_temp (sb, opt, &setpoint);
+
+    snap (sb, ccd, opt, SNAP_LF, seq);
+
+    update_fitsheader (sb, sbf, ccd, opt, setpoint, temp);
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
     if (sbfits_close_file (sbf))
@@ -529,7 +593,12 @@ void snap_series (sbig_t sb, snap_t opt)
      * Optionally increase the exposure time by time_delta on each exposure.
      */
     for (i = 0; i < opt.count; i++) {
-        snap_one_autodark (sb, ccd, opt, i);
+        if (opt.image_type == SNAP_AUTO)
+            snap_one_autodark (sb, ccd, opt, i);
+        else if (opt.image_type == SNAP_LF)
+            snap_one_lf (sb, ccd, opt, i);
+        else if (opt.image_type == SNAP_DF)
+            snap_one_df (sb, ccd, opt, i);
         opt.t += opt.time_delta;
     }
 
