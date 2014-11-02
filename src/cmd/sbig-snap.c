@@ -99,7 +99,7 @@ void usage (void)
     fprintf (stderr,
 "Usage: sbig-snap [OPTIONS]\n"
 "  -t, --exposure-time SEC    exposure time in seconds (default 1.0)\n"
-"  -d, --image-directory DIR  where to put images (default /mnt/img)\n"
+"  -d, --image-directory DIR  where to put images (default /tmp)\n"
 "  -C, --ccd-chip CHIP        use imaging, tracking, or ext-tracking\n"
 "  -r, --resolution RES       select hi, med, or lo resolution\n"
 "  -n, --count N              take N exposures\n"
@@ -142,7 +142,7 @@ int main (int argc, char *argv[])
     if (!config_filename)
         msg_exit ("SBIG_CONFIG_FILE is not set");
     if (ini_parse (config_filename, config_cb, &opt) < 0)
-        msg ("cannot load %s", config_filename);
+        msg ("warning - cannot load %s", config_filename);
 
     /* Override defaults and config file with command line
      */
@@ -219,10 +219,10 @@ int main (int argc, char *argv[])
      */
     if (!force) {
         if (!opt.object)
-            msg_exit ("Please specify --object or --force");
+            msg_exit ("Please specify --object or --force for incomplete FITS header");
         if (!opt.telescope || !opt.observer || opt.focal_length == 0
                 || opt.aperture_diameter == 0 || opt.aperture_area == 0)
-            msg_exit ("Please populate config file or --force");
+            msg_exit ("Please populate config file or --force for incomplete FITS header");
     }
 
     /* Connect to driver
@@ -407,12 +407,59 @@ double snap_temp (sbig_t sb, snap_t opt, double *setpoint)
     return temp.imagingCCDTemperature;
 }
 
+void update_fitsheader (sbig_t sb, sbfits_t sbf, sbig_ccd_t ccd, snap_t opt,
+                       double temp_setpoint, double temp)
+{
+    long cwhite, cblack;
+    int e;
+
+    sbfits_set_ccdinfo (sbf, ccd);
+    sbfits_set_temperature (sbf, temp_setpoint, temp);
+    sbfits_set_annotation (sbf, opt.message);
+    sbfits_set_observer (sbf, opt.observer);
+    sbfits_set_telescope (sbf, opt.telescope);
+    sbfits_set_filter (sbf, opt.filter);
+    sbfits_set_focal_length (sbf, opt.focal_length);
+    sbfits_set_aperture_diameter (sbf, opt.aperture_diameter);
+    sbfits_set_aperture_area (sbf, opt.aperture_area);
+    sbfits_set_object (sbf, opt.object);
+    sbfits_set_site (sbf, opt.sitename, opt.latitude, opt.longitude,
+                     opt.elevation);
+    sbfits_set_swcreate (sbf, software_name);
+    sbfits_set_contrast (sbf, cblack, cwhite);
+
+    if ((e = sbig_ccd_auto_contrast (ccd, &cwhite, &cblack)) != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_auto_contrast: %s", sbig_get_error_string (sb, e));
+    sbfits_set_contrast (sbf, cblack, cwhite);
+    sbfits_set_pedestal (sbf, 0); /* update if DF subtracted */
+}
+
+void preview_ds9 (sbfits_t sbf)
+{
+    char *cmd;
+    int status;
+
+    if (asprintf (&cmd, "xpaset ds9 fits <%s", sbfits_get_filename (sbf))<0)
+        oom ();
+    if ((status = system (cmd)) < 0)
+        err ("preview");
+    else if (WIFEXITED (status)) {
+        if (WEXITSTATUS (status) != 0)
+            msg ("preview: xpaset exited with rc=%d", WEXITSTATUS (status));
+    } else if (WIFSIGNALED (status)) {
+        msg ("preview: killed by %s", strsignal (WTERMSIG (status)));
+    } else if (WIFSTOPPED (status)) {
+        msg ("preview: stopped");
+    } else if (WIFCONTINUED (status)) {
+        msg ("preview: continued");
+    }
+    free (cmd);
+}
+
 void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
 {
     double dt, temp_lf, temp_df, setpoint;
-    long cwhite, cblack;
     sbfits_t sbf;
-    int e;
 
     /* Create FITS file for output.
      */
@@ -432,59 +479,23 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
             msg ("Retaking DF as CCD temp was not stable");
     } while (dt > 1);
 
+    /* Light frame, auto-subtracted
+     */
     snap (sb, ccd, opt, SNAP_LF_SUB, seq);
 
-    if ((e = sbig_ccd_auto_contrast (ccd, &cwhite, &cblack)) != CE_NO_ERROR)
-        msg_exit ("sbig_ccd_auto_contrast: %s", sbig_get_error_string (sb, e));
-
-    /* Write out FITS file
+    /* Write out FITS file, optionally preview
      */
-    sbfits_set_ccdinfo (sbf, ccd);
-    sbfits_set_temperature (sbf, setpoint, temp_lf);
-    sbfits_set_annotation (sbf, opt.message);
-    sbfits_set_observer (sbf, opt.observer);
-    sbfits_set_telescope (sbf, opt.telescope);
-    sbfits_set_filter (sbf, opt.filter);
-    sbfits_set_focal_length (sbf, opt.focal_length);
-    sbfits_set_aperture_diameter (sbf, opt.aperture_diameter);
-    sbfits_set_aperture_area (sbf, opt.aperture_area);
-    sbfits_set_object (sbf, opt.object);
-    sbfits_set_site (sbf, opt.sitename, opt.latitude, opt.longitude,
-                     opt.elevation);
-    sbfits_set_swcreate (sbf, software_name);
+    update_fitsheader (sb, sbf, ccd, opt, setpoint, temp_lf);
     sbfits_set_history (sbf, software_name, "Dark Subtraction");
-    sbfits_set_contrast (sbf, cblack, cwhite);
     sbfits_set_pedestal (sbf, -100); /* readout_subtract does this */
-
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
     if (sbfits_close_file (sbf))
         err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
     if (opt.verbose)
         msg ("wrote %s", sbfits_get_filename (sbf));
-
-    /* Preview file in ds9
-     */
-    if (opt.preview) {
-        char *cmd;
-        int status;
-        if (asprintf (&cmd, "xpaset ds9 fits <%s", sbfits_get_filename (sbf))<0)
-            oom ();
-        if ((status = system (cmd)) < 0)
-            err ("preview");
-        else if (WIFEXITED (status)) {
-            if (WEXITSTATUS (status) != 0)
-                msg ("preview: xpaset exited with rc=%d", WEXITSTATUS (status));
-        } else if (WIFSIGNALED (status)) {
-            msg ("preview: killed by %s", strsignal (WTERMSIG (status)));
-        } else if (WIFSTOPPED (status)) {
-            msg ("preview: stopped");
-        } else if (WIFCONTINUED (status)) {
-            msg ("preview: continued");
-        }
-        free (cmd);
-    }
-
+    if (opt.preview)
+        preview_ds9 (sbf);
     sbfits_destroy (sbf);
 }
 
@@ -504,7 +515,8 @@ void snap_series (sbig_t sb, snap_t opt)
         msg ("exposure: abort (just in case)");
     /* FIXME: could verify that camera is idle here */
 
-    /* Set up the readout binning mode which we hold constant over a series.
+    /* Set up the readout binning mode and subframe window,
+     * which we hold constant over a series.
      */
     if ((e = sbig_ccd_set_readout_mode (ccd, opt.readout_mode)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
