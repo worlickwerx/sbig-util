@@ -225,7 +225,7 @@ DATAMAX
 ```
 nor the following optional headers:
 ```
-IMAGETYP, TRAKTIME, OBJECTRA, OBJECTDEC, CENTAZ, CENTALT
+TRAKTIME, OBJECTRA, OBJECTDEC, CENTAZ, CENTALT
 ```
 Here is an example header:
 ```
