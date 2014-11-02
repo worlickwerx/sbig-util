@@ -45,6 +45,7 @@
 typedef struct {
     char *device;
     char *sbigudrv;
+    char *xpa_nsinet;
 } opt_t;
 
 static char *prog;
@@ -55,12 +56,13 @@ void exec_subcommand (char *argv[]);
 int config_cb (void *user, const char *section, const char *name,
                const char *value);
 
-#define OPTIONS "+hx:S:c:d:"
+#define OPTIONS "+hx:S:c:d:X:"
 static const struct option longopts[] = {
     {"exec-dir",         required_argument,  0, 'x'},
     {"sbig-udrv",        required_argument,  0, 'S'},
     {"config",           required_argument,  0, 'c'},
     {"device",           required_argument,  0, 'd'},
+    {"xpa-nsinet",       required_argument,  0, 'X'},
     {"help",             no_argument,        0, 'h'},
     {0, 0, 0, 0},
 };
@@ -73,6 +75,7 @@ static void usage (void)
 "    -S,--sbig-udrv FILE   set path to SBIG universal driver .so file\n"
 "    -c,--config FILE      set path to config file\n"
 "    -d,--device DEV       set device type (USB1, USB2, LPT1, ETH, ...)\n"
+"    -X,--xpa-nsinet IP:PORT   set for remote ds9 preview\n"
 );
 }
 
@@ -97,7 +100,6 @@ int main (int argc, char *argv[])
 
     memset (&opt, 0, sizeof (opt));
     opt.device = xstrdup ("USB1");
-    opt.sbigudrv = NULL;
 
     prog = basename (argv[0]);
 
@@ -126,6 +128,11 @@ int main (int argc, char *argv[])
         switch (ch) {
             case 'c': /* --config FILE */
                 break;
+            case 'X': /* --xpa-nsinet */
+                if (opt.xpa_nsinet)
+                    free (opt.xpa_nsinet);
+                opt.xpa_nsinet = xstrdup (optarg);
+                break;
             case 'x': /* --exec-dir */
                 if (setenv ("SBIG_EXEC_DIR", optarg, 1) < 0)
                     err_exit ("setenv");
@@ -151,9 +158,14 @@ int main (int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
-    if (opt.sbigudrv)
+    if (opt.sbigudrv) {
         if (setenv ("SBIG_UDRV", opt.sbigudrv, 1) < 0)
             err_exit ("setenv");
+    }
+    if (opt.xpa_nsinet) {
+        if (setenv ("XPA_NSINET", opt.xpa_nsinet, 1) < 0)
+            err_exit ("setenv");
+    }
     if (setenv ("SBIG_DEVICE", opt.device, 1) < 0)
         err_exit ("setenv");
 
@@ -203,6 +215,12 @@ int config_cb (void *user, const char *section, const char *name,
             if (opt->device)
                 free (opt->device);
             opt->device = xstrdup (value);
+        }
+    } else if (!strcmp (section, "ds9")) {
+        if (!strcmp (name, "xpa_nsinet")) {
+            if (opt->xpa_nsinet)
+                free (opt->xpa_nsinet);
+            opt->xpa_nsinet = xstrdup (value);
         }
     }
     return 0;
