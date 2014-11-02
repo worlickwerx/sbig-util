@@ -69,6 +69,7 @@ struct sbfits_struct {
     const char *swcreate;        /* software that created image */
     const char *swmodify;        /* software that modified image */
     const char *history;         /* history (goes with swmodify) */
+    sbfits_type_t image_type;    /* (opt) image type */
     double elevation;
     ushort *data;                /* image data */
     ushort height, width;        /* size of image data */
@@ -219,6 +220,11 @@ void sbfits_set_site (sbfits_t sbf, const char *name,
     sbf->elevation = elev;
 }
 
+void sbfits_set_imagetype (sbfits_t sbf, sbfits_type_t image_type)
+{
+    sbf->image_type = image_type;
+}
+
 void sbfits_set_annotation (sbfits_t sbf, const char *str)
 {
     sbf->annotation = str;
@@ -297,6 +303,12 @@ static int sbfits_write_header (sbfits_t sbf)
                     "CCD temp in degress C", &sbf->status);
     fits_write_key (sbf->fptr, TDOUBLE, "SET-TEMP", &sbf->setpoint,
                     "Setpoint for CCD temp in degress C", &sbf->status);
+    fits_write_key (sbf->fptr, TSTRING, "IMAGETYP",
+                    sbf->image_type == SBFITS_TYPE_LF ? "Light Frame"
+                  : sbf->image_type == SBFITS_TYPE_DF ? "Dark Frame"
+                  : sbf->image_type == SBFITS_TYPE_BF ? "Bias Frame"
+                                                      : "Flat Field",
+                    "Type of image", &sbf->status);
     if (sbf->swcreate)
         fits_write_key (sbf->fptr, TSTRING, "SWCREATE", (char *)sbf->swcreate,
                         "Software that created this image", &sbf->status);
