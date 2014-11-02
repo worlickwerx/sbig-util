@@ -23,7 +23,7 @@ the SBIG universal (all user space) driver, and some test code.
 
 We are limited to architectures for which SBIG pre-compiled the
 libraries in the SDK.  As of this writing, sbig-util includes the
-SDK drop dated 2014-10-26T18-10 built for
+SDK drop dated 2014-10-27T12-58, built for
 * 32-bit ARM (v6, v7, v8)
 * 32-bit x86
 * 64-bit x86
@@ -42,6 +42,12 @@ On Debian Wheezy use:
 sudo apt-get install fxload
 sudo apt-get install libusb-1.0-0-dev
 sudo apt-get install cfitsio-dev
+```
+
+If you want to use ds9 for FITS previewing the also:
+```
+sudo apt-get install saods9
+sudo apt-get install xpa-tools
 ```
 
 ### USB firmware download
@@ -97,6 +103,51 @@ To build sbig-util, run
 make
 ```
 
+### Configuring sbig-util
+
+sbig-util is configurable via a config file which should be placed
+in `$HOME/.sbig/config.ini`.  Here is an example:
+```
+[system]
+device = USB1               ; USB1 thru USB8, ...
+imagedir = /tmp             ; FITS files will be created here
+;sbigudrv = /usr/local/lib/libsbigudrv.so
+
+[ds9]
+;xpa_nsinet = 10.10.10.253:14285 ; set for remote ds9 display
+
+[cfw]
+slot1 = Astrodon Tru-balance E-series NIR blocked R
+slot2 = Astrodon Tru-balance E-series NIR blocked G
+slot3 = Astrodon Tru-balance E-series NIR blocked B
+slot4 = Astrodon Tru-balance E-series NIR blocked L
+
+[config]
+observer = Jim Garlick     ; Telescope operator
+;filter = cfw               ; Filter selected by CFW
+filter = Astrodon Tru-balance E-series NIR blocked L ; Fixed filter
+telescope = Nikkor-Q       ; Telescope (CLA-7 Nikon adapter, stopped at f/4)
+focal_length = 135         ; Focal length of the telescope in mm
+aperture_diameter = 33     ; Aperture diameter of the telescope in mm
+aperture_area = 854.86     ; Aperture area in sq-mm (correct for obstruction)
+
+[site]
+name = Carnelian Bay, CA
+latitude = +39:13:36.6636   ; Latitude, degrees
+longitude = +120:04:54.6924 ; Longitude, degrees W. of zero
+elevation = 1928            ; Elevation, meters
+```
+
+Note: if you set `xpa_nsinet` for remote ds9 previewing, you will need
+to tell ds9 to allow that and also to bind to an interface other than
+localhost.  For example if the ds9 host is 10.10.10.253 and the sbig host
+is 10.10.10.103, then you can launch ds9 as follows:
+```
+echo "DS9:ds9 10.10.10.103 +" >$HOME/acls.xpa
+export XPA_HOST=10.10.10.253
+ds9
+```
+
 ### Running sbig-info
 
 You can get your camera connected and run
@@ -148,37 +199,6 @@ and watch it stablize with the following commands:
 
 ### Running sbig-snap
 
-sbig-snap generates FITS files and needs you to supply some static
-information that it will enter into the FITS header.  The config file
-should be placed in `$HOME/.sbig/config.ini`.  Here is an example:
-```
-[system]
-device = USB1               ; USB1 thru USB8, ...
-imagedir = /tmp             ; FITS files will be created here
-;sbigudrv = /usr/local/lib/libsbigudrv.so
-
-[cfw]
-slot1 = Astrodon Tru-balance E-series NIR blocked R
-slot2 = Astrodon Tru-balance E-series NIR blocked G
-slot3 = Astrodon Tru-balance E-series NIR blocked B
-slot4 = Astrodon Tru-balance E-series NIR blocked L
-
-[config]
-observer = Jim Garlick     ; Telescope operator
-;filter = cfw               ; Filter selected by CFW
-filter = Astrodon Tru-balance E-series NIR blocked L ; Fixed filter
-telescope = Nikkor-Q       ; Telescope (CLA-7 Nikon adapter, stopped at f/4)
-focal_length = 135         ; Focal length of the telescope in mm
-aperture_diameter = 33     ; Aperture diameter of the telescope in mm
-aperture_area = 854.86     ; Aperture area in sq-mm (correct for obstruction)
-
-[site]
-name = Carnelian Bay, CA
-latitude = +39:13:36.6636   ; Latitude, degrees
-longitude = +120:04:54.6924 ; Longitude, degrees W. of zero
-elevation = 1928            ; Elevation, meters
-```
-
 To take a picture, e.g. a 30s exposure of M31:
 ```
 ./sbig snap --object M31 -t 30
@@ -188,13 +208,17 @@ Currently sbig-snap only takes "autodark" images.  That is, it takes
 a dark frame and a light frame and writes the result of subtracting
 the dark from the light.
 
-sbig-snap has various options to play with.  Run `sbig snap -h` to list them.
+sbig-snap has various options to play with, for example the `--preview`
+option to display the image with ds9.  Run `sbig snap -h` to list them.
 
 ### FITS headers
 
 sbig-util is moving towards full support of SBIG's FITS header
 extensions described in
 [this document](http://archive.sbig.com/pdffiles/SBFITSEXT_1r0.pdf).
+Some of the header values must be configured statically in
+`$HOME/.sbig/config.ini`.
+
 These mandatory headers are not yet being generated:
 ```
 DATAMAX
