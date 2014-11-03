@@ -88,6 +88,7 @@ static void help (void)
 "   cooler     Configure the TE cooler setpoint\n"
 "   cfw        Select a filter on CFW device\n"
 "   snap       Take a picture\n"
+"   focus      Preview images quickly in a loop\n"
 );
 }
 
