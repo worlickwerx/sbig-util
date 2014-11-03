@@ -197,6 +197,15 @@ and watch it stablize with the following commands:
 ./sbig info cooler
 ```
 
+### Running sbig-focus
+
+To focus/align your camera, run
+```
+./sbig focus
+```
+which previews images (default one second exposures at full frame,
+3X3 binning) in a loop until you interrupt it with ctrl-C.
+
 ### Running sbig-snap
 
 To take a picture, e.g. a 30s exposure of M31:
@@ -204,12 +213,12 @@ To take a picture, e.g. a 30s exposure of M31:
 ./sbig snap --object M31 -t 30
 ```
 
-Currently sbig-snap only takes "autodark" images.  That is, it takes
+Sbig-snap takes "autodark" images by default; that is, it takes
 a dark frame and a light frame and writes the result of subtracting
-the dark from the light.
-
-sbig-snap has various options to play with, for example the `--preview`
-option to display the image with ds9.  Run `sbig snap -h` to list them.
+the dark from the light.  It can also take light frames and dark frames
+by themselves.  sbig-snap has various options to play with, for example
+the `--preview` option to display the image with ds9.  Run `sbig snap -h`
+to list them.
 
 ### FITS headers
 
