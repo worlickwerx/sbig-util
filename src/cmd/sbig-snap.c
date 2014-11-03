@@ -176,9 +176,6 @@ int main (int argc, char *argv[])
             case 'f': /* --force */
                 force = true; 
                 break;
-            case 'c': /* --config FILE */
-                /* already parsed in first pass */
-                break;
             case 'O': /* --object NAME */
                 opt.object = optarg;
                 break;
