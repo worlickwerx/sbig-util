@@ -188,8 +188,8 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
     double focal_length;                /* telescope FL in mm */
     double pixel_width, pixel_height;   /* pixel dims in um */
     double sensor_width, sensor_height; /* sensor dims in mm */
-    double fov_height, fov_width;       /* field of view in arcseconds */
-    double vres, hres;                  /* pixel resolution in arcmin/pixel */
+    double fov_height, fov_width;       /* field of view in arcmin */
+    double vres, hres;                  /* pixel resolution in arcsec/pixel */
     int e, rm_index;
     sbig_ccd_t ccd;
     CCD_REQUEST chip;
@@ -250,7 +250,7 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
 
     vres = 206.265 * pixel_height / focal_length;
     hres = 206.265 * pixel_width / focal_length;
-    msg ("pixel resolution: %.2f\"H x %.2f\"W", vres, hres);
+    msg ("resolution: %.2f''H x %.2f''W per pixel", vres, hres);
 
     sbig_ccd_destroy (ccd);
     fini_device (sb);
