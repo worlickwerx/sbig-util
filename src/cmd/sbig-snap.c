@@ -282,10 +282,11 @@ int main (int argc, char *argv[])
     if (opt.verbose)
         msg ("Link established to %s", sbig_strcam (type));
 
-    /* Verify TE cooler
+    /* Verify TE cooler and set auto-freeze
      */
     if (!opt.no_cooler) {
         double setpoint, temp;
+        TEMPERATURE_REGULATION mode = REGULATION_ENABLE_AUTOFREEZE;
         if (!get_temp (sb, &temp, &setpoint)) {
             msg ("TE cooler disabled, use --no-cooler or set with sbig-cooler");
             goto done;
@@ -294,6 +295,8 @@ int main (int argc, char *argv[])
             msg ("temp unstable (setpoint %.2fC ccd %.2fC)", setpoint, temp);
             goto done;
         }
+        if ((e = sbig_temp_set (sb, mode, 0) != CE_NO_ERROR))
+            msg_exit ("sbig_temp_set: %s", sbig_get_error_string (sb, e));
     }
 
     /* Take pictures.
