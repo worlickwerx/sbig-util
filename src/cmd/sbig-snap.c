@@ -62,6 +62,7 @@ typedef struct snap_struct {
     char *observer;
     char *telescope;
     char *filter;
+    char *cfw[10];
     const char *object;
     double focal_length;
     double aperture_diameter;
@@ -134,7 +135,7 @@ int main (int argc, char *argv[])
 {
     const char *sbig_udrv = getenv ("SBIG_UDRV");
     const char *config_filename = getenv ("SBIG_CONFIG_FILE");
-    int e, ch;
+    int e, ch, i;
     sbig_t sb;
     opt_t opt;
     CAMERA_TYPE type;
@@ -326,6 +327,10 @@ done:
         free (opt.latitude);
     if (opt.longitude)
         free (opt.longitude);
+    for (i = 0; i < sizeof (opt.cfw) / sizeof (opt.cfw[0]); i++) {
+        if (opt.cfw[i])
+            free (opt.cfw[i]);
+    }
 
     sbig_destroy (sb);
     log_fini ();
@@ -346,7 +351,12 @@ int config_cb (void *user, const char *section, const char *name,
             opt->device = sbig_devstr (value);
         }
     } else if (!strcmp (section, "cfw")) {
-        /* XXX set filter to slot mapping here */
+        int slot;
+        if (sscanf (name, "slot%d", &slot) == 1 && slot >= 1 && slot <= 10) {
+            if (opt->cfw[slot])
+                free (opt->cfw[slot]);
+            opt->cfw[slot] = xstrdup (value);
+        }
     } else if (!strcmp (section, "config")) {
         if (!strcmp (name, "observer"))
             opt->observer = xstrdup (value);
@@ -459,13 +469,26 @@ void update_fitsheader (sbig_t sb, sbfits_t sbf, sbig_ccd_t ccd, opt_t opt,
 {
     long cwhite, cblack;
     int e;
+    CFW_POSITION cfw_pos = CFWP_UNKNOWN;
 
     sbfits_set_ccdinfo (sbf, ccd);
     sbfits_set_temperature (sbf, temp_setpoint, temp);
     sbfits_set_annotation (sbf, opt.message);
     sbfits_set_observer (sbf, opt.observer);
     sbfits_set_telescope (sbf, opt.telescope);
-    sbfits_set_filter (sbf, opt.filter);
+    if (opt.filter && !strcmp (opt.filter, "cfw")) {
+        CFW_STATUS s;
+        do {
+            if ((e = sbig_cfw_query (sb, &s, &cfw_pos)) != CE_NO_ERROR)
+                msg_exit ("sbig_cfw_query: %s", sbig_get_error_string (sb, e));
+        } while (s == CFWS_BUSY);
+        if (cfw_pos == CFWP_UNKNOWN)
+            msg ("warning: could not get filter position from CFW");
+    }
+    if (cfw_pos == CFWP_UNKNOWN || cfw_pos < 1 || cfw_pos > 10)
+        sbfits_set_filter (sbf, opt.filter);
+    else
+        sbfits_set_filter (sbf, opt.cfw[cfw_pos - 1]);
     sbfits_set_focal_length (sbf, opt.focal_length);
     sbfits_set_aperture_diameter (sbf, opt.aperture_diameter);
     sbfits_set_aperture_area (sbf, opt.aperture_area);
