@@ -81,7 +81,7 @@ void usage (void)
 
 void handle_sigint (int signal)
 {
-    msg ("interrupted: focus loop will exit");
+    msg ("interrupted: aborting");
     interrupted = true;
 }
 
@@ -189,7 +189,7 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-void exposure_wait (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
+bool exposure_wait (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
 {
     PAR_COMMAND_STATUS status;
     int e;
@@ -200,7 +200,8 @@ void exposure_wait (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
             msg_exit ("sbig_get_exposure_status: %s", sbig_get_error_string (sb, e));
         if (status != CS_INTEGRATION_COMPLETE)
             usleep (1E3 * 500); /* 500ms */
-    } while (status != CS_INTEGRATION_COMPLETE);
+    } while (status != CS_INTEGRATION_COMPLETE && !interrupted);
+    return !interrupted;
 }
 
 void preview_ds9 (sbfits_t sbf)
@@ -225,7 +226,7 @@ void preview_ds9 (sbfits_t sbf)
     free (cmd);
 }
 
-void snap (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
+bool snap (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
 {
     int e;
     int flags = START_SKIP_VDD; 
@@ -240,11 +241,16 @@ void snap (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
 
     if ((e = sbig_ccd_set_shutter_mode (ccd, SC_OPEN_SHUTTER)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
+    if (opt.verbose)
+        msg ("exposure (%.0fs)", opt.t);
     if ((e = sbig_ccd_start_exposure (ccd, flags, opt.t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
-    exposure_wait (sb, ccd, opt);
+    if (!exposure_wait (sb, ccd, opt))
+        goto abort;
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
+    if (opt.verbose)
+        msg ("readout");
     if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
 
@@ -258,6 +264,12 @@ void snap (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
     preview_ds9 (sbf);
     (void)unlink (sbfits_get_filename (sbf));
     sbfits_destroy (sbf);
+    return true;
+abort:
+    (void)sbig_ccd_end_exposure (ccd, ABORT_DONT_END);
+    (void)unlink (sbfits_get_filename (sbf));
+    sbfits_destroy (sbf);
+    return false;
 }
 
 void snap_series (sbig_t sb, opt_t opt)
@@ -275,7 +287,7 @@ void snap_series (sbig_t sb, opt_t opt)
         if ((e = sbig_ccd_set_partial_frame (ccd, opt.partial)) != CE_NO_ERROR)
             msg_exit ("sbig_ccd_set_partial_frame: %s", sbig_get_error_string (sb, e));
     }
-    msg ("Type ctrl-C to abort focusing loop");
+    msg ("Type ctrl-C to interrupt");
     while (!interrupted) {
         snap (sb, ccd, opt);
     }
