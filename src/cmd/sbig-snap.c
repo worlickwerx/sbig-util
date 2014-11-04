@@ -287,7 +287,7 @@ int main (int argc, char *argv[])
     if (!opt.no_cooler) {
         double setpoint, temp;
         if (!get_temp (sb, &temp, &setpoint)) {
-            msg ("TE cooler disabled, use --no-cooler or configure it");
+            msg ("TE cooler disabled, use --no-cooler or set with sbig-cooler");
             goto done;
         }
         if (fabs (setpoint - temp > TE_stable)) {
