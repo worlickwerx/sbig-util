@@ -72,13 +72,14 @@ typedef struct snap_struct {
     double elevation;
     bool preview;
     snap_type_t image_type;
-} snap_t;
+    bool no_cooler;
+} opt_t;
 
 const char *software_name = "sbig-util 0.1.0";
-
+const double TE_stable = 3.0; /* degrees C allowable diff from setpoint */
 static bool interrupted = false;
 
-#define OPTIONS "ht:d:C:r:n:D:m:O:fp:PT:"
+#define OPTIONS "ht:d:C:r:n:D:m:O:fp:PT:c"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -93,10 +94,12 @@ static const struct option longopts[] = {
     {"partial",       required_argument,     0, 'p'},
     {"preview",       no_argument,           0, 'P'},
     {"image-type",    required_argument,     0, 'T'},
+    {"no-cooler",     no_argument,           0, 'c'},
     {0, 0, 0, 0},
 };
 
-void snap_series (sbig_t sb, snap_t snap);
+bool get_temp (sbig_t sb, double *ccd_temp, double *setpoint);
+void snap_series (sbig_t sb, opt_t snap);
 int config_cb (void *user, const char *section, const char *name,
                const char *value);
 
@@ -116,6 +119,7 @@ void usage (void)
 "  -p, --partial N            take centered partial frame (0 < N <= 1.0)\n"
 "  -P, --preview              preview image using ds9\n"
 "  -T, --image-type TYPE      take df, lf, or auto (default auto)\n"
+"  -c, --no-cooler            allow TE to be disabled/unstable\n"
 );
     exit (1);
 }
@@ -132,7 +136,7 @@ int main (int argc, char *argv[])
     const char *config_filename = getenv ("SBIG_CONFIG_FILE");
     int e, ch;
     sbig_t sb;
-    snap_t opt;
+    opt_t opt;
     CAMERA_TYPE type;
     bool force = false;
     struct sigaction sa;
@@ -164,6 +168,9 @@ int main (int argc, char *argv[])
     optind = 0;
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
+            case 'c': /* --no-cooler */
+                opt.no_cooler = true;
+                break;
             case 'T': /* --image-type DF|LF|AUTO */
                 if (!strcasecmp (optarg, "df"))
                     opt.image_type = SNAP_DF;
@@ -275,10 +282,25 @@ int main (int argc, char *argv[])
     if (opt.verbose)
         msg ("Link established to %s", sbig_strcam (type));
 
+    /* Verify TE cooler
+     */
+    if (!opt.no_cooler) {
+        double setpoint, temp;
+        if (!get_temp (sb, &temp, &setpoint)) {
+            msg ("TE cooler disabled, use --no-cooler or configure it");
+            goto done;
+        }
+        if (fabs (setpoint - temp > TE_stable)) {
+            msg ("temp unstable (setpoint %.2fC ccd %.2fC)", setpoint, temp);
+            goto done;
+        }
+    }
+
     /* Take pictures.
      */
     snap_series (sb, opt);
 
+done:
     /* Clean up.
      * N.B. this does not reset the camera's TE cooler
      */
@@ -310,7 +332,7 @@ int main (int argc, char *argv[])
 int config_cb (void *user, const char *section, const char *name,
                const char *value)
 {
-    snap_t *opt = user;
+    opt_t *opt = user;
 
     if (!strcmp (section, "system")) {
         if (!strcmp (name, "imagedir")) {
@@ -352,7 +374,7 @@ int config_cb (void *user, const char *section, const char *name,
 /* Wait for an exposure in progress to complete.
  * We avoid polling the camera excessively.
  */
-bool exposure_wait (sbig_t sb, sbig_ccd_t ccd, snap_t opt)
+bool exposure_wait (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
 {
     PAR_COMMAND_STATUS status;
     int e;
@@ -373,7 +395,7 @@ bool exposure_wait (sbig_t sb, sbig_ccd_t ccd, snap_t opt)
  * SNAP_LF: take a light frame
  * SNAP_AUTO: take a light frame, subtracting previous DF during readout
  */
-bool snap (sbig_t sb, sbig_ccd_t ccd, snap_t opt, snap_type_t type, int seq)
+bool snap (sbig_t sb, sbig_ccd_t ccd, opt_t opt, snap_type_t type, int seq)
 {
     int e;
 
@@ -391,8 +413,8 @@ bool snap (sbig_t sb, sbig_ccd_t ccd, snap_t opt, snap_type_t type, int seq)
     if ((e = sbig_ccd_start_exposure (ccd, 0, opt.t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
-        msg ("exposure: start %s #%d (%.2fs)", type == SNAP_DF ? "DF" : "LF",
-             seq, opt.t);
+        msg ("[%d]exposure: %s (%.2fs)", seq, type == SNAP_DF ? "DF" : "LF",
+             opt.t);
     if (!exposure_wait (sb, ccd, opt))
         goto abort;
 
@@ -402,43 +424,34 @@ bool snap (sbig_t sb, sbig_ccd_t ccd, snap_t opt, snap_type_t type, int seq)
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
-        msg ("exposure: end %s #%d", type == SNAP_DF ? "DF" : "LF", seq);
+        msg ("[%d]readout: %s%s", seq, type == SNAP_DF ? "DF" : "LF",
+             type == SNAP_AUTO ? " (subtracted)" : "");
     if (type == SNAP_AUTO)
         e = sbig_ccd_readout_subtract (ccd);
     else
         e = sbig_ccd_readout (ccd);
     if (e != CE_NO_ERROR)
         msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
-        msg ("readout: %s%s #%d complete", type == SNAP_DF ? "DF" : "LF",
-             type == SNAP_AUTO ? " (subtracted)" : "", seq);
     return true;
 abort:
     (void)sbig_ccd_end_exposure (ccd, ABORT_DONT_END);
     return false;
 }
 
-/* Return current CCD temperature in degrees C
- */
-double snap_temp (sbig_t sb, snap_t opt, double *setpoint)
+bool get_temp (sbig_t sb, double *ccd_temp, double *setpoint)
 {
     QueryTemperatureStatusResults2 temp;
     int e;
     if ((e = sbig_temp_get_info (sb, &temp)) != CE_NO_ERROR)
         msg_exit ("sbig_temp_get_info: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose) {
-        msg ("cooler: %s setpoint %.2fC ccd %.2fC ambient %.2fC",
-             temp.coolingEnabled ? "enabled" : "disabled",
-             temp.ccdSetpoint,
-             temp.imagingCCDTemperature,
-             temp.ambientTemperature);
-    }
+    if (ccd_temp)
+        *ccd_temp = temp.imagingCCDTemperature;
     if (setpoint)
         *setpoint = temp.ccdSetpoint;
-    return temp.imagingCCDTemperature;
+    return temp.coolingEnabled;
 }
 
-void update_fitsheader (sbig_t sb, sbfits_t sbf, sbig_ccd_t ccd, snap_t opt,
+void update_fitsheader (sbig_t sb, sbfits_t sbf, sbig_ccd_t ccd, opt_t opt,
                        double temp_setpoint, double temp)
 {
     long cwhite, cblack;
@@ -488,9 +501,9 @@ void preview_ds9 (sbfits_t sbf)
     free (cmd);
 }
 
-void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, opt_t opt, int seq)
 {
-    double dt, temp_lf, temp_df, setpoint;
+    double temp, setpoint;
     sbfits_t sbf;
 
     /* Create FITS file for output.
@@ -499,26 +512,17 @@ void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     if (sbfits_create_file (sbf, opt.imagedir, "LF") < 0)
         msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
 
-    /* Dark frame
+    /* Take DF, LF
      */
-    do {
-        temp_df = snap_temp (sb, opt, NULL);
-        if (!snap (sb, ccd, opt, SNAP_DF, seq))
-            goto abort;
-        temp_lf = snap_temp (sb, opt, &setpoint);
-        dt = fabs (temp_df - temp_lf);
-        if (dt > 1) /* FIXME: 1C threshold is somewhat arbitrary */
-            msg ("Retaking DF as CCD temp was not stable");
-    } while (dt > 1);
-
-    /* Light frame, auto-subtracted
-     */
+    if (!snap (sb, ccd, opt, SNAP_DF, seq))
+        goto abort;
+    get_temp (sb, &temp, &setpoint); /* get temp for FITS */
     if (!snap (sb, ccd, opt, SNAP_AUTO, seq))
         goto abort;
 
     /* Write out FITS file, optionally preview
      */
-    update_fitsheader (sb, sbf, ccd, opt, setpoint, temp_lf);
+    update_fitsheader (sb, sbf, ccd, opt, setpoint, temp);
     sbfits_set_history (sbf, software_name, "Dark Subtraction");
     sbfits_set_pedestal (sbf, -100); /* readout_subtract does this */
     if (sbfits_write_file (sbf) < 0)
@@ -539,7 +543,7 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_one_df (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+void snap_one_df (sbig_t sb, sbig_ccd_t ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
     sbfits_t sbf;
@@ -548,7 +552,7 @@ void snap_one_df (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     if (sbfits_create_file (sbf, opt.imagedir, "DF") < 0)
         msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
 
-    temp = snap_temp (sb, opt, &setpoint);
+    get_temp (sb, &temp, &setpoint);
 
     if (!snap (sb, ccd, opt, SNAP_DF, seq))
         goto abort;
@@ -568,7 +572,7 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_one_lf (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
+void snap_one_lf (sbig_t sb, sbig_ccd_t ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
     sbfits_t sbf;
@@ -577,7 +581,7 @@ void snap_one_lf (sbig_t sb, sbig_ccd_t ccd, snap_t opt, int seq)
     if (sbfits_create_file (sbf, opt.imagedir, "LF") < 0)
         msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
 
-    temp = snap_temp (sb, opt, &setpoint);
+    get_temp (sb, &temp, &setpoint);
 
     if (!snap (sb, ccd, opt, SNAP_LF, seq))
         goto abort;
@@ -598,7 +602,7 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_series (sbig_t sb, snap_t opt)
+void snap_series (sbig_t sb, opt_t opt)
 {
     int e, i;
     sbig_ccd_t ccd;
@@ -610,8 +614,6 @@ void snap_series (sbig_t sb, snap_t opt)
      */
     if ((e = sbig_ccd_end_exposure (ccd, ABORT_DONT_END)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
-        msg ("exposure: abort (just in case)");
     /* FIXME: could verify that camera is idle here */
 
     /* Set up the readout binning mode and subframe window,
