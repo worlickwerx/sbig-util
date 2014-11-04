@@ -44,7 +44,8 @@ sudo apt-get install libusb-1.0-0-dev
 sudo apt-get install cfitsio-dev
 ```
 
-If you want to use ds9 for FITS previewing the also:
+If you want to use ds9 for FITS previewing, install it and its
+messaging system, XPA:
 ```
 sudo apt-get install saods9
 sudo apt-get install xpa-tools
@@ -150,13 +151,24 @@ ds9
 
 ### Running sbig-info
 
-You can get your camera connected and run
+sbig-info can query info about the various parts of your system,
+as well as calculate filed of view and pixel resolution based
+on your camera's sensor size and the focal length you put in the
+config file.
+
+```
+Usage: sbig-info driver
+       sbig-info ccd {tracking|imaging}
+       sbig-info cfw
+       sbig-info cooler
+       sbig-info fov {tracking|imaging} {lo|med|hi} [focal-length]
+```
+For example, with your camera connected, run:
 ```
 cd src/cmd
 ./sbig info ccd imaging
 ```
-which should display information about your camera.  For example
-my ST-8 looks like this:
+My ST-8 looks like this:
 ```
 sbig-info: firmware-version: 2.42
 sbig-info: camera-type:      ST-8
@@ -184,14 +196,15 @@ sbig-info: frame-buffer:      no
 sbig-info: use-startexp2:     no
 ```
 
-`sbig info` can also query information about the tracking ccd,
-cfw (filter wheel), cooler, driver, and calculate angular field of view
-for a given focal length telescope.
-
 ### Running sbig-cooler
 
-You can enable the TE cooler for a setpoint in degrees Celcius,
-and watch it stablize with the following commands:
+sbig-cooler can enable/disable the thermoelectric cooler and
+change the setpoint.
+```
+Usage: sbig-cooler on setpoint-degrees-C
+                   off
+```
+For example, to set the cooler for -30C and watch it stablize:
 ```
 ./sbig cooler on -30
 ./sbig info cooler
@@ -199,26 +212,57 @@ and watch it stablize with the following commands:
 
 ### Running sbig-focus
 
-To focus/align your camera, run
+sbig-focus is used in conjunction with ds9 for live focusing and
+alignment.  It continues to run until the user aborts it with ctrl-C.
+
+```
+Usage: sbig-focus [OPTIONS]
+  -t, --exposure-time SEC exposure time in seconds (default 1.0)
+  -C, --ccd-chip CHIP     use imaging, tracking, or ext-tracking
+  -r, --resolution RES    select hi, med, or lo resolution
+  -p, --partial N         take centered partial frame (0 < N <= 1.0)
+```
+
+To focus/align your camera using full frame, 3X3 binned (lo resolution),
+and 1 second exposures, first start ds9, then run:
 ```
 ./sbig focus
 ```
-which previews images (default one second exposures at full frame,
-3X3 binning) in a loop until you interrupt it with ctrl-C.
+
+### Running sbig-cfw
+
+sbig-cfw controls an SBIG filter wheel.  Slots are numbered 1-N.
+```
+Usage: sbig-cfw query
+       sbig-cfw goto N
+```
 
 ### Running sbig-snap
 
-To take a picture, e.g. a 30s exposure of M31:
+sbig-snap is used for taking images, which are written as FITS files
+to the configured image directory.
+```
+Usage: sbig-snap [OPTIONS]
+  -t, --exposure-time SEC    exposure time in seconds (default 1.0)
+  -d, --image-directory DIR  where to put images (default /tmp)
+  -C, --ccd-chip CHIP        use imaging, tracking, or ext-tracking
+  -r, --resolution RES       select hi, med, or lo resolution
+  -n, --count N              take N exposures
+  -D, --time-delta N         increase exposure time by N on each exposure
+  -m, --message string       add COMMENT to FITS file
+  -O, --object NAME          name of object being observed (e.g. M33)
+  -f, --force                press on even if FITS header will be incomplete
+  -p, --partial N            take centered partial frame (0 < N <= 1.0)
+  -P, --preview              preview image using ds9
+  -T, --image-type TYPE      take df, lf, or auto (default auto)
+  -c, --no-cooler            allow TE to be disabled/unstable
+```
+
+To take a full frame, high resolution, auto-dark-subtracted, 30s
+exposure of M31:
 ```
 ./sbig snap --object M31 -t 30
 ```
-
-Sbig-snap takes "autodark" images by default; that is, it takes
-a dark frame and a light frame and writes the result of subtracting
-the dark from the light.  It can also take light frames and dark frames
-by themselves.  sbig-snap has various options to play with, for example
-the `--preview` option to display the image with ds9.  Run `sbig snap -h`
-to list them.
 
 ### FITS headers
 
