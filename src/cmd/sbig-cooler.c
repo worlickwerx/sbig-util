@@ -81,16 +81,6 @@ int main (int argc, char *argv[])
         mode = REGULATION_OFF;
     else if (!strcmp (modestr, "on"))
         mode = REGULATION_ON;
-    else if (!strcmp (modestr, "override"))
-        mode = REGULATION_OVERRIDE;
-    else if (!strcmp (modestr, "freeze"))
-        mode = REGULATION_FREEZE;
-    else if (!strcmp (modestr, "unfreeze"))
-        mode = REGULATION_UNFREEZE;
-    else if (!strcmp (modestr, "auto"))
-        mode = REGULATION_ENABLE_AUTOFREEZE;
-    else if (!strcmp (modestr, "noauto"))
-        mode = REGULATION_DISABLE_AUTOFREEZE;
     else
         usage ();
     if (optind < argc)
