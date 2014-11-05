@@ -266,20 +266,9 @@ exposure of M31:
 
 ### FITS headers
 
-sbig-util is moving towards full support of SBIG's FITS header
-extensions described in
+sbig-util writes FITS files using SBIG FITS header extensions, described in
 [this document](http://archive.sbig.com/pdffiles/SBFITSEXT_1r0.pdf).
-Some of the header values must be configured statically in
-`$HOME/.sbig/config.ini`.
 
-These mandatory headers are not yet being generated:
-```
-DATAMAX
-```
-nor the following optional headers:
-```
-TRAKTIME, OBJECTRA, OBJECTDEC, CENTAZ, CENTALT
-```
 Here is an example header:
 ```
 SIMPLE  =                    T / file does conform to FITS standard
@@ -327,5 +316,6 @@ APTAREA =               854.86 / Aperture area in sq-mm
 CBLACK  =                  138 / Black ADU for display
 CWHITE  =                   74 / White ADU for display
 PEDESTAL=                 -100 / Add to ADU for 0-base
+DATAMAX =                40000 / Saturation level
 END
 ```
