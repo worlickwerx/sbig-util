@@ -235,7 +235,7 @@ char *dir_self (void)
         fprintf (stderr, "/proc/self/exe");
         exit (1);
     }
-    return path; 
+    return dirname (path);
 }
 
 void exec_subcommand (char *argv[])
