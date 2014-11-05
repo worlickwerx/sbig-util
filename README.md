@@ -68,40 +68,14 @@ sudo udevadm control --reload-rules
 When my camera is properly initialized, the red LED on the back blinks
 for about a second, then the cooling fan comes on.
 
-### Building and running the SDK test code
-
-To validate that the SDK functions on your Linux system with your camera,
-you can build and run SBIG's test code.
-```
-cd sdk/app
-make
-```
-The usage is:
-```
-./testapp filePath fileType imgCount imgType expTime rm top left width heigh fr dcm
-
-fileType: SBIG or FITS
-imgCount: integer number of images to snap
-imgType:  LF=light field or DF=dark field
-expTime:  floating point exposure time in seconds
-rm:       readout mode 1x1, 2x2, 3x3 
-top, left, width, height:
-          image size (set all to zero for full size)
-fr:       1=enable fast readout (at cost of noise)
-dcm:      1=enable dual channel mode
-```
-For example, to snap an image from the camera and store it in /tmp, run
-```
-./testapp /tmp/ FITS 1 LF 0.01 1x1 0 0 0 0 1 1
-```
-
 ### Building sbig-util
 
 To build sbig-util, run
 ```
-./autogen.sh
+./autogen.sh       # not necessary if building a release tarball
 ./configure
 make
+sudo make install  # install to /usr/local
 ```
 
 ### Configuring sbig-util
@@ -165,8 +139,7 @@ Usage: sbig-info driver
 ```
 For example, with your camera connected, run:
 ```
-cd src/cmd
-./sbig info ccd imaging
+sbig info ccd imaging
 ```
 My ST-8 looks like this:
 ```
@@ -206,8 +179,8 @@ Usage: sbig-cooler on setpoint-degrees-C
 ```
 For example, to set the cooler for -30C and watch it stablize:
 ```
-./sbig cooler on -30
-./sbig info cooler
+sbig cooler on -30
+sbig info cooler
 ```
 
 ### Running sbig-focus
@@ -226,7 +199,7 @@ Usage: sbig-focus [OPTIONS]
 To focus/align your camera using full frame, 3X3 binned (lo resolution),
 and 1 second exposures, first start ds9, then run:
 ```
-./sbig focus
+sbig focus
 ```
 
 ### Running sbig-cfw
@@ -261,7 +234,7 @@ Usage: sbig-snap [OPTIONS]
 To take a full frame, high resolution, auto-dark-subtracted, 30s
 exposure of M31:
 ```
-./sbig snap --object M31 -t 30
+sbig snap --object M31 -t 30
 ```
 
 ### FITS headers
