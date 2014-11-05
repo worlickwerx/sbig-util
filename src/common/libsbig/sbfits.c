@@ -76,11 +76,13 @@ struct sbfits_struct {
     int top, left;               /* subframe origin */
     READOUT_BINNING_MODE readout_mode;
     GetCCDInfoResults0 info0;
+    GetCCDInfoResults2 info2;
     double focal_length;
     double aperture_diameter;
     double aperture_area;
     long cwhite, cblack;
     long pedestal;
+    ushort datamax;
 };
 
 static char *gmtime_str (time_t t, char *buf, int sz)
@@ -99,7 +101,7 @@ sbfits_t sbfits_create (void)
     sbfits_t sbf = xzmalloc (sizeof (*sbf));
     sbf->num_exposures = 1;
     return sbf;
-}
+}                         
 
 void sbfits_destroy (sbfits_t sbf)
 {
@@ -160,9 +162,37 @@ void sbfits_set_ccdinfo (sbfits_t sbf, sbig_ccd_t ccd)
     sbf->data          = sbig_ccd_get_data (ccd, &sbf->height, &sbf->width);
     (void)sbig_ccd_get_readout_mode (ccd, &sbf->readout_mode); /* FIXME */
     (void)sbig_ccd_get_info0 (ccd, &sbf->info0); /* FIXME */
+    (void)sbig_ccd_get_info2 (ccd, &sbf->info2); /* FIXME */
     (void)sbig_ccd_get_window (ccd, &top, &left, &height, &width);
     sbf->top = top;   /* need as int */
     sbf->left = left; /* need as int */
+
+    /* Ref: SBIG USB Camera manual rev 14, table 3.2, pp 37
+     *  provides info on ST7, ST8, ST9, ST10, ST2K
+     */
+    switch (sbf->info0.cameraType) {
+        case ST7_CAMERA:
+        case ST8_CAMERA:
+            if (sbf->readout_mode == RM_1X1 && sbf->info2.imagingABG)
+                sbf->datamax = 20000;
+            else if (sbf->readout_mode == RM_1X1 && !sbf->info2.imagingABG)
+                sbf->datamax = 40000;
+            else
+                sbf->datamax = 65000;
+            break;
+        case ST10_CAMERA:
+            if (sbf->readout_mode == RM_1X1)
+                sbf->datamax = 50000;
+            else
+                sbf->datamax = 65000;
+            break;
+        case ST9_CAMERA:
+        case ST2K_CAMERA:
+            sbf->datamax = 65000;
+            break;
+        default:
+            sbf->datamax = 65000;
+    }
 }
 
 void sbfits_set_num_exposures (sbfits_t sbf, ushort num_exposures)
@@ -412,10 +442,8 @@ static int sbfits_write_header (sbfits_t sbf)
                     "White ADU for display", &sbf->status);
     fits_write_key(sbf->fptr, TLONG,   "PEDESTAL", &sbf->pedestal,
                     "Add to ADU for 0-base", &sbf->status);
-#if 0
-    fits_write_key(sbf->fptr, TUSHORT, "DATAMAX", &sbf->saturation_level,
+    fits_write_key(sbf->fptr, TUSHORT, "DATAMAX", &sbf->datamax,
                     "Saturation level", &sbf->status);
-#endif
     return sbf->status ? -1 : 0;
 }
 
