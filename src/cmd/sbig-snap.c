@@ -178,7 +178,7 @@ int main (int argc, char *argv[])
                 else if (!strcasecmp (optarg, "lf"))
                     opt.image_type = SNAP_LF;
                 else if (!strcasecmp (optarg, "auto"))
-                    opt.image_type = SNAP_LF;
+                    opt.image_type = SNAP_AUTO;
                 else
                     usage ();
                 break;
