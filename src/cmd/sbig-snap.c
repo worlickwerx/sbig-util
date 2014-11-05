@@ -76,7 +76,7 @@ typedef struct snap_struct {
     bool no_cooler;
 } opt_t;
 
-const char *software_name = "sbig-util 0.1.0";
+const char *software_name = META_NAME "-" META_VERSION;
 const double TE_stable = 3.0; /* degrees C allowable diff from setpoint */
 static bool interrupted = false;
 
