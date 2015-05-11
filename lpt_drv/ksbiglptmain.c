@@ -6,14 +6,13 @@
 // All rights reserved.		
 //========================================================================
 /* kernel stuff */
-#include <linux/config.h>
+#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
 #include <linux/timer.h>
 #include <linux/fs.h>
 #include <linux/poll.h>
-#include <linux/wrapper.h>
 #include <linux/proc_fs.h>
 #include <linux/sysctl.h>
 #include <linux/init.h>
