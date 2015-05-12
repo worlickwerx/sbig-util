@@ -7,6 +7,8 @@
 #ifndef _ULPTDRV_
 #define _ULPTDRV_
 
+#include "sbigudrv.h"
+
 /*
 
 	Low-Level Driver Commands
