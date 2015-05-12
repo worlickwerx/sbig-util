@@ -1354,9 +1354,6 @@ int KDevOpen(struct inode *inode,
 {
  int status = 0;  // assume success
 
- // increment a usage count
- MOD_INC_USE_COUNT;
-
  // allocate private data structure
  if((status = KAllocatePrivateData(
               filp,
@@ -1364,7 +1361,6 @@ int KDevOpen(struct inode *inode,
 	      lpt_span,
 	      buffer_size)) < 0){
     // decrement the usage count
-    MOD_DEC_USE_COUNT; 
     gLastError = CE_DEVICE_NOT_OPEN;
     return(status);
  }
@@ -1373,8 +1369,6 @@ int KDevOpen(struct inode *inode,
  if((status = KAllocateLptPorts(filp)) < 0){
     // release private data structure
     KReleasePrivateData(filp);
-    // decrement the usage count
-    MOD_DEC_USE_COUNT;
     gLastError = CE_DEVICE_NOT_OPEN;
     return(status);
  }
@@ -1396,9 +1390,6 @@ int KDevRelease(struct inode *inode,
 
  // release private data structure				
  KReleasePrivateData(filp);
-
- // decrement usage count
- MOD_DEC_USE_COUNT;
 
  return(0);	
 }
