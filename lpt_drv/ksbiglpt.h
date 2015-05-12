@@ -59,7 +59,7 @@ unsigned char KLptMicroIn    (struct private_data *, unsigned char ackIt);
 
 int  KDevOpen      	     (struct inode *, struct file *, int, int, int);
 int  KDevRelease             (struct inode *, struct file *);
-int  KDevIoctl     	     (struct inode *, struct file *, unsigned int,
+long KDevIoctl     	     (struct file *, unsigned int,
                               unsigned long , spinlock_t *);
 //========================================================================
 #endif  // _KSBIG_LPT_H_

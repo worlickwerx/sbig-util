@@ -45,11 +45,10 @@ int KDev2Release(struct inode *inode,
 //========================================================================
 // KDev2Ioctl
 //========================================================================
-int KDev2Ioctl(struct inode   *inode,
-               struct file    *filp,
+long KDev2Ioctl(struct file    *filp,
                unsigned int   cmd,
                unsigned long  arg)
 {
- return(KDevIoctl(inode, filp, cmd, arg, &d2_spinlock));
+ return(KDevIoctl(filp, cmd, arg, &d2_spinlock));
 }
 //========================================================================

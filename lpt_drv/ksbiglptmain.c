@@ -46,19 +46,19 @@ spinlock_t  d2_spinlock;
 struct file_operations d0_fops = {	// device 0
  open:    KDev0Open,
  release: KDev0Release,
- ioctl:   KDev0Ioctl,
+ unlocked_ioctl:   KDev0Ioctl,
 };
 
 struct file_operations d1_fops = {	// device 1
  open:    KDev1Open,
  release: KDev1Release,
- ioctl:   KDev1Ioctl,
+ unlocked_ioctl:   KDev1Ioctl,
 };
 
 struct file_operations d2_fops = {	// device 2
  open:    KDev2Open,
  release: KDev2Release,
- ioctl:   KDev2Ioctl,
+ unlocked_ioctl:   KDev2Ioctl,
 };
 //========================================================================
 // array of file_operations structures

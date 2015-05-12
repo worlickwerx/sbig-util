@@ -1404,8 +1404,7 @@ int KDevRelease(struct inode *inode,
 //========================================================================
 // KDevIoctl
 //========================================================================
-int KDevIoctl(struct inode  *inode,
-              struct file   *filp,
+long KDevIoctl(struct file   *filp,
               unsigned int   cmd,
               unsigned long  arg,
 	      spinlock_t    *spin_lock)

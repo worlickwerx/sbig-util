@@ -18,8 +18,7 @@ int KDev0Release(
     struct file		*filp
 );
 
-int KDev0Ioctl(
-    struct inode	*inode,
+long KDev0Ioctl(
     struct file		*filp,
     unsigned int	cmd,
     unsigned long	arg
@@ -35,8 +34,7 @@ int KDev1Release(
     struct file		*filp
 );
 
-int KDev1Ioctl(
-    struct inode	*inode,
+long KDev1Ioctl(
     struct file		*filp,
     unsigned int	cmd,
     unsigned long	arg
@@ -52,8 +50,7 @@ int KDev2Release(
     struct file		*filp
 );
 
-int KDev2Ioctl(
-    struct inode	*inode,
+long KDev2Ioctl(
     struct file		*filp,
     unsigned int	cmd,
     unsigned long	arg
