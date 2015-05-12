@@ -24,7 +24,7 @@
 #include "ksbiglpthw.h"
 #include "ksbigdef.h"
 
-extern spinlock_t  d0_lock;
+extern spinlock_t  d0_spinlock;
 //========================================================================
 // KAllocatePrivateData
 //========================================================================
@@ -37,7 +37,7 @@ int KAllocatePrivateData(struct file *filp,
  struct private_data *pd = (struct private_data *)(filp->private_data);
 
  // grab spinlock
- spin_lock(d0_lock);
+ spin_lock(&d0_spinlock);
 
  // check if the device is available, ie. 'pd' should be NULL pointer
  if(pd){
@@ -46,7 +46,7 @@ int KAllocatePrivateData(struct file *filp,
     printk("<0>KAllocatePrivateData() : device already open!\n");
     #endif
     // release spinlock
-    spin_unlock(d0_lock);
+    spin_unlock(&d0_spinlock);
     return(-EBUSY);
  }
 
@@ -57,7 +57,7 @@ int KAllocatePrivateData(struct file *filp,
     printk("<0>KAllocatePrivateData() : kmalloc() : "
            "struct private_data : error!\n");
     filp->private_data = (struct private_data *)NULL;
-    spin_unlock(d0_lock);
+    spin_unlock(&d0_spinlock);
     return(-ENOMEM);
  }
 
@@ -66,7 +66,7 @@ int KAllocatePrivateData(struct file *filp,
     printk("<0>KAllocatePrivateData() : kmalloc() : "
            "I/O buffer : error!\n");
     kfree(pd);
-    spin_unlock(d0_lock);
+    spin_unlock(&d0_spinlock);
     return(-ENOMEM);
  }
 
@@ -74,7 +74,7 @@ int KAllocatePrivateData(struct file *filp,
  filp->private_data = pd;
 
  // release spinlock because nobody can change our private data now
- spin_unlock(d0_lock);
+ spin_unlock(&d0_spinlock);
 
  // initialize private_data structure
  pd->port_base          = port_base;
