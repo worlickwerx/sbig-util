@@ -79,8 +79,6 @@ int KModInit(void)
 {
  int status = 0;
  unsigned long t0, t1, dt;
-
- EXPORT_NO_SYMBOLS;
  
  gLastError = CE_NO_ERROR;
 
