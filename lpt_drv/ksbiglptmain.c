@@ -27,7 +27,7 @@
 #include "ksbiglptmain.h"   
 
 extern unsigned long gLptHz;
-extern unsigned long gLastError;
+extern unsigned short gLastError;
 //========================================================================
 module_init(KModInit);
 module_exit(KModExit);

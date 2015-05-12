@@ -43,9 +43,9 @@
  outb(AD0, pd->port_base);                           \
  u += (unsigned short)(inb(pd->port_base + 1) & 0x78) >> 3
 //-----------------------------------------------------------------------------
-// Static variables:
-static unsigned long  gLptHz;  
-static unsigned short gLastError;
+// Global variables:
+unsigned long  gLptHz;
+unsigned short gLastError;
 //========================================================================
 // KLptInitPort
 // Disable interrupts and force the LPT com to idle.
