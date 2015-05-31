@@ -134,6 +134,7 @@ void handle_sigint (int signal)
 int main (int argc, char *argv[])
 {
     const char *sbig_udrv = getenv ("SBIG_UDRV");
+    const char *sbig_device = getenv ("SBIG_DEVICE");
     const char *config_filename = getenv ("SBIG_CONFIG_FILE");
     int e, ch, i;
     sbig_t sb;
@@ -144,10 +145,13 @@ int main (int argc, char *argv[])
 
     log_init ("sbig-snap");
 
+    if (!sbig_device)
+        msg_exit ("SBIG_DEVICE is not set");
+
     /* Set default option values.
      */
     memset (&opt, 0, sizeof (opt));
-    opt.device = "USB1";          /* first USB device */
+    opt.device = xstrdup (sbig_device);
     opt.chip = CCD_IMAGING;         /* main imaging ccd */
     opt.readout_mode = RM_1X1;      /* high resolution */
     opt.imagedir = xstrdup("/tmp"); /* where to write files */
@@ -275,7 +279,8 @@ int main (int argc, char *argv[])
     /* Open camera
      */
     if ((e = sbig_open_device (sb, opt.device)) != CE_NO_ERROR)
-        msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
+        msg_exit ("sbig_open_device: %s: %s", opt.device,
+                   sbig_get_error_string (sb, e));
     if (opt.verbose)
         msg ("Device open");
     if ((e = sbig_establish_link (sb, &type)) != CE_NO_ERROR)
