@@ -49,7 +49,7 @@
 typedef enum { SNAP_DF, SNAP_LF, SNAP_AUTO } snap_type_t;
 
 typedef struct snap_struct {
-    SBIG_DEVICE_TYPE device;
+    char *device;
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
     double partial;
@@ -147,7 +147,7 @@ int main (int argc, char *argv[])
     /* Set default option values.
      */
     memset (&opt, 0, sizeof (opt));
-    opt.device = DEV_USB1;          /* first USB device */
+    opt.device = "USB1";          /* first USB device */
     opt.chip = CCD_IMAGING;         /* main imaging ccd */
     opt.readout_mode = RM_1X1;      /* high resolution */
     opt.imagedir = xstrdup("/tmp"); /* where to write files */
@@ -348,7 +348,7 @@ int config_cb (void *user, const char *section, const char *name,
                 free (opt->imagedir);
             opt->imagedir = xstrdup (value);
         } else if (!strcmp (name, "device")) {
-            opt->device = sbig_devstr (value);
+            opt->device = xstrdup (value);
         }
     } else if (!strcmp (section, "cfw")) {
         int slot;

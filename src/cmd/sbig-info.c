@@ -153,11 +153,10 @@ void fini_driver (sbig_t sb)
 
 void init_device (sbig_t sb, const char *sbig_device)
 {
-    SBIG_DEVICE_TYPE device = sbig_devstr (sbig_device);
     CAMERA_TYPE type;
     int e;
 
-    if ((e = sbig_open_device (sb, device)) != 0)
+    if ((e = sbig_open_device (sb, sbig_device) != 0))
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));

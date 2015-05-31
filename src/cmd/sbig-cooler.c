@@ -59,7 +59,6 @@ int main (int argc, char *argv[])
     int e;
     int ch;
     CAMERA_TYPE type;
-    SBIG_DEVICE_TYPE device;
     double setpoint = 0;
     char *modestr = NULL;
     TEMPERATURE_REGULATION mode;
@@ -90,14 +89,13 @@ int main (int argc, char *argv[])
         msg_exit ("SBIG_UDRV is not set");
     if (!sbig_device)
         msg_exit ("SBIG_DEVICE is not set");
-    device = sbig_devstr (sbig_device);
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != CE_NO_ERROR)
         msg_exit ("%s", dlerror ());
     if ((e = sbig_open_driver (sb)) != CE_NO_ERROR)
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_open_device (sb, device)) != CE_NO_ERROR)
+    if ((e = sbig_open_device (sb, sbig_device)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != CE_NO_ERROR)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));

@@ -45,7 +45,7 @@
 #include "src/common/libsbig/sbfits.h"
 
 typedef struct opt_struct {
-    SBIG_DEVICE_TYPE device;
+    char *device;
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
     double partial;
@@ -99,7 +99,7 @@ int main (int argc, char *argv[])
     /* Set default option values.
      */
     memset (&opt, 0, sizeof (opt));
-    opt.device = DEV_USB1;          /* first USB device */
+    opt.device = "USB1";            /* first USB device */
     opt.chip = CCD_IMAGING;         /* main imaging ccd */
     opt.readout_mode = RM_3X3;      /* lo resolution */
     opt.t = 1.0;                    /* 1s exposure time */

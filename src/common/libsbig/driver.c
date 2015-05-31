@@ -31,6 +31,10 @@
 #include <string.h>
 #include <dlfcn.h>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include "handle.h"
 #include "handle_impl.h"
 #include "sbigudrv.h"
@@ -55,22 +59,18 @@ int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
     return sb->fun (CC_GET_DRIVER_INFO, &in, info);
 }
 
-/* N.B. presumed that lptBaseAddress would be zero on Linux, but untested
- */
-int sbig_open_device (sbig_t sb, SBIG_DEVICE_TYPE type)
+int sbig_open_device (sbig_t sb, const char *name) 
 {
-    if (   type != DEV_LPT1 && type != DEV_LPT2 && type != DEV_LPT3
-        && type != DEV_USB  && type != DEV_USB1 && type != DEV_USB2
-        && type != DEV_USB3 && type != DEV_USB4 && type != DEV_USB5
-        && type != DEV_USB6 && type != DEV_USB7 && type != DEV_USB8)
-        return CE_BAD_PARAMETER;
-    OpenDeviceParams in = { .deviceType = type, .lptBaseAddress = 0 };
-    return sb->fun (CC_OPEN_DEVICE, &in, NULL);
-}
-
-int sbig_open_device_ip (sbig_t sb, ulong ipaddr)
-{
-    OpenDeviceParams in = { .deviceType = DEV_ETH, .ipAddress = ipaddr };
+    struct in_addr addr;
+    memset (&addr, 0, sizeof (addr));
+    SBIG_DEVICE_TYPE type = sbig_devstr (name);
+    if (type == DEV_NONE) {
+        if (inet_aton (name, &addr) == 0) // sbig wants little-endian ipv4
+            return CE_BAD_PARAMETER;
+        type = DEV_ETH;
+    }
+    OpenDeviceParams in = { .deviceType = type, .lptBaseAddress = 0,
+                            .ipAddress = htole32 (ntohl (addr.s_addr))};
     return sb->fun (CC_OPEN_DEVICE, &in, NULL);
 }
 
@@ -128,9 +128,6 @@ SBIG_DEVICE_TYPE sbig_devstr (const char *str)
     return DEV_NONE;
 }
 
-/*
- * vi:tabstop=4 shiftwidth=4 expandtab
- */
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
  */

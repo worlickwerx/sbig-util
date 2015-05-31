@@ -74,7 +74,7 @@ static void usage (void)
 "    -x,--exec-dir DIR     set directory to search for commands\n"
 "    -S,--sbig-udrv FILE   set path to SBIG universal driver .so file\n"
 "    -c,--config FILE      set path to config file\n"
-"    -d,--device DEV       set device type (USB1, USB2, LPT1, ETH, ...)\n"
+"    -d,--device DEV       set device type (USB1, LPT1, 192.168.1.99, ...)\n"
 "    -X,--xpa-nsinet IP:PORT   set for remote ds9 preview\n"
 );
 }

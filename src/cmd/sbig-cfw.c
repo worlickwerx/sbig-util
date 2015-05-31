@@ -63,7 +63,6 @@ int main (int argc, char *argv[])
     int ch;
     char *cmd;
     CAMERA_TYPE type;
-    SBIG_DEVICE_TYPE device;
 
     log_init ("sbig-cfw");
 
@@ -82,14 +81,13 @@ int main (int argc, char *argv[])
         msg_exit ("SBIG_UDRV is not set");
     if (!sbig_device)
         msg_exit ("SBIG_DEVICE is not set");
-    device = sbig_devstr (sbig_device);
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != 0)
         msg_exit ("%s", dlerror ());
     if ((e = sbig_open_driver (sb)) != 0)
         msg_exit ("sbig_open_driver: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_open_device (sb, device)) != 0)
+    if ((e = sbig_open_device (sb, sbig_device)) != 0)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_establish_link (sb, &type)) != 0)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));

@@ -11,13 +11,12 @@ int sbig_open_driver (sbig_t sb);
 int sbig_close_driver (sbig_t sb);
 
 /* Initialize/finalize low level transport (N.B. only tested on USB)
- * USB: DEV_USB picks first camera, DEV_USB1...DEV_USB8 picks specific one.
- * LPT: DEV_LPT1...DEV_LPT3 chooses parallel port
- * IP: user-provided IPv4 address
+ * usb: "USB" picks first camera, "USB1"..."USB8" picks specific one.
+ * parallel: "LPT1"..."LPT3" chooses parallel port
+ * ethernet: "a.b.c.d" is parsed as the camera's IPv4 address.
  * Ref SBIGUDrv sec 3.1.3, 3.1.4
  */
-int sbig_open_device (sbig_t sb, SBIG_DEVICE_TYPE type);
-int sbig_open_device_ip (sbig_t sb, ulong ipaddr);
+int sbig_open_device (sbig_t sb, const char *name);
 int sbig_close_device (sbig_t sb);
 
 /* Get info about driver code
