@@ -1,3 +1,5 @@
+KERNEL_VERSION ?= $(shell uname -r)
+
 obj-m += sbiglptmod.o
 
 sbiglptmod-y = \
@@ -11,4 +13,4 @@ sbiglptmod-y = \
 all: modules
 
 modules clean:
-	make -C /lib/modules/`uname -r`/build M=$(shell pwd) $@
+	make -C /lib/modules/$(KERNEL_VERSION)/build M=$(shell pwd) $@
