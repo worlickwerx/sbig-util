@@ -44,7 +44,7 @@ int KAllocatePrivateData(struct file *filp,
  if(pd){
     // device already open
     #ifdef _CHATTY_
-    printk(KERN_ERR "KAllocatePrivateData() : device already open!\n");
+    printk(KERN_ERR "%s() : device already open!\n", __FUNCTION__);
     #endif
     // release spinlock
     spin_unlock(&d0_spinlock);
@@ -55,8 +55,8 @@ int KAllocatePrivateData(struct file *filp,
 
  // allocate private_data structure
  if((pd = kmalloc(sizeof(struct private_data), GFP_KERNEL)) == NULL){
-    printk(KERN_ERR "KAllocatePrivateData() : kmalloc() : "
-           "struct private_data : error!\n");
+    printk(KERN_ERR "%s() : kmalloc() : struct private_data : error!\n",
+           __FUNCTION__);
     filp->private_data = (struct private_data *)NULL;
     spin_unlock(&d0_spinlock);
     return(-ENOMEM);
@@ -64,8 +64,7 @@ int KAllocatePrivateData(struct file *filp,
 
  // allocate I/O buffer
  if((buff = kmalloc(buffer_size, GFP_KERNEL)) == NULL){
-    printk(KERN_ERR "KAllocatePrivateData() : kmalloc() : "
-           "I/O buffer : error!\n");
+    printk(KERN_ERR "%s() : kmalloc() : I/O buffer : error!\n", __FUNCTION__);
     kfree(pd);
     spin_unlock(&d0_spinlock);
     return(-ENOMEM);
@@ -120,8 +119,8 @@ int KAllocateLptPorts(struct file *filp)
 
  // request I/O region
  if(request_region(pd->port_base, pd->port_span, pd->dev_name) == NULL){
-    printk(KERN_ERR "KAllocateLptPorts() : port_base %X, port_span %d error!\n",
-	   pd->port_base, pd->port_span);
+    printk(KERN_ERR "%s() : port_base %X, port_span %d error!\n",
+	   __FUNCTION__, pd->port_base, pd->port_span);
     printk(KERN_CONT "LPT port probably allocated by your printer.\n");
     printk(KERN_CONT "Please uninstall your printer and try again.\n");
     printk(KERN_CONT "Use: modprobe -r lp, modprobe -r parport_pc, modprobe -r parport\n");
@@ -153,12 +152,12 @@ int KReallocateLptPorts(struct file *filp, LinuxLptPortParams *arg)
  status = copy_from_user(&llpp, (LinuxLptPortParams *)arg,
                          sizeof(LinuxLptPortParams)); 					
  if(status != 0){ 					
-    printk(KERN_ERR "KReallocateLptPorts() : copy_from_user : error!\n");
+    printk(KERN_ERR "%s() : copy_from_user : error!\n", __FUNCTION__);
     return(status);
  }
 
  /*
- printk(KERN_DEBUG "KReallocateLptPorts() : \n");
+ printk(KERN_DEBUG "%s() : \n", __FUNCTION__);
  printk(KERN_CONT "current  values : portBase %X, portSpan %d, name %s\n",
         pd->port_base, pd->port_span, pd->dev_name);
  printk(KERN_CONT "requested values: portBase %X, portSpan %d, name %s\n",
@@ -168,7 +167,7 @@ int KReallocateLptPorts(struct file *filp, LinuxLptPortParams *arg)
  // request I/O region
  if(request_region(llpp.portBase, llpp.portSpan, pd->dev_name) == NULL){
     // somebody holds requested lpt ports...
-    printk(KERN_ERR "KReallocateLptPorts() : request_region() : error!\n");
+    printk(KERN_ERR "%s() : request_region() : error!\n", __FUNCTION__);
     printk(KERN_CONT "current  values : portBase %X, portSpan %d, name %s\n",
 	   pd->port_base, pd->port_span, pd->dev_name);
     printk(KERN_CONT "requested values: portBase %X, portSpan %d, name %s\n",

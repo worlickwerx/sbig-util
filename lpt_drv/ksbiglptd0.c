@@ -41,7 +41,7 @@ int KDev0Open(struct inode *inode,
 
  // check device minor number
  if(minor > LDEV_MAX_INDEX){
-    printk(KERN_ERR "KDev0Open() : minor must be <= %d\n", LDEV_MAX_INDEX);
+    printk(KERN_ERR "%s() : minor must be <= %d\n", __FUNCTION__, LDEV_MAX_INDEX);
     return(-ENODEV);
  }
 

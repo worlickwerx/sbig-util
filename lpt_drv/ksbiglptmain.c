@@ -123,7 +123,7 @@ int KModInit(void)
  }
 
  #ifdef _CHATTY_	
- printk(KERN_DEBUG "KModInit() : module loaded, MAJOR number: %d\n", dev_major);
+ printk(KERN_DEBUG "%s() : module loaded, MAJOR number: %d\n", __FUNCTION__, dev_major);
  #endif
 
  return(status);
@@ -137,7 +137,7 @@ void KModExit(void)
  unregister_chrdev(dev_major, dev_name);
 
  #ifdef _CHATTY_
- printk(KERN_DEBUG "KModExit() : module unloaded...\n");
+ printk(KERN_DEBUG "%s() : module unloaded...\n", __FUNCTION__);
  #endif
 }
 //========================================================================
