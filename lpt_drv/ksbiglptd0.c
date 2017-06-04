@@ -36,12 +36,12 @@ int KDev0Open(struct inode *inode,
  int minor  = MINOR(inode->i_rdev);
 
  #ifdef _CHATTY_	
- printk("<0>Minor number : %d\n", minor);
+ printk(KERN_DEBUG "Minor number : %d\n", minor);
  #endif
 
  // check device minor number
  if(minor > LDEV_MAX_INDEX){
-    printk("<0>KDev0Open() : minor must be <= %d\n", LDEV_MAX_INDEX);
+    printk(KERN_ERR "KDev0Open() : minor must be <= %d\n", LDEV_MAX_INDEX);
     return(-ENODEV);
  }
 

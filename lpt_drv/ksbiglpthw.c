@@ -44,7 +44,7 @@ int KAllocatePrivateData(struct file *filp,
  if(pd){
     // device already open
     #ifdef _CHATTY_
-    printk("<0>KAllocatePrivateData() : device already open!\n");
+    printk(KERN_ERR "KAllocatePrivateData() : device already open!\n");
     #endif
     // release spinlock
     spin_unlock(&d0_spinlock);
@@ -55,7 +55,7 @@ int KAllocatePrivateData(struct file *filp,
 
  // allocate private_data structure
  if((pd = kmalloc(sizeof(struct private_data), GFP_KERNEL)) == NULL){
-    printk("<0>KAllocatePrivateData() : kmalloc() : "
+    printk(KERN_ERR "KAllocatePrivateData() : kmalloc() : "
            "struct private_data : error!\n");
     filp->private_data = (struct private_data *)NULL;
     spin_unlock(&d0_spinlock);
@@ -64,7 +64,7 @@ int KAllocatePrivateData(struct file *filp,
 
  // allocate I/O buffer
  if((buff = kmalloc(buffer_size, GFP_KERNEL)) == NULL){
-    printk("<0>KAllocatePrivateData() : kmalloc() : "
+    printk(KERN_ERR "KAllocatePrivateData() : kmalloc() : "
            "I/O buffer : error!\n");
     kfree(pd);
     spin_unlock(&d0_spinlock);
@@ -120,11 +120,11 @@ int KAllocateLptPorts(struct file *filp)
 
  // request I/O region
  if(request_region(pd->port_base, pd->port_span, pd->dev_name) == NULL){
-    printk("<0>KAllocateLptPorts() : port_base %X, port_span %d error!\n",
+    printk(KERN_ERR "KAllocateLptPorts() : port_base %X, port_span %d error!\n",
 	   pd->port_base, pd->port_span);
-    printk("<0>LPT port probably allocated by your printer.\n");
-    printk("<0>Please uninstall your printer and try again.\n");
-    printk("<0>Use: modprobe -r lp, modprobe -r parport_pc, modprobe -r parport\n");
+    printk(KERN_CONT "LPT port probably allocated by your printer.\n");
+    printk(KERN_CONT "Please uninstall your printer and try again.\n");
+    printk(KERN_CONT "Use: modprobe -r lp, modprobe -r parport_pc, modprobe -r parport\n");
     return(-EBUSY);
  }
 
@@ -153,25 +153,25 @@ int KReallocateLptPorts(struct file *filp, LinuxLptPortParams *arg)
  status = copy_from_user(&llpp, (LinuxLptPortParams *)arg,
                          sizeof(LinuxLptPortParams)); 					
  if(status != 0){ 					
-    printk("<0>KReallocateLptPorts() : copy_from_user : error!\n");
+    printk(KERN_ERR "KReallocateLptPorts() : copy_from_user : error!\n");
     return(status);
  }
 
  /*
- printk("<0>KReallocateLptPorts() : \n");
- printk("<0>current  values : portBase %X, portSpan %d, name %s\n",
+ printk(KERN_DEBUG "KReallocateLptPorts() : \n");
+ printk(KERN_CONT "current  values : portBase %X, portSpan %d, name %s\n",
         pd->port_base, pd->port_span, pd->dev_name);
- printk("<0>requested values: portBase %X, portSpan %d, name %s\n",
+ printk(KERN_CONT "requested values: portBase %X, portSpan %d, name %s\n",
 	llpp.portBase, llpp.portSpan, pd->dev_name);
  */
 
  // request I/O region
  if(request_region(llpp.portBase, llpp.portSpan, pd->dev_name) == NULL){
     // somebody holds requested lpt ports...
-    printk("<0>KReallocateLptPorts() : request_region() : error!\n");
-    printk("<0>current  values : portBase %X, portSpan %d, name %s\n",
+    printk(KERN_ERR "KReallocateLptPorts() : request_region() : error!\n");
+    printk(KERN_CONT "current  values : portBase %X, portSpan %d, name %s\n",
 	   pd->port_base, pd->port_span, pd->dev_name);
-    printk("<0>requested values: portBase %X, portSpan %d, name %s\n",
+    printk(KERN_CONT "requested values: portBase %X, portSpan %d, name %s\n",
 	   llpp.portBase, llpp.portSpan, pd->dev_name);
     return(-EBUSY);
  }
@@ -195,22 +195,22 @@ void KDumpPrivateData(struct file *filp)
 {
  struct private_data *pd  = (struct private_data *)(filp->private_data);
 
- printk("<0>---------------------------------------------------\n");
- printk("<0>Device private data :\n");
- printk("<0>---------------------------------------------------\n");
- printk("<0>dev_name    : %s\n", pd->dev_name);
- printk("<0>port_base   : %x\n", pd->port_base);
- printk("<0>port_span   : %x\n", pd->port_span);
- printk("<0>buffer      : p = %p,  size = %d\n",
+ printk(KERN_DEBUG "---------------------------------------------------\n");
+ printk(KERN_CONT "Device private data :\n");
+ printk(KERN_CONT "---------------------------------------------------\n");
+ printk(KERN_CONT "dev_name    : %s\n", pd->dev_name);
+ printk(KERN_CONT "port_base   : %x\n", pd->port_base);
+ printk(KERN_CONT "port_span   : %x\n", pd->port_span);
+ printk(KERN_CONT "buffer      : p = %p,  size = %d\n",
          &(pd->buffer), pd->buffer_size);
  
  if((filp->f_mode & FMODE_READ) && (filp->f_mode & FMODE_WRITE)){
-    printk("<0>I/O mode    : device opened for reading and writing\n");
+    printk(KERN_CONT  "I/O mode    : device opened for reading and writing\n");
  }else if(filp->f_mode & FMODE_READ){
-    printk("<0>I/O mode    : device opened for reading\n");
+    printk(KERN_CONT "I/O mode    : device opened for reading\n");
  }else if(filp->f_mode & FMODE_WRITE){
-    printk("<0>I/O mode    : device opened for writing\n");
+    printk(KERN_CONT "I/O mode    : device opened for writing\n");
  }
- printk("<0>---------------------------------------------------\n");
+ printk(KERN_CONT "---------------------------------------------------\n");
 }
 //========================================================================

@@ -102,7 +102,7 @@ int KModInit(void)
  }
 
  #ifdef _CHATTY_	
- printk("<0>gLptHz: %lu.\n", gLptHz);
+ printk(KERN_DEBUG "gLptHz: %lu.\n", gLptHz);
  #endif
 
  // LPT cameras
@@ -112,7 +112,7 @@ int KModInit(void)
  spin_lock_init(&d2_spinlock);
 
  if((status = register_chrdev(dev_major, dev_name, &d0_fops)) < 0){
-    printk("<0>register_chrdev() : error %X [hex]\n", status);
+    printk(KERN_ERR "register_chrdev() : error %X [hex]\n", status);
     gLastError = CE_DEVICE_NOT_IMPLEMENTED;
     return(status);
  }
@@ -123,7 +123,7 @@ int KModInit(void)
  }
 
  #ifdef _CHATTY_	
- printk("<0>KModInit() : module loaded, MAJOR number: %d\n", dev_major);
+ printk(KERN_DEBUG "KModInit() : module loaded, MAJOR number: %d\n", dev_major);
  #endif
 
  return(status);
@@ -137,7 +137,7 @@ void KModExit(void)
  unregister_chrdev(dev_major, dev_name);
 
  #ifdef _CHATTY_
- printk("<0>KModExit() : module unloaded...\n");
+ printk(KERN_DEBUG "KModExit() : module unloaded...\n");
  #endif
 }
 //========================================================================

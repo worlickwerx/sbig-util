@@ -69,7 +69,7 @@ int KLptCameraOutWrapper(struct private_data  *pd,
  status = copy_from_user(&cop,(LinuxCameraOutParams *)arg,
                                sizeof(LinuxCameraOutParams)); 					
  if(status != 0){ 					
-    printk("<0>KLptCameraOutWrapper() : copy_from_user : error\n");
+    printk(KERN_ERR "KLptCameraOutWrapper() : copy_from_user : error\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -117,14 +117,14 @@ int KLptSendMicroBlock(struct private_data  *pd,
  // copy LinuxMicroblock structure from the user space
  status = copy_from_user(&lmb, arg, sizeof(LinuxMicroblock)); 					
  if(status != 0){ 					
-    printk("<0>KLptSendMicroBlock() : copy_from_user : lmb error.\n");     
+    printk(KERN_ERR "KLptSendMicroBlock() : copy_from_user : lmb error.\n");     
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
 
  status = copy_from_user(p, lmb.pBuffer, lmb.length);
  if(status != 0){ 					
-    printk("<0>KLptSendMicroBlock() : copy_from_user : lmb.pData error.\n");
+    printk(KERN_ERR "KLptSendMicroBlock() : copy_from_user : lmb.pData error.\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -182,7 +182,7 @@ int KLptGetMicroBlock(struct private_data *pd,
  // copy LinuxMicroblock structure from the user space
  status = copy_from_user(&lmb, arg, sizeof(LinuxMicroblock)); 					
  if(status != 0){ 					
-    printk("<0>KLptGetMicroBlock() : copy_from_user : lmb error.\n");
+    printk(KERN_ERR "KLptGetMicroBlock() : copy_from_user : lmb error.\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -263,7 +263,7 @@ int KLptGetMicroBlock(struct private_data *pd,
 
  status = copy_to_user(lmb.pBuffer, pd->buffer, lmb.length);
  if(status != 0){ 					
-    printk("<0>KLptGetMicroBlock() : copy_to_user : lmb.pData : error.\n");
+    printk(KERN_ERR "KLptGetMicroBlock() : copy_to_user : lmb.pData : error.\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -279,7 +279,7 @@ int  KLptSetVdd(struct private_data *pd, IocSetVdd *arg)
 
  // copy IocSetVdd structure from the user space
  if(copy_from_user(&svdd, (IocSetVdd *)arg, sizeof(IocSetVdd)) != 0){ 					
-    printk("<0>KLptSetVdd() : copy_from_user : error\n"); 
+    printk(KERN_ERR "KLptSetVdd() : copy_from_user : error\n"); 
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -289,7 +289,7 @@ int  KLptSetVdd(struct private_data *pd, IocSetVdd *arg)
  KLptCameraOut(pd, IMAGING_CLOCKS, (unsigned char)(svdd.raiseIt ? 0 : TRG_H));
 
  if(copy_to_user((IocSetVdd *)arg, &svdd, sizeof(IocSetVdd)) != 0){ 					
-    printk("<0>KLptSetVdd() : copy_to_user : svdd : error\n"); 
+    printk(KERN_ERR "KLptSetVdd() : copy_to_user : svdd : error\n"); 
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -585,7 +585,7 @@ int KLptGetPixels(struct private_data  *pd,
  status = copy_from_user(&lgpp,(LinuxGetPixelsParams *)arg,
                          sizeof(LinuxGetPixelsParams)); 					
  if(status != 0){ 					
-    printk("<0>KLptGetPixels() : copy_from_user : error\n");
+    printk(KERN_ERR "KLptGetPixels() : copy_from_user : error\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -697,7 +697,7 @@ int KLptGetPixels(struct private_data  *pd,
 
  status = copy_to_user(lgpp.dest, pd->buffer, lgpp.length);
  if(status != 0){ 					
-    printk("<0>KLptGetPixels() : copy_to_user : lgpp.dest : error\n"); 
+    printk(KERN_ERR "KLptGetPixels() : copy_to_user : lgpp.dest : error\n"); 
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -727,7 +727,7 @@ int KLptGetArea(struct private_data *pd,
  status = copy_from_user(&lgap,(LinuxGetAreaParams *)arg,
                          sizeof(LinuxGetAreaParams)); 					
  if(status != 0){ 					
-    printk("<0>KLptGetArea() : copy_from_user : error\n");
+    printk(KERN_ERR "KLptGetArea() : copy_from_user : error\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -850,7 +850,7 @@ int KLptGetArea(struct private_data *pd,
  // copy area back to the user space
  status = copy_to_user(lgap.dest, pd->buffer, lgap.length);
  if(status != 0){ 					
-    printk("<0>KLptGetArea() : copy_to_user : lgap.dest : error\n");
+    printk(KERN_ERR "KLptGetArea() : copy_to_user : lgap.dest : error\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -970,7 +970,7 @@ int KLptDumpImagingLines(struct private_data   *pd,
  status = copy_from_user(&dlp,(IOC_DUMP_LINES_PARAMS *)arg,
                                sizeof(IOC_DUMP_LINES_PARAMS)); 					
  if(status != 0){ 					
-    printk("<0>KLptDumpImagingLines() : copy_from_user : error\n");
+    printk(KERN_ERR "KLptDumpImagingLines() : copy_from_user : error\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -1036,7 +1036,7 @@ int KLptDumpTrackingLines(struct private_data   *pd,
  status = copy_from_user(&dlp,(IOC_DUMP_LINES_PARAMS *)arg,
                                sizeof(IOC_DUMP_LINES_PARAMS)); 					
  if(status != 0){ 					
-    printk("<0>KLptDumpTrackingLines() : copy_from_user : error\n"); 
+    printk(KERN_ERR "KLptDumpTrackingLines() : copy_from_user : error\n"); 
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -1088,7 +1088,7 @@ int KLptDumpST5CLines(struct private_data   *pd,
  status = copy_from_user(&dlp,(IOC_DUMP_LINES_PARAMS *)arg,
                                sizeof(IOC_DUMP_LINES_PARAMS)); 					
  if(status != 0){ 					
-    printk("<0>KLptDumpST5CLines() : copy_from_user : error\n");
+    printk(KERN_ERR "KLptDumpST5CLines() : copy_from_user : error\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -1125,7 +1125,7 @@ int KLptClockAD(struct private_data *pd, short *arg)
 
  // get arg value
  if((status = get_user(len, arg)) != 0){ 					
-    printk("<0>KLptClockAD() : get_user() : error\n"); 
+    printk(KERN_ERR "KLptClockAD() : get_user() : error\n"); 
     gLastError = CE_BAD_PARAMETER;
     return(status);
  }
@@ -1166,7 +1166,7 @@ int KLptClearImagingArray(struct private_data  *pd,
  status = copy_from_user(&cccdp,(IOC_CLEAR_CCD_PARAMS *)arg,
                          sizeof(IOC_CLEAR_CCD_PARAMS)); 					
  if(status != 0){ 					
-    printk("<0>KLptClearImagingArray() : copy_from_user : error\n"); 
+    printk(KERN_ERR "KLptClearImagingArray() : copy_from_user : error\n"); 
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -1209,7 +1209,7 @@ int KLptClearTrackingArray(struct private_data  *pd,
  status = copy_from_user(&cccdp,(IOC_CLEAR_CCD_PARAMS *)arg,
                          sizeof(IOC_CLEAR_CCD_PARAMS)); 					
  if(status != 0){ 					
-    printk("<0>KLptClearTrackingArray() : copy_from_user : error\n"); 
+    printk(KERN_ERR "KLptClearTrackingArray() : copy_from_user : error\n"); 
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -1258,7 +1258,7 @@ int KLptGetDriverInfo(GetDriverInfoResults0 *results)
 
  status = copy_to_user(results, &gdir0, sizeof(GetDriverInfoResults0));
  if(status != 0){ 					
-    printk("<0>KLptGetDriverInfo() : copy_to_user : error\n");
+    printk(KERN_ERR "KLptGetDriverInfo() : copy_to_user : error\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
@@ -1275,20 +1275,20 @@ int KLptSetBufferSize(struct private_data *pd,
 
  // check if user-space variable is available
  if(access_ok(VERIFY_READ, new_size, sizeof(unsigned short *)) == 0){
-    printk("<0>KLptSetBufferSize() : access_ok() : error\n"); 
+    printk(KERN_ERR "KLptSetBufferSize() : access_ok() : error\n"); 
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
  // get size of the new buffer, ie. read unsigned short
  if(__get_user(buffer_size, new_size) != 0){ 					
-    printk("<0>KLptSetBufferSize() : get_user() : error\n");
+    printk(KERN_ERR "KLptSetBufferSize() : get_user() : error\n");
     gLastError = CE_BAD_PARAMETER;
     return(-EFAULT);
  }
 
  // allocate new kernel-space I/O buffer
  if((kbuff = kmalloc(buffer_size, GFP_KERNEL)) == NULL){
-    printk("<0>KLptSetBufferSize() : kmalloc() : new size : %d : error\n",
+    printk(KERN_ERR "KLptSetBufferSize() : kmalloc() : new size : %d : error\n",
             buffer_size);
     // allocation failured, return previous buffer size
     return(pd->buffer_size);
@@ -1305,7 +1305,7 @@ int KLptSetBufferSize(struct private_data *pd,
 
  status = pd->buffer_size;
  # ifdef _CHATTY_
- printk("<0>KLptSetBufferSize() : %d\n", status);
+ printk(KERN_DEBUG "KLptSetBufferSize() : %d\n", status);
  #endif
  return(status);
 }
@@ -1315,14 +1315,14 @@ int KLptGetBufferSize(struct private_data *pd)
  PAR_ERROR status = pd->buffer_size;
 
  #ifdef _CHATTY_
- printk("<0>KLptGetBufferSize() : %d\n", status);
+ printk(KERN_DEBUG "KLptGetBufferSize() : %d\n", status);
  #endif
  return(status);
 }
 //========================================================================
 int KLptTestCommand(void){
  #ifdef _CHATTY_
- printk("<0>KLptTestCommand() : ok\n");
+ printk(KERN_DEBUG "KLptTestCommand() : ok\n");
  #endif
  return(CE_NO_ERROR);
 }
@@ -1405,7 +1405,7 @@ long KDevIoctl(struct file   *filp,
  struct private_data *pd = (struct private_data *)(filp->private_data);
 
  if(_IOC_TYPE(cmd) != IOCTL_BASE){
-    printk("<0>KDevIoctl() : error: IOCTL base %d, must be %d\n",
+    printk(KERN_ERR "KDevIoctl() : error: IOCTL base %d, must be %d\n",
            _IOC_TYPE(cmd), IOCTL_BASE);	 
     gLastError = CE_BAD_PARAMETER;
     return(-ENOTTY);
@@ -1497,7 +1497,7 @@ long KDevIoctl(struct file   *filp,
         break;
 
    default:
-        printk("<0>KDevIoctl() : Developer error: undefined LIOCTL.\n"); 
+        printk(KERN_ERR "KDevIoctl() : Developer error: undefined LIOCTL.\n"); 
 	gLastError = CE_BAD_PARAMETER;
         return(-ENOTTY);
  }
