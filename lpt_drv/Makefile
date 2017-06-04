@@ -1,5 +1,7 @@
 KERNEL_VERSION ?= $(shell uname -r)
 
+ccflags-y := -D_CHATTY_=1
+
 obj-m += sbiglptmod.o
 
 sbiglptmod-y = \
