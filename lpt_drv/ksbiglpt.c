@@ -44,7 +44,6 @@
  u += (unsigned short)(inb(pd->port_base + 1) & 0x78) >> 3
 //-----------------------------------------------------------------------------
 // Global variables:
-unsigned long  gLptHz;
 unsigned short gLastError;
 //========================================================================
 // KLptInitPort
@@ -112,7 +111,7 @@ int KLptSendMicroBlock(struct private_data  *pd,
  LinuxMicroblock  lmb;
 
  // Set nibbleTimeout to 300 ms.
- nibbleTimeout = gLptHz / 3;
+ nibbleTimeout = HZ / 3;
 
  // copy LinuxMicroblock structure from the user space
  status = copy_from_user(&lmb, arg, sizeof(LinuxMicroblock)); 					
@@ -177,7 +176,7 @@ int KLptGetMicroBlock(struct private_data *pd,
  LinuxMicroblock  lmb;
 
  // Set nibbleTimeout to 300 ms.
- nibbleTimeout = gLptHz / 3;
+ nibbleTimeout = HZ / 3;
 
  // copy LinuxMicroblock structure from the user space
  status = copy_from_user(&lmb, arg, sizeof(LinuxMicroblock)); 					
@@ -1340,8 +1339,7 @@ int KLptGetJiffies(unsigned long *arg)
 //========================================================================
 int KLptGetHz(unsigned long *arg)
 {
-// return(put_user((unsigned long)HZ, arg));
- return(put_user((unsigned long)gLptHz, arg));
+ return(put_user((unsigned long)HZ, arg));
 }
 //========================================================================
 // KDevOpen

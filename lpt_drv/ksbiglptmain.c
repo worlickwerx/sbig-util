@@ -26,7 +26,6 @@
 #include "ksbiglptd.h"
 #include "ksbiglptmain.h"   
 
-extern unsigned long gLptHz;
 extern unsigned short gLastError;
 //========================================================================
 module_init(KModInit);
@@ -78,32 +77,8 @@ struct file_operations *dev_fops_array[] = {
 int KModInit(void)
 {
  int status = 0;
- unsigned long t0, t1, dt;
  
  gLastError = CE_NO_ERROR;
-
- // Determine an actual HZ value.
- gLptHz = 1;
-
- do{
-    t0 = jiffies;
-    mdelay(1000);
-    t1 = jiffies;
- }while(t1 < t0);
-
- dt = t1 - t0;
-
- if(dt >= 90 && dt <= 110){
-    gLptHz = 100;
- }else if(dt >= 950 && dt <= 1010){
-    gLptHz = 1000;
- }else if(dt >= 1011 && dt <= 1030){
-    gLptHz = 1024;
- }
-
- #ifdef _CHATTY_	
- printk(KERN_DEBUG "gLptHz: %lu.\n", gLptHz);
- #endif
 
  // LPT cameras
  // initialize spinlocks
