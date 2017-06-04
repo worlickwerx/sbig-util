@@ -177,7 +177,7 @@ int KLptGetMicroBlock(struct private_data *pd,
  LinuxMicroblock  lmb;
 
  // Set nibbleTimeout to 300 ms.
- nibbleTimeout = 0.3 * gLptHz;
+ nibbleTimeout = gLptHz / 3;
 
  // copy LinuxMicroblock structure from the user space
  status = copy_from_user(&lmb, arg, sizeof(LinuxMicroblock)); 					
