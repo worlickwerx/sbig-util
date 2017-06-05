@@ -1,0 +1,17 @@
+/*
+
+	Linux LPT Driver History
+
+
+Date		File(s)				Modifications
+=================================================================================
+??/??/??	All					Received from Jan Soldan
+03/18/05	All					Stripped from global build to singlke make project
+								 so could distribute source
+03/28/05	ksbiglpt.c			Got rid of dependency on __HZ symbol by returing
+								 gLptHz in Get HZ call which isn't used by SBIG
+								 Driver Library so wouldn't get build errors on
+								 various Linux distributions.
+03/28/05	------				Released source to Jan and Charles Padgett for testing
+
+*/
