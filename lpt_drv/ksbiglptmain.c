@@ -33,8 +33,8 @@ module_exit(KModExit);
 //========================================================================
 // driver variables
 //========================================================================
-uint        dev_major  = LDEV_MAJOR;
-char        dev_name[] = LDEV_NAME;
+dev_t       dev_device;
+struct cdev dev_cdev;
 
 spinlock_t  d0_spinlock;
 spinlock_t  d1_spinlock;
@@ -76,8 +76,6 @@ struct file_operations *dev_fops_array[] = {
 //========================================================================
 int KModInit(void)
 {
- int status = 0;
- 
  gLastError = CE_NO_ERROR;
 
  // LPT cameras
@@ -86,22 +84,25 @@ int KModInit(void)
  spin_lock_init(&d1_spinlock);
  spin_lock_init(&d2_spinlock);
 
- if((status = register_chrdev(dev_major, dev_name, &d0_fops)) < 0){
-    printk(KERN_ERR "register_chrdev() : error %X [hex]\n", status);
+ if(alloc_chrdev_region(&dev_device, 0, LDEV_MAX_INDEX + 1, LDEV_NAME) < 0){
+    printk(KERN_ERR "%s() : alloc_chrdev_region failed\n", __FUNCTION__);
     gLastError = CE_DEVICE_NOT_IMPLEMENTED;
-    return(status);
+    return(-1);
  }
-
- if(LDEV_MAJOR == 0){
-    dev_major = status;
-    status = 0;
+ cdev_init (&dev_cdev, &d0_fops);
+ if(cdev_add (&dev_cdev, dev_device, LDEV_MAX_INDEX + 1)<0){
+    printk(KERN_ERR "%s() : cdev_add failed\n", __FUNCTION__);
+    gLastError = CE_DEVICE_NOT_IMPLEMENTED;
+    unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
+    return(-1);
  }
 
  #ifdef _CHATTY_	
- printk(KERN_DEBUG "%s() : module loaded, MAJOR number: %d\n", __FUNCTION__, dev_major);
+ printk(KERN_DEBUG "%s() : module loaded, MAJOR number: %d\n",
+                    __FUNCTION__, MAJOR (dev_device));
  #endif
 
- return(status);
+ return(0);
 }
 //========================================================================
 // KModExit - called by rmmod
@@ -109,7 +110,7 @@ int KModInit(void)
 void KModExit(void)
 {
  // unregister LPT driver
- unregister_chrdev(dev_major, dev_name);
+ unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
 
  #ifdef _CHATTY_
  printk(KERN_DEBUG "%s() : module unloaded...\n", __FUNCTION__);
