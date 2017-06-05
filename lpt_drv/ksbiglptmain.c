@@ -19,6 +19,7 @@
 #include <linux/ioport.h>
 #include <linux/tty.h>
 #include <linux/delay.h>
+#include <linux/device.h>
 #include <asm/io.h>
 
 /* project stuff */
@@ -34,6 +35,7 @@ module_exit(KModExit);
 // driver variables
 //========================================================================
 dev_t       dev_device;
+struct class *dev_class;
 struct cdev dev_cdev;
 
 spinlock_t  d0_spinlock;
@@ -89,10 +91,21 @@ int KModInit(void)
     gLastError = CE_DEVICE_NOT_IMPLEMENTED;
     return(-1);
  }
+ if (!(dev_class = class_create(THIS_MODULE, "chardrv"))){
+    unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
+    return(-1);
+ }
+ if (!device_create(dev_class, NULL, dev_device, NULL, "sbiglpt0")){
+    class_destroy(dev_class);
+    unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
+    return(-1);
+ }
  cdev_init (&dev_cdev, &d0_fops);
  if(cdev_add (&dev_cdev, dev_device, LDEV_MAX_INDEX + 1)<0){
     printk(KERN_ERR "%s() : cdev_add failed\n", __FUNCTION__);
     gLastError = CE_DEVICE_NOT_IMPLEMENTED;
+    device_destroy(dev_class, dev_device);
+    class_destroy(dev_class);
     unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
     return(-1);
  }
@@ -110,6 +123,9 @@ int KModInit(void)
 void KModExit(void)
 {
  // unregister LPT driver
+ cdev_del(&dev_cdev);
+ device_destroy(dev_class, dev_device);
+ class_destroy(dev_class);
  unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
 
  #ifdef _CHATTY_
@@ -118,9 +134,6 @@ void KModExit(void)
 }
 //========================================================================
 
-
-
-
-
-
-
+// N.B. no license was declared with this source code
+// define this to get the code ported, ask permission for license change later.
+MODULE_LICENSE("GPL");
