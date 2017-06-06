@@ -140,8 +140,8 @@ void cfw_query (sbig_t sb, int ac, char **av)
         msg_exit ("show takes no arguments");
     if ((e = sbig_cfw_query (sb, &status, &position)) != CE_NO_ERROR)
         msg_exit ("sbig_cfw_query: %s", sbig_get_error_string (sb, e));
-        msg ("status:   %s", status == CFWS_UNKNOWN ? "unknown" :
-                             status == CFWS_IDLE ? "idle" : "busy");
+    msg ("status:   %s", status == CFWS_UNKNOWN ? "unknown" :
+                         status == CFWS_IDLE ? "idle" : "busy");
     if (position == CFWP_UNKNOWN)
         msg ("position: unknown");
     else
