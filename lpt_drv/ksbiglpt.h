@@ -57,8 +57,6 @@ unsigned char KLptMicroStat  (struct private_data *);
 unsigned char KLptCameraIn   (struct private_data *, unsigned char reg);
 unsigned char KLptMicroIn    (struct private_data *, unsigned char ackIt);
 
-int  KDevOpen      	     (struct inode *, struct file *, int, int, int);
-int  KDevRelease             (struct inode *, struct file *);
 long KDevIoctl     	     (struct file *, unsigned int,
                               unsigned long , spinlock_t *);
 //========================================================================
