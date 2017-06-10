@@ -45,7 +45,6 @@
 #include "src/common/libsbig/sbfits.h"
 
 typedef struct opt_struct {
-    char *device;
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
     double partial;
@@ -88,6 +87,7 @@ void handle_sigint (int signal)
 int main (int argc, char *argv[])
 {
     const char *sbig_udrv = getenv ("SBIG_UDRV");
+    const char *sbig_device = getenv ("SBIG_DEVICE");
     int e, ch;
     sbig_t sb;
     CAMERA_TYPE type;
@@ -99,7 +99,6 @@ int main (int argc, char *argv[])
     /* Set default option values.
      */
     memset (&opt, 0, sizeof (opt));
-    opt.device = "USB1";            /* first USB device */
     opt.chip = CCD_IMAGING;         /* main imaging ccd */
     opt.readout_mode = RM_3X3;      /* lo resolution */
     opt.t = 1.0;                    /* 1s exposure time */
@@ -151,6 +150,8 @@ int main (int argc, char *argv[])
      */
     if (!sbig_udrv)
         msg_exit ("SBIG_UDRV is not set");
+    if (!sbig_device)
+        msg_exit ("SBIG_DEVICE is not set");
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != 0)
@@ -166,7 +167,7 @@ int main (int argc, char *argv[])
 
     /* Open camera
      */
-    if ((e = sbig_open_device (sb, opt.device)) != CE_NO_ERROR)
+    if ((e = sbig_open_device (sb, sbig_device)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
     if (opt.verbose)
         msg ("Device open");
