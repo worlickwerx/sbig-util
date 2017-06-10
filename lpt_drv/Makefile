@@ -1,15 +1,9 @@
 KERNEL_VERSION ?= $(shell uname -r)
 
-ccflags-y := -D_CHATTY_=1
+obj-m += sbiglpt.o
 
-obj-m += sbiglptmod.o
-
-sbiglptmod-y = \
+sbiglpt-y = \
 	ksbiglptmain.o \
-	ksbiglptd0.o \
-	ksbiglptd1.o \
-       	ksbiglptd2.o \
-	ksbiglpthw.o \
 	ksbiglpt.o
 
 all: modules

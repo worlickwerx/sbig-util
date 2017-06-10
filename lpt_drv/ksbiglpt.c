@@ -25,7 +25,6 @@
 #include "ulptdrv.h"
 #include "sbigudrv.h"
 #include "ksbiglptmain.h"
-#include "ksbiglpthw.h"
 #include "ksbiglpt.h"
 #include "paropts.h" 
 
@@ -33,15 +32,15 @@
 // Assumes AD3 is addressed coming into it and leaves
 // with AD0 address going out.
 
- #define K_LPT_READ_AD16(pd, u)                      \
- /*	outb(AD3_MDI, pd->port_base); */             \
- u = (unsigned short)(inb(pd->port_base  + 1) & 0x78) << 9;  \
- outb(AD2, pd->port_base);                           \
- u += (unsigned short)(inb(pd->port_base + 1) & 0x78) << 5;  \
- outb(AD1, pd->port_base);                           \
- u += (unsigned short)(inb(pd->port_base + 1) & 0x78) << 1;  \
- outb(AD0, pd->port_base);                           \
- u += (unsigned short)(inb(pd->port_base + 1) & 0x78) >> 3
+ #define K_LPT_READ_AD16(pd, u)                         \
+ /*	pd->outb(AD3_MDI, pd->minor); */                \
+ u = (unsigned short)(pd->inb(pd->minor) & 0x78) << 9;  \
+ pd->outb(AD2, pd->minor);                              \
+ u += (unsigned short)(pd->inb(pd->minor) & 0x78) << 5; \
+ pd->outb(AD1, pd->minor);                              \
+ u += (unsigned short)(pd->inb(pd->minor) & 0x78) << 1; \
+ pd->outb(AD0, pd->minor);                              \
+ u += (unsigned short)(pd->inb(pd->minor) & 0x78) >> 3
 //-----------------------------------------------------------------------------
 // Global variables:
 unsigned short gLastError;
@@ -52,7 +51,6 @@ unsigned short gLastError;
 void KLptInitPort(struct private_data *pd)
 {
  KLptForceMicroIdle(pd);
- KLptDisableLptInterrupts(pd);
 }
 //========================================================================
 // KLptCameraOutWraper
@@ -84,12 +82,10 @@ void KLptCameraOut(struct private_data *pd,
                    unsigned char        reg,
                    unsigned char        val)
 {
- unsigned port = pd->port_base;
-
- outb((unsigned char)(reg + val), port);
- outb((unsigned char)(reg + val + 0x80), port);
- outb((unsigned char)(reg + val + 0x80), port);
- outb((unsigned char)(reg + val), port);
+ pd->outb((unsigned char)(reg + val), pd->minor);
+ pd->outb((unsigned char)(reg + val + 0x80), pd->minor);
+ pd->outb((unsigned char)(reg + val + 0x80), pd->minor);
+ pd->outb((unsigned char)(reg + val), pd->minor);
 
  if(reg == CONTROL_OUT){
     pd->control_out = val;
@@ -315,24 +311,13 @@ void KEnable(struct private_data *pd)
  //__restore_flags(pd->flags);
 }
 //========================================================================
-// DisableLPTInterrupts
-// Make sure the LPT port can not generate interrupts by disabling them
-// at the card.
-//========================================================================
-void KLptDisableLptInterrupts(struct private_data *pd)
-{
- outb(0x0e, pd->port_base + 2);
-}
-//========================================================================
 // KLptIoDelay
 // Delay a passed number of IO instructions.
 //========================================================================
 void KLptIoDelay(struct private_data *pd, short i)
 {
- unsigned port_base = pd->port_base;
-
  for(; i > 0; i--){
-     inb(port_base);
+     pd->inb(pd->minor);
  }
 }
 //========================================================================
@@ -418,12 +403,11 @@ int KLptWaitForPLD(struct private_data *pd)
 //========================================================================
 int KLptWaitForAD(struct private_data *pd)
 {
- unsigned  port_base = pd->port_base;
  short     t0 = 0;
 
- outb(AD0, port_base);
+ pd->outb(AD0, pd->minor);
  while(1){
-   if(!(inb(port_base + 1) & 0x80)) break;
+   if(!(pd->inb(pd->minor) & 0x80)) break;
    if(t0++ >= LCONVERSION_DELAY) return(gLastError = CE_AD_TIMEOUT);
  }
  return(CE_NO_ERROR);
@@ -556,10 +540,8 @@ int KLptBlockClearPixels(struct private_data *pd,
 //========================================================================
 unsigned char KLptCameraIn(struct private_data *pd, unsigned char reg)
 {
- unsigned port_base = pd->port_base;
-
- outb(reg, port_base);
- return(inb(port_base + 1) >> 3);
+ pd->outb(reg, pd->minor);
+ return(pd->inb(pd->minor) >> 3);
 }
 //========================================================================
 // KLptGetPixels
@@ -656,13 +638,13 @@ int KLptGetPixels(struct private_data  *pd,
  }
 	
  KLptCameraOut(pd, CONTROL_OUT, ccd_select); // select desired CCD
- outb(AD0, pd->port_base);                   // address done bit
+ pd->outb(AD0, pd->minor);                   // address done bit
 	
  for(i = 0; i < len; i++){
      // optimize as non-subroutine for Speed
      u = LCONVERSION_DELAY;
      while(1){
-        if(!(inb(pd->port_base + 1) & 0x80))
+        if(!(pd->inb(pd->minor) & 0x80))
     	   break;
         if(--u == 0){
       	   KEnable(pd);
@@ -807,13 +789,13 @@ int KLptGetArea(struct private_data *pd,
      }
 	
      KLptCameraOut(pd, CONTROL_OUT, ccd_select); // select desired CCD
-     outb(AD0, pd->port_base);                   // address done bit
+     pd->outb(AD0, pd->minor);                   // address done bit
 	
      for(j = 0; j < len; j++){
          // optimize as non-subroutine for Speed
          u = LCONVERSION_DELAY;
          while(1){
-            if(!(inb(pd->port_base + 1) & 0x80))
+            if(!(pd->inb(pd->minor) & 0x80))
     	       break;
             if(--u == 0){
       	       KEnable(pd);
@@ -1342,56 +1324,6 @@ int KLptGetHz(unsigned long *arg)
  return(put_user((unsigned long)HZ, arg));
 }
 //========================================================================
-// KDevOpen
-//========================================================================
-int KDevOpen(struct inode *inode,
-             struct file  *filp,
-	     int           lpt_base,
-	     int 	   lpt_span,
-	     int           buffer_size)
-{
- int status = 0;  // assume success
-
- // allocate private data structure
- if((status = KAllocatePrivateData(
-              filp,
-              lpt_base,
-	      lpt_span,
-	      buffer_size)) < 0){
-    // decrement the usage count
-    gLastError = CE_DEVICE_NOT_OPEN;
-    return(status);
- }
-
- // allocate LPT ports
- if((status = KAllocateLptPorts(filp)) < 0){
-    // release private data structure
-    KReleasePrivateData(filp);
-    gLastError = CE_DEVICE_NOT_OPEN;
-    return(status);
- }
-
- #ifdef _CHATTY_	
- KDumpPrivateData(filp);
- #endif
-
- return(status);	
-}
-//========================================================================
-// KDevRelease
-//========================================================================
-int KDevRelease(struct inode *inode,
-                struct file  *filp)
-{
- // release lpt ports
- KReleaseLptPorts(filp);
-
- // release private data structure				
- KReleasePrivateData(filp);
-
- return(0);	
-}
-//========================================================================
 // KDevIoctl
 //========================================================================
 long KDevIoctl(struct file   *filp,
@@ -1479,7 +1411,7 @@ long KDevIoctl(struct file   *filp,
 	break;
 
    case LIOCTL_REALLOCATE_PORTS:
-        status = KReallocateLptPorts(filp, (LinuxLptPortParams *)arg);
+	printk(KERN_ERR "sbiglpt: LIOCTL_REALLOCATE_PORTS ioctl deprecated\n");
 	break;
 
    case LIOCTL_SET_BUFFER_SIZE:
@@ -1495,7 +1427,7 @@ long KDevIoctl(struct file   *filp,
         break;
 
    default:
-        printk(KERN_ERR "%s() : Developer error: undefined LIOCTL.\n", __FUNCTION__); 
+        printk(KERN_ERR "ksbiglpt: undefined ioctl (%d)\n", cmd);
 	gLastError = CE_BAD_PARAMETER;
         return(-ENOTTY);
  }

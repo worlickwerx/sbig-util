@@ -1,15 +1,16 @@
-//========================================================================
-// File name  : ksbiglptmain.c
-// Description: The main source file of the kernel driver.
-// Author     : Jan Soldan    
-// Copyright (C) 2002 - 2003 Jan Soldan			     
-// All rights reserved.		
-//========================================================================
-/* kernel stuff */
+/* SBIG astronomy camera parallel port driver
+ *
+ * Replacement driver mainline developed on Linux 4.10, supercedes mainline
+ * written for Linux 2.4 by Jan Soldan (c) 2002-2003.
+ *
+ * Copyright (c) 2017 by Jim Garlick
+ */
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 #include <linux/timer.h>
 #include <linux/fs.h>
 #include <linux/poll.h>
@@ -20,120 +21,198 @@
 #include <linux/tty.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/parport.h>
 #include <asm/io.h>
 
-/* project stuff */
 #include "ulptdrv.h"
-#include "ksbiglptd.h"
-#include "ksbiglptmain.h"   
+#include "ksbiglptmain.h"
+#include "ksbiglpt.h"
 
-extern unsigned short gLastError;
-//========================================================================
-module_init(KModInit);
-module_exit(KModExit);
-//========================================================================
-// driver variables
-//========================================================================
-dev_t       dev_device;
-struct class *dev_class;
-struct cdev dev_cdev;
+#define SBIG_NO	3
+static struct {
+	struct pardevice 	*dev;
+	spinlock_t  		spinlock;
+} sbig_table[SBIG_NO];
+static unsigned int sbig_count = 0;
 
-spinlock_t  d0_spinlock;
-spinlock_t  d1_spinlock;
-spinlock_t  d2_spinlock;
-//========================================================================
-// file_operations structures
-//========================================================================
-struct file_operations d0_fops = {	// device 0
- open:    KDev0Open,
- release: KDev0Release,
- unlocked_ioctl:   KDev0Ioctl,
-};
+static dev_t sbig_dev;
+static struct class *sbig_class;
+static struct cdev sbig_cdev;
 
-struct file_operations d1_fops = {	// device 1
- open:    KDev1Open,
- release: KDev1Release,
- unlocked_ioctl:   KDev1Ioctl,
-};
-
-struct file_operations d2_fops = {	// device 2
- open:    KDev2Open,
- release: KDev2Release,
- unlocked_ioctl:   KDev2Ioctl,
-};
-//========================================================================
-// array of file_operations structures
-//========================================================================
-// Don't forget update the DEV_MAX_IDX constant defined in kmain.h
-// after adding new file operations structure into the following array!
-
-struct file_operations *dev_fops_array[] = {
- &d0_fops,  // device 0
- &d1_fops,  // device 1
- &d2_fops,  // device 2
-};
-//========================================================================
-// KModInit called by insmod
-// return 0 if OK
-//========================================================================
-int KModInit(void)
+static void sbig_outb (uint8_t data, unsigned int minor)
 {
- gLastError = CE_NO_ERROR;
+	struct parport *port = sbig_table[minor].dev->port;
 
- // LPT cameras
- // initialize spinlocks
- spin_lock_init(&d0_spinlock);
- spin_lock_init(&d1_spinlock);
- spin_lock_init(&d2_spinlock);
+	port->ops->write_data(port, data);
+}
 
- if(alloc_chrdev_region(&dev_device, 0, LDEV_MAX_INDEX + 1, LDEV_NAME) < 0){
-    printk(KERN_ERR "%s() : alloc_chrdev_region failed\n", __FUNCTION__);
-    gLastError = CE_DEVICE_NOT_IMPLEMENTED;
-    return(-1);
- }
- if (!(dev_class = class_create(THIS_MODULE, "chardrv"))){
-    unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
-    return(-1);
- }
- if (!device_create(dev_class, NULL, dev_device, NULL, "sbiglpt0")){
-    class_destroy(dev_class);
-    unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
-    return(-1);
- }
- cdev_init (&dev_cdev, &d0_fops);
- if(cdev_add (&dev_cdev, dev_device, LDEV_MAX_INDEX + 1)<0){
-    printk(KERN_ERR "%s() : cdev_add failed\n", __FUNCTION__);
-    gLastError = CE_DEVICE_NOT_IMPLEMENTED;
-    device_destroy(dev_class, dev_device);
-    class_destroy(dev_class);
-    unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
-    return(-1);
- }
+static uint8_t sbig_inb (unsigned int minor)
+{
+	struct parport *port = sbig_table[minor].dev->port;
 
- #ifdef _CHATTY_	
- printk(KERN_DEBUG "%s() : module loaded, MAJOR number: %d\n",
-                    __FUNCTION__, MAJOR (dev_device));
- #endif
+	return port->ops->read_status (port);
+}
 
- return(0);
+static int sbig_open(struct inode *inode, struct file *file)
+{
+	unsigned int minor = MINOR(inode->i_rdev);
+	struct private_data *pd = (struct private_data *)(file->private_data);
+	int rc = 0;
+
+	if (minor >= sbig_count) {
+		rc = -ENODEV;
+		goto out;
+	}
+	spin_lock (&sbig_table[minor].spinlock);
+	if (pd) {
+		rc = -EBUSY;
+		goto out_unlock;
+	}
+	if (!(pd = kmalloc(sizeof(*pd), GFP_KERNEL))) {
+		rc = -ENOMEM;
+		goto out_unlock;
+	}
+	if (!(pd->buffer = kmalloc(LDEFAULT_BUFFER_SIZE, GFP_KERNEL))) {
+		kfree (pd);
+		rc = -ENOMEM;
+		goto out_unlock;
+	}
+	pd->buffer_size = LDEFAULT_BUFFER_SIZE;
+	pd->flags = 0;
+	pd->control_out = 0;
+	pd->imaging_clocks_out = 0;
+	pd->noBytesRd = 0;
+	pd->noBytesWr = 0;
+	pd->state = 0;
+	pd->outb = sbig_outb;
+	pd->inb = sbig_inb;
+	pd->minor = minor;
+	file->private_data = pd;
+out_unlock:
+	spin_unlock (&sbig_table[minor].spinlock);
+out:
+	return rc;
+}
+
+static int sbig_release(struct inode *inode, struct file *file)
+{
+	struct private_data *pd = (struct private_data *)(file->private_data);
+	if (pd) {
+		if (pd->buffer)
+			kfree(pd->buffer);
+		kfree(pd);
+		file->private_data = NULL;
+	}
+	return 0;
+}
+
+static long sbig_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int minor = iminor(file_inode(file));
+
+	return KDevIoctl(file, cmd, arg, &sbig_table[minor].spinlock);
+}
+
+static void sbig_attach (struct parport *port)
+{
+	int nr = 0 + sbig_count;
+
+	if (!(port->modes & PARPORT_MODE_PCSPP)) {
+		printk(KERN_INFO "sbiglpt: ignoring %s - no SPP capability\n",
+			port->name);
+		return;
+	}
+	if (nr == SBIG_NO) {
+		printk(KERN_INFO "sbiglpt: ignoring %s - max %d reached\n",
+			port->name, SBIG_NO);
+		return;
+	}
+	sbig_table[nr].dev = parport_register_device(port, "sbiglpt",
+						     NULL, NULL, NULL, 0, NULL);
+	if (sbig_table[nr].dev == NULL) {
+		printk(KERN_ERR "sbiglpt%d: parport_register_device failed\n",
+			nr);
+		return;
+	}
+	if (parport_claim (sbig_table[nr].dev)) {
+		parport_unregister_device(sbig_table[nr].dev);
+		printk(KERN_ERR "sbiglpt%d: parport_claim failed\n", nr);
+		return;
+	}
+	device_create(sbig_class, port->dev, MKDEV (MAJOR(sbig_dev), nr),
+		      NULL, "sbiglpt%d", nr);
+	spin_lock_init(&sbig_table[nr].spinlock);
+	sbig_count++;
+	printk(KERN_INFO "sbiglpt%d: using %s\n", nr, port->name);
+}
+
+static void sbig_detach (struct parport *port)
+{
+	//printk(KERN_INFO "sbiglpt: detach %s\n", port->name);
+}
+
+static struct parport_driver sbig_driver = {
+	.name = "sbiglpt",
+	.attach = sbig_attach,
+	.detach = sbig_detach,
+};
+
+static struct file_operations sbig_fops = {
+	.owner		= THIS_MODULE,
+	.open 		= sbig_open,
+	.release	= sbig_release,
+	.unlocked_ioctl = sbig_ioctl,
+};
+
+static int sbig_init_module (void)
+{
+	if (alloc_chrdev_region(&sbig_dev, 0, SBIG_NO, "sbiglpt") < 0) {
+		printk(KERN_ERR "sbiglpt: alloc_chrdev_region failed\n");
+		goto out;
+	}
+	if (!(sbig_class = class_create(THIS_MODULE, "chardrv"))) {
+		printk(KERN_ERR "sbiglpt: class_create failed\n");
+		goto out_reg;
+	}
+	cdev_init (&sbig_cdev, &sbig_fops);
+	if (cdev_add (&sbig_cdev, sbig_dev, SBIG_NO) < 0) {
+		printk(KERN_ERR "sbiglpt: cdev_add failed\n");
+		goto out_class;
+	}
+	if (parport_register_driver (&sbig_driver)) {
+		printk(KERN_ERR "sbiglpt: parport_register_driver failed\n");
+		goto out_cdev;
+	}
+	return(0);
+out_cdev:
+	cdev_del(&sbig_cdev);
+out_class:
+	class_destroy(sbig_class);
+out_reg:
+	unregister_chrdev_region(sbig_dev, SBIG_NO);
+out:
+	return(-1);
+}
+
+static void sbig_cleanup_module(void)
+{
+	int nr;
+	parport_unregister_driver(&sbig_driver);
+	cdev_del(&sbig_cdev);
+	for (nr = 0; nr < sbig_count; nr++) {
+		parport_release(sbig_table[nr].dev);
+		parport_unregister_device(sbig_table[nr].dev);
+ 		device_destroy(sbig_class, MKDEV (MAJOR(sbig_dev), nr));
+	}
+	class_destroy(sbig_class);
+	unregister_chrdev_region(sbig_dev, SBIG_NO);
 }
 //========================================================================
-// KModExit - called by rmmod
-//========================================================================
-void KModExit(void)
-{
- // unregister LPT driver
- cdev_del(&dev_cdev);
- device_destroy(dev_class, dev_device);
- class_destroy(dev_class);
- unregister_chrdev_region(dev_device, LDEV_MAX_INDEX + 1);
 
- #ifdef _CHATTY_
- printk(KERN_DEBUG "%s() : module unloaded...\n", __FUNCTION__);
- #endif
-}
-//========================================================================
+module_init(sbig_init_module);
+module_exit(sbig_cleanup_module);
 
-// N.B. no license was declared with this source code
-// define this to get the code ported, ask permission for license change later.
+// N.B. no license was declared with orig. SBIG source code.
+// This *file* is declared GPL by its author (Jim Garlick).
+// TODO: see if we can get a statement from copyright holders of the other bits.
 MODULE_LICENSE("GPL");
