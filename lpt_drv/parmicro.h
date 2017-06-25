@@ -14,7 +14,7 @@
 	External Includes
 
 */
-#ifndef _LARDRV_
+#ifndef _LPARDRV_
 #include "lpardrv.h"
 #endif
 
