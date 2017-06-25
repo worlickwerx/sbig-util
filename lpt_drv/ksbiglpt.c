@@ -32,15 +32,15 @@
 // Assumes AD3 is addressed coming into it and leaves
 // with AD0 address going out.
 
- #define K_LPT_READ_AD16(pd, u)                         \
- /*	pd->outb(AD3_MDI, pd->minor); */                \
- u = (unsigned short)(pd->inb(pd->minor) & 0x78) << 9;  \
- pd->outb(AD2, pd->minor);                              \
- u += (unsigned short)(pd->inb(pd->minor) & 0x78) << 5; \
- pd->outb(AD1, pd->minor);                              \
- u += (unsigned short)(pd->inb(pd->minor) & 0x78) << 1; \
- pd->outb(AD0, pd->minor);                              \
- u += (unsigned short)(pd->inb(pd->minor) & 0x78) >> 3
+ #define K_LPT_READ_AD16(pd, u)                            \
+ /*	pd->pp_outb(AD3_MDI, pd->minor); */                \
+ u = (unsigned short)(pd->pp_inb(pd->minor) & 0x78) << 9;  \
+ pd->pp_outb(AD2, pd->minor);                              \
+ u += (unsigned short)(pd->pp_inb(pd->minor) & 0x78) << 5; \
+ pd->pp_outb(AD1, pd->minor);                              \
+ u += (unsigned short)(pd->pp_inb(pd->minor) & 0x78) << 1; \
+ pd->pp_outb(AD0, pd->minor);                              \
+ u += (unsigned short)(pd->pp_inb(pd->minor) & 0x78) >> 3
 //-----------------------------------------------------------------------------
 // Global variables:
 unsigned short gLastError;
@@ -82,10 +82,10 @@ void KLptCameraOut(struct private_data *pd,
                    unsigned char        reg,
                    unsigned char        val)
 {
- pd->outb((unsigned char)(reg + val), pd->minor);
- pd->outb((unsigned char)(reg + val + 0x80), pd->minor);
- pd->outb((unsigned char)(reg + val + 0x80), pd->minor);
- pd->outb((unsigned char)(reg + val), pd->minor);
+ pd->pp_outb((unsigned char)(reg + val), pd->minor);
+ pd->pp_outb((unsigned char)(reg + val + 0x80), pd->minor);
+ pd->pp_outb((unsigned char)(reg + val + 0x80), pd->minor);
+ pd->pp_outb((unsigned char)(reg + val), pd->minor);
 
  if(reg == CONTROL_OUT){
     pd->control_out = val;
@@ -317,7 +317,7 @@ void KEnable(struct private_data *pd)
 void KLptIoDelay(struct private_data *pd, short i)
 {
  for(; i > 0; i--){
-     pd->inb(pd->minor);
+     pd->pp_inb(pd->minor);
  }
 }
 //========================================================================
@@ -405,9 +405,9 @@ int KLptWaitForAD(struct private_data *pd)
 {
  short     t0 = 0;
 
- pd->outb(AD0, pd->minor);
+ pd->pp_outb(AD0, pd->minor);
  while(1){
-   if(!(pd->inb(pd->minor) & 0x80)) break;
+   if(!(pd->pp_inb(pd->minor) & 0x80)) break;
    if(t0++ >= LCONVERSION_DELAY) return(gLastError = CE_AD_TIMEOUT);
  }
  return(CE_NO_ERROR);
@@ -540,8 +540,8 @@ int KLptBlockClearPixels(struct private_data *pd,
 //========================================================================
 unsigned char KLptCameraIn(struct private_data *pd, unsigned char reg)
 {
- pd->outb(reg, pd->minor);
- return(pd->inb(pd->minor) >> 3);
+ pd->pp_outb(reg, pd->minor);
+ return(pd->pp_inb(pd->minor) >> 3);
 }
 //========================================================================
 // KLptGetPixels
@@ -638,13 +638,13 @@ int KLptGetPixels(struct private_data  *pd,
  }
 	
  KLptCameraOut(pd, CONTROL_OUT, ccd_select); // select desired CCD
- pd->outb(AD0, pd->minor);                   // address done bit
+ pd->pp_outb(AD0, pd->minor);                // address done bit
 	
  for(i = 0; i < len; i++){
      // optimize as non-subroutine for Speed
      u = LCONVERSION_DELAY;
      while(1){
-        if(!(pd->inb(pd->minor) & 0x80))
+        if(!(pd->pp_inb(pd->minor) & 0x80))
     	   break;
         if(--u == 0){
       	   KEnable(pd);
@@ -789,13 +789,13 @@ int KLptGetArea(struct private_data *pd,
      }
 	
      KLptCameraOut(pd, CONTROL_OUT, ccd_select); // select desired CCD
-     pd->outb(AD0, pd->minor);                   // address done bit
+     pd->pp_outb(AD0, pd->minor);                // address done bit
 	
      for(j = 0; j < len; j++){
          // optimize as non-subroutine for Speed
          u = LCONVERSION_DELAY;
          while(1){
-            if(!(pd->inb(pd->minor) & 0x80))
+            if(!(pd->pp_inb(pd->minor) & 0x80))
     	       break;
             if(--u == 0){
       	       KEnable(pd);

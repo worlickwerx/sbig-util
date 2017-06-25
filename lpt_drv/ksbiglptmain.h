@@ -15,8 +15,8 @@ struct private_data {
 	unsigned short  state;
 	unsigned short  buffer_size;
 	char           *buffer;
-	void 		(*outb)(uint8_t data, unsigned int minor);
-	uint8_t		(*inb)(unsigned int minor);
+	void 		(*pp_outb)(uint8_t data, unsigned int minor);
+	uint8_t		(*pp_inb)(unsigned int minor);
 	unsigned int	minor;
 };
 #endif

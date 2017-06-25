@@ -84,8 +84,8 @@ static int sbig_open(struct inode *inode, struct file *file)
 	pd->noBytesRd = 0;
 	pd->noBytesWr = 0;
 	pd->state = 0;
-	pd->outb = sbig_outb;
-	pd->inb = sbig_inb;
+	pd->pp_outb = sbig_outb;
+	pd->pp_inb = sbig_inb;
 	pd->minor = minor;
 	file->private_data = pd;
 out_unlock:
