@@ -386,12 +386,21 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
     }
     if (chip == CCD_IMAGING) {
         GetCCDInfoResults2 xinfo;
-        if ((e = sbig_ccd_get_info2 (ccd, &xinfo)) != 0)
-            msg_exit ("sbig_get_ccd_xinfo: %s", sbig_get_error_string (sb, e));
-        msg ("bad columns:       %d", xinfo.badColumns);
-        msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT ? "yes"
-                                                                      : "no");
-        msg ("serial-number:     %s", xinfo.serialNumber);
+        e = sbig_ccd_get_info2 (ccd, &xinfo);
+        if (e == CE_BAD_PARAMETER) {
+            msg ("bad columns:       unknown");
+            msg ("ABG:               unknown");
+            msg ("serial-number:     unknown");
+        }
+        else if (e == 0) {
+            msg ("bad columns:       %d", xinfo.badColumns);
+            msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT
+							? "yes" : "no");
+            msg ("serial-number:     %s", xinfo.serialNumber);
+        }
+        else
+            msg_exit ("sbig_ccd_get_xinfo: %s", sbig_get_error_string (sb, e));
+
     }
     if (chip == CCD_IMAGING) {
         GetCCDInfoResults4 xinfo;
