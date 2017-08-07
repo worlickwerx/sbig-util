@@ -48,7 +48,7 @@
 
 typedef enum { SNAP_DF, SNAP_LF, SNAP_AUTO } snap_type_t;
 
-typedef struct snap_struct {
+struct options {
     char *device;
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
@@ -74,7 +74,7 @@ typedef struct snap_struct {
     bool preview;
     snap_type_t image_type;
     bool no_cooler;
-} opt_t;
+};
 
 const char *software_name = META_NAME "-" META_VERSION;
 const double TE_stable = 3.0; /* degrees C allowable diff from setpoint */
@@ -100,7 +100,7 @@ static const struct option longopts[] = {
 };
 
 bool get_temp (sbig_t *sb, double *ccd_temp, double *setpoint);
-void snap_series (sbig_t *sb, opt_t snap);
+void snap_series (sbig_t *sb, struct options *snap);
 int config_cb (void *user, const char *section, const char *name,
                const char *value);
 
@@ -138,34 +138,35 @@ int main (int argc, char *argv[])
     const char *config_filename = getenv ("SBIG_CONFIG_FILE");
     int e, ch, i;
     sbig_t *sb;
-    opt_t opt;
+    struct options *opt;
     CAMERA_TYPE type;
     bool force = false;
     struct sigaction sa;
 
     log_init ("sbig-snap");
 
+    opt = xzmalloc (sizeof (*opt));
+
     if (!sbig_device)
         msg_exit ("SBIG_DEVICE is not set");
 
     /* Set default option values.
      */
-    memset (&opt, 0, sizeof (opt));
-    opt.device = xstrdup (sbig_device);
-    opt.chip = CCD_IMAGING;         /* main imaging ccd */
-    opt.readout_mode = RM_1X1;      /* high resolution */
-    opt.imagedir = xstrdup("/tmp"); /* where to write files */
-    opt.t = 1.0;                    /* 1s exposure time */
-    opt.count = 1;                  /* one exposure */
-    opt.verbose = true;
-    opt.partial = 1.0;
-    opt.image_type = SNAP_AUTO;
+    opt->device = xstrdup (sbig_device);
+    opt->chip = CCD_IMAGING;         /* main imaging ccd */
+    opt->readout_mode = RM_1X1;      /* high resolution */
+    opt->imagedir = xstrdup("/tmp"); /* where to write files */
+    opt->t = 1.0;                    /* 1s exposure time */
+    opt->count = 1;                  /* one exposure */
+    opt->verbose = true;
+    opt->partial = 1.0;
+    opt->image_type = SNAP_AUTO;
 
     /* Override defaults with config file
      */
     if (!config_filename)
         msg_exit ("SBIG_CONFIG_FILE is not set");
-    if (ini_parse (config_filename, config_cb, &opt) < 0)
+    if (ini_parse (config_filename, config_cb, opt) < 0)
         msg ("warning - cannot load %s", config_filename);
 
     /* Override defaults and config file with command line
@@ -174,70 +175,70 @@ int main (int argc, char *argv[])
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
             case 'c': /* --no-cooler */
-                opt.no_cooler = true;
+                opt->no_cooler = true;
                 break;
             case 'T': /* --image-type DF|LF|AUTO */
                 if (!strcasecmp (optarg, "df"))
-                    opt.image_type = SNAP_DF;
+                    opt->image_type = SNAP_DF;
                 else if (!strcasecmp (optarg, "lf"))
-                    opt.image_type = SNAP_LF;
+                    opt->image_type = SNAP_LF;
                 else if (!strcasecmp (optarg, "auto"))
-                    opt.image_type = SNAP_AUTO;
+                    opt->image_type = SNAP_AUTO;
                 else
                     usage ();
                 break;
             case 'p': /* --partial */
-                opt.partial = strtod (optarg, NULL); 
-                if (opt.partial <= 0 || opt.partial > 1.0)
+                opt->partial = strtod (optarg, NULL); 
+                if (opt->partial <= 0 || opt->partial > 1.0)
                     usage ();
                 break;
             case 'P': /* --preview */
-                opt.preview = true;
+                opt->preview = true;
                 break;
             case 'f': /* --force */
                 force = true; 
                 break;
             case 'O': /* --object NAME */
-                opt.object = optarg;
+                opt->object = optarg;
                 break;
             case 'm': /* --message string */
-                opt.message = optarg;
+                opt->message = optarg;
                 break;
             case 'n': /* --count N */
-                opt.count = strtoul (optarg, NULL, 10);
+                opt->count = strtoul (optarg, NULL, 10);
                 break;
             case 'D': /* --time-delta N */
-                opt.time_delta = strtod (optarg, NULL);
-                if (opt.time_delta < 0 || opt.time_delta > 86400)
+                opt->time_delta = strtod (optarg, NULL);
+                if (opt->time_delta < 0 || opt->time_delta > 86400)
                     msg_exit ("error parsing --time-delta argument");
                 break;
             case 't': /* --exposure-time SEC */
-                opt.t = strtod (optarg, NULL);
-                if (opt.t < 0 || opt.t > 86400)
+                opt->t = strtod (optarg, NULL);
+                if (opt->t < 0 || opt->t > 86400)
                     msg_exit ("error parsing --exposure-time argument");
                 break;
             case 'C': /* --ccd-chip CHIP */
                 if (!strcmp (optarg, "imaging"))
-                    opt.chip = CCD_IMAGING;
+                    opt->chip = CCD_IMAGING;
                 else if (!strcmp (optarg, "tracking"))
-                    opt.chip = CCD_TRACKING;
+                    opt->chip = CCD_TRACKING;
                 else if (!strcmp (optarg, "ext-tracking"))
-                    opt.chip = CCD_EXT_TRACKING;
+                    opt->chip = CCD_EXT_TRACKING;
                 else
                     msg_exit ("error parsing --ccd-chip argument (imaging, tracking, ext-tracking)");
                 break;
             case 'd': /* --image-directory DIR */
-                if (opt.imagedir)
-                    free (opt.imagedir);
-                opt.imagedir = xstrdup (optarg);
+                if (opt->imagedir)
+                    free (opt->imagedir);
+                opt->imagedir = xstrdup (optarg);
                 break;
             case 'r': /* --resolution hi|med|lo */
                 if (!strcmp (optarg, "hi"))
-                    opt.readout_mode = RM_1X1;
+                    opt->readout_mode = RM_1X1;
                 else if (!strcmp (optarg, "med"))
-                    opt.readout_mode = RM_2X2;
+                    opt->readout_mode = RM_2X2;
                 else if (!strcmp (optarg, "lo"))
-                    opt.readout_mode = RM_3X3;
+                    opt->readout_mode = RM_3X3;
                 else
                     msg_exit ("error parsing --resolution (hi, med, lo)");
                 break;
@@ -252,10 +253,10 @@ int main (int argc, char *argv[])
     /* Verify we have all the info we need for a complete FITS header.
      */
     if (!force) {
-        if (!opt.object)
+        if (!opt->object)
             msg_exit ("Please specify --object or --force for incomplete FITS header");
-        if (!opt.telescope || !opt.observer || opt.focal_length == 0
-                || opt.aperture_diameter == 0 || opt.aperture_area == 0)
+        if (!opt->telescope || !opt->observer || opt->focal_length == 0
+                || opt->aperture_diameter == 0 || opt->aperture_area == 0)
             msg_exit ("Please populate config file or --force for incomplete FITS header");
     }
 
@@ -278,19 +279,19 @@ int main (int argc, char *argv[])
 
     /* Open camera
      */
-    if ((e = sbig_open_device (sb, opt.device)) != CE_NO_ERROR)
-        msg_exit ("sbig_open_device: %s: %s", opt.device,
+    if ((e = sbig_open_device (sb, opt->device)) != CE_NO_ERROR)
+        msg_exit ("sbig_open_device: %s: %s", opt->device,
                    sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("Device open");
     if ((e = sbig_establish_link (sb, &type)) != CE_NO_ERROR)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("Link established to %s", sbig_strcam (type));
 
     /* Verify TE cooler and set auto-freeze
      */
-    if (!opt.no_cooler) {
+    if (!opt->no_cooler) {
         double setpoint, temp;
         TEMPERATURE_REGULATION mode = REGULATION_ENABLE_AUTOFREEZE;
         if (!get_temp (sb, &temp, &setpoint)) {
@@ -315,27 +316,28 @@ done:
      */
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("Device closed");
 
-    if (opt.observer)
-        free (opt.observer);
-    if (opt.telescope)
-        free (opt.telescope);
-    if (opt.filter)
-        free (opt.filter);
-    if (opt.imagedir)
-        free (opt.imagedir);
-    if (opt.sitename)
-        free (opt.sitename);
-    if (opt.latitude)
-        free (opt.latitude);
-    if (opt.longitude)
-        free (opt.longitude);
-    for (i = 0; i < sizeof (opt.cfw) / sizeof (opt.cfw[0]); i++) {
-        if (opt.cfw[i])
-            free (opt.cfw[i]);
+    if (opt->observer)
+        free (opt->observer);
+    if (opt->telescope)
+        free (opt->telescope);
+    if (opt->filter)
+        free (opt->filter);
+    if (opt->imagedir)
+        free (opt->imagedir);
+    if (opt->sitename)
+        free (opt->sitename);
+    if (opt->latitude)
+        free (opt->latitude);
+    if (opt->longitude)
+        free (opt->longitude);
+    for (i = 0; i < sizeof (opt->cfw) / sizeof (opt->cfw[0]); i++) {
+        if (opt->cfw[i])
+            free (opt->cfw[i]);
     }
+    free (opt);
 
     sbig_destroy (sb);
     log_fini ();
@@ -345,7 +347,7 @@ done:
 int config_cb (void *user, const char *section, const char *name,
                const char *value)
 {
-    opt_t *opt = user;
+    struct options *opt = user;
 
     if (!strcmp (section, "system")) {
         if (!strcmp (name, "imagedir")) {
@@ -392,12 +394,12 @@ int config_cb (void *user, const char *section, const char *name,
 /* Wait for an exposure in progress to complete.
  * We avoid polling the camera excessively.
  */
-bool exposure_wait (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
+bool exposure_wait (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt)
 {
     PAR_COMMAND_STATUS status;
     int e;
 
-    usleep (1E6 * opt.t);
+    usleep (1E6 * opt->t);
     do {
         if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
             msg_exit ("sbig_get_exposure_status: %s", sbig_get_error_string (sb, e));
@@ -413,7 +415,8 @@ bool exposure_wait (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
  * SNAP_LF: take a light frame
  * SNAP_AUTO: take a light frame, subtracting previous DF during readout
  */
-bool snap (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, snap_type_t type, int seq)
+bool snap (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt,
+           snap_type_t type, int seq)
 {
     int e;
 
@@ -428,11 +431,11 @@ bool snap (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, snap_type_t type, int seq)
 
     /* Start exposure, then wait for it to finish.
      */
-    if ((e = sbig_ccd_start_exposure (ccd, 0, opt.t)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_start_exposure (ccd, 0, opt->t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("[%d]exposure: %s (%.2fs)", seq, type == SNAP_DF ? "DF" : "LF",
-             opt.t);
+             opt->t);
     if (!exposure_wait (sb, ccd, opt))
         goto abort;
 
@@ -441,7 +444,7 @@ bool snap (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, snap_type_t type, int seq)
      */
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("[%d]readout: %s%s", seq, type == SNAP_DF ? "DF" : "LF",
              type == SNAP_AUTO ? " (subtracted)" : "");
     if (type == SNAP_AUTO)
@@ -469,8 +472,9 @@ bool get_temp (sbig_t *sb, double *ccd_temp, double *setpoint)
     return temp.coolingEnabled;
 }
 
-void update_fitsheader (sbig_t *sb, sbfits_t *sbf, sbig_ccd_t *ccd, opt_t opt,
-                       double temp_setpoint, double temp)
+void update_fitsheader (sbig_t *sb, sbfits_t *sbf, sbig_ccd_t *ccd,
+                        const struct options *opt,
+                        double temp_setpoint, double temp)
 {
     long cwhite, cblack;
     int e;
@@ -478,10 +482,10 @@ void update_fitsheader (sbig_t *sb, sbfits_t *sbf, sbig_ccd_t *ccd, opt_t opt,
 
     sbfits_set_ccdinfo (sbf, ccd);
     sbfits_set_temperature (sbf, temp_setpoint, temp);
-    sbfits_set_annotation (sbf, opt.message);
-    sbfits_set_observer (sbf, opt.observer);
-    sbfits_set_telescope (sbf, opt.telescope);
-    if (opt.filter && !strcmp (opt.filter, "cfw")) {
+    sbfits_set_annotation (sbf, opt->message);
+    sbfits_set_observer (sbf, opt->observer);
+    sbfits_set_telescope (sbf, opt->telescope);
+    if (opt->filter && !strcmp (opt->filter, "cfw")) {
         CFW_STATUS s;
         do {
             if ((e = sbig_cfw_query (sb, &s, &cfw_pos)) != CE_NO_ERROR)
@@ -491,19 +495,19 @@ void update_fitsheader (sbig_t *sb, sbfits_t *sbf, sbig_ccd_t *ccd, opt_t opt,
             msg ("warning: could not get filter position from CFW");
     }
     if (cfw_pos == CFWP_UNKNOWN || cfw_pos < 1 || cfw_pos > 10)
-        sbfits_set_filter (sbf, opt.filter);
+        sbfits_set_filter (sbf, opt->filter);
     else
-        sbfits_set_filter (sbf, opt.cfw[cfw_pos - 1]);
-    sbfits_set_focal_length (sbf, opt.focal_length);
-    sbfits_set_aperture_diameter (sbf, opt.aperture_diameter);
-    sbfits_set_aperture_area (sbf, opt.aperture_area);
-    sbfits_set_object (sbf, opt.object);
-    sbfits_set_site (sbf, opt.sitename, opt.latitude, opt.longitude,
-                     opt.elevation);
+        sbfits_set_filter (sbf, opt->cfw[cfw_pos - 1]);
+    sbfits_set_focal_length (sbf, opt->focal_length);
+    sbfits_set_aperture_diameter (sbf, opt->aperture_diameter);
+    sbfits_set_aperture_area (sbf, opt->aperture_area);
+    sbfits_set_object (sbf, opt->object);
+    sbfits_set_site (sbf, opt->sitename, opt->latitude, opt->longitude,
+                     opt->elevation);
     sbfits_set_swcreate (sbf, software_name);
     sbfits_set_contrast (sbf, cblack, cwhite);
-    sbfits_set_imagetype (sbf, opt.image_type == SNAP_DF ? SBFITS_TYPE_DF
-                                                         : SBFITS_TYPE_LF);
+    sbfits_set_imagetype (sbf, opt->image_type == SNAP_DF ? SBFITS_TYPE_DF
+                                                          : SBFITS_TYPE_LF);
     if ((e = sbig_ccd_auto_contrast (ccd, &cwhite, &cblack)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_auto_contrast: %s", sbig_get_error_string (sb, e));
     sbfits_set_contrast (sbf, cblack, cwhite);
@@ -532,7 +536,8 @@ void preview_ds9 (sbfits_t *sbf)
     free (cmd);
 }
 
-void snap_one_autodark (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
+void snap_one_autodark (sbig_t *sb, sbig_ccd_t *ccd,
+                        const struct options *opt, int seq)
 {
     double temp, setpoint;
     sbfits_t *sbf;
@@ -540,7 +545,7 @@ void snap_one_autodark (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
     /* Create FITS file for output.
      */
     sbf = sbfits_create ();
-    if (sbfits_create_file (sbf, opt.imagedir, "LF") < 0)
+    if (sbfits_create_file (sbf, opt->imagedir, "LF") < 0)
         msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
 
     /* Take DF, LF
@@ -560,10 +565,10 @@ void snap_one_autodark (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
     if (sbfits_close_file (sbf))
         err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("wrote %s", sbfits_get_filename (sbf));
-    if (opt.preview) {
-        if (opt.verbose)
+    if (opt->preview) {
+        if (opt->verbose)
             msg ("preview");
         preview_ds9 (sbf);
     }
@@ -574,13 +579,14 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_one_df (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
+void snap_one_df (sbig_t *sb, sbig_ccd_t *ccd,
+                  const struct options *opt, int seq)
 {
     double temp, setpoint;
     sbfits_t *sbf;
 
     sbf = sbfits_create ();
-    if (sbfits_create_file (sbf, opt.imagedir, "DF") < 0)
+    if (sbfits_create_file (sbf, opt->imagedir, "DF") < 0)
         msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
 
     get_temp (sb, &temp, &setpoint);
@@ -593,9 +599,9 @@ void snap_one_df (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
     if (sbfits_close_file (sbf))
         err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("wrote %s", sbfits_get_filename (sbf));
-    if (opt.preview)
+    if (opt->preview)
         preview_ds9 (sbf);
     return;
 abort:
@@ -603,13 +609,14 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_one_lf (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
+void snap_one_lf (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt,
+                  int seq)
 {
     double temp, setpoint;
     sbfits_t *sbf;
 
     sbf = sbfits_create ();
-    if (sbfits_create_file (sbf, opt.imagedir, "LF") < 0)
+    if (sbfits_create_file (sbf, opt->imagedir, "LF") < 0)
         msg_exit ("%s: %s", sbfits_get_filename (sbf), sbfits_get_errstr (sbf));
 
     get_temp (sb, &temp, &setpoint);
@@ -622,9 +629,9 @@ void snap_one_lf (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
     if (sbfits_close_file (sbf))
         err_exit ("sbfits_close: %s", sbfits_get_errstr (sbf));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("wrote %s", sbfits_get_filename (sbf));
-    if (opt.preview)
+    if (opt->preview)
         preview_ds9 (sbf);
     sbfits_destroy (sbf);
     return;
@@ -633,12 +640,12 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_series (sbig_t *sb, opt_t opt)
+void snap_series (sbig_t *sb, struct options *opt)
 {
     int e, i;
     sbig_ccd_t *ccd;
 
-    if ((e = sbig_ccd_create (sb, opt.chip, &ccd)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_create (sb, opt->chip, &ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
 
     /* Abort any in-progress exposure
@@ -650,24 +657,24 @@ void snap_series (sbig_t *sb, opt_t opt)
     /* Set up the readout binning mode and subframe window,
      * which we hold constant over a series.
      */
-    if ((e = sbig_ccd_set_readout_mode (ccd, opt.readout_mode)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_set_readout_mode (ccd, opt->readout_mode)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
-    if (opt.partial < 1.0) {
-        if ((e = sbig_ccd_set_partial_frame (ccd, opt.partial)) != CE_NO_ERROR)
+    if (opt->partial < 1.0) {
+        if ((e = sbig_ccd_set_partial_frame (ccd, opt->partial)) != CE_NO_ERROR)
             msg_exit ("sbig_ccd_set_partial_frame: %s", sbig_get_error_string (sb, e));
     }
 
     /* Take series of images and write them out as FITS files.
      * Optionally increase the exposure time by time_delta on each exposure.
      */
-    for (i = 0; i < opt.count && !interrupted; i++) {
-        if (opt.image_type == SNAP_AUTO)
+    for (i = 0; i < opt->count && !interrupted; i++) {
+        if (opt->image_type == SNAP_AUTO)
             snap_one_autodark (sb, ccd, opt, i);
-        else if (opt.image_type == SNAP_LF)
+        else if (opt->image_type == SNAP_LF)
             snap_one_lf (sb, ccd, opt, i);
-        else if (opt.image_type == SNAP_DF)
+        else if (opt->image_type == SNAP_DF)
             snap_one_df (sb, ccd, opt, i);
-        opt.t += opt.time_delta;
+        opt->t += opt->time_delta;
     }
 
     sbig_ccd_destroy (ccd);
