@@ -205,7 +205,7 @@ bool exposure_wait (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
     return !interrupted;
 }
 
-void preview_ds9 (sbfits_t sbf)
+void preview_ds9 (sbfits_t *sbf)
 {
     char *cmd;
     int status;
@@ -231,7 +231,7 @@ bool snap (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
 {
     int e;
     int flags = START_SKIP_VDD; 
-    sbfits_t sbf;
+    sbfits_t *sbf;
     const char *tmpdir = getenv ("TMPDIR");
     if (!tmpdir)
         tmpdir = "/tmp";

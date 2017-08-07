@@ -469,7 +469,7 @@ bool get_temp (sbig_t *sb, double *ccd_temp, double *setpoint)
     return temp.coolingEnabled;
 }
 
-void update_fitsheader (sbig_t *sb, sbfits_t sbf, sbig_ccd_t *ccd, opt_t opt,
+void update_fitsheader (sbig_t *sb, sbfits_t *sbf, sbig_ccd_t *ccd, opt_t opt,
                        double temp_setpoint, double temp)
 {
     long cwhite, cblack;
@@ -510,7 +510,7 @@ void update_fitsheader (sbig_t *sb, sbfits_t sbf, sbig_ccd_t *ccd, opt_t opt,
     sbfits_set_pedestal (sbf, 0); /* update if DF subtracted */
 }
 
-void preview_ds9 (sbfits_t sbf)
+void preview_ds9 (sbfits_t *sbf)
 {
     char *cmd;
     int status;
@@ -535,7 +535,7 @@ void preview_ds9 (sbfits_t sbf)
 void snap_one_autodark (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
-    sbfits_t sbf;
+    sbfits_t *sbf;
 
     /* Create FITS file for output.
      */
@@ -577,7 +577,7 @@ abort:
 void snap_one_df (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
-    sbfits_t sbf;
+    sbfits_t *sbf;
 
     sbf = sbfits_create ();
     if (sbfits_create_file (sbf, opt.imagedir, "DF") < 0)
@@ -606,7 +606,7 @@ abort:
 void snap_one_lf (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
-    sbfits_t sbf;
+    sbfits_t *sbf;
 
     sbf = sbfits_create ();
     if (sbfits_create_file (sbf, opt.imagedir, "LF") < 0)

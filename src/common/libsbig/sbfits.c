@@ -96,19 +96,19 @@ static char *gmtime_str (time_t t, char *buf, int sz)
     return buf;
 }
 
-sbfits_t sbfits_create (void)
+sbfits_t *sbfits_create (void)
 {
-    sbfits_t sbf = xzmalloc (sizeof (*sbf));
+    sbfits_t *sbf = xzmalloc (sizeof (*sbf));
     sbf->num_exposures = 1;
     return sbf;
 }                         
 
-void sbfits_destroy (sbfits_t sbf)
+void sbfits_destroy (sbfits_t *sbf)
 {
     free (sbf);
 }
 
-int sbfits_create_file (sbfits_t sbf, const char *imagedir,
+int sbfits_create_file (sbfits_t *sbf, const char *imagedir,
                                            const char *prefix)
 {
     char buf[64];
@@ -132,18 +132,18 @@ done:
     return rc;
 }
 
-const char *sbfits_get_filename (sbfits_t sbf)
+const char *sbfits_get_filename (sbfits_t *sbf)
 {
     return sbf->filename;
 }
 
-const char *sbfits_get_errstr (sbfits_t sbf)
+const char *sbfits_get_errstr (sbfits_t *sbf)
 {
     fits_get_errstatus (sbf->status, sbf->error_string);
     return sbf->error_string;
 }
 
-int sbfits_close_file (sbfits_t sbf)
+int sbfits_close_file (sbfits_t *sbf)
 {
     int rc = -1;
     fits_close_file (sbf->fptr, &sbf->status);
@@ -154,7 +154,7 @@ done:
     return rc;
 }
 
-void sbfits_set_ccdinfo (sbfits_t sbf, sbig_ccd_t *ccd)
+void sbfits_set_ccdinfo (sbfits_t *sbf, sbig_ccd_t *ccd)
 {
     ushort top, left, height, width;
     sbf->t_obs         = sbig_ccd_get_start_time (ccd);
@@ -195,53 +195,53 @@ void sbfits_set_ccdinfo (sbfits_t sbf, sbig_ccd_t *ccd)
     }
 }
 
-void sbfits_set_num_exposures (sbfits_t sbf, ushort num_exposures)
+void sbfits_set_num_exposures (sbfits_t *sbf, ushort num_exposures)
 {
     sbf->num_exposures = num_exposures;
 }
 
-void sbfits_set_observer (sbfits_t sbf, const char *observer)
+void sbfits_set_observer (sbfits_t *sbf, const char *observer)
 {
     sbf->observer = observer;
 }
 
-void sbfits_set_telescope (sbfits_t sbf, const char *telescope)
+void sbfits_set_telescope (sbfits_t *sbf, const char *telescope)
 {
     sbf->telescope = telescope;
 }
 
-void sbfits_set_filter (sbfits_t sbf, const char *filter)
+void sbfits_set_filter (sbfits_t *sbf, const char *filter)
 {
     sbf->filter = filter;
 }
 
-void sbfits_set_object (sbfits_t sbf, const char *object)
+void sbfits_set_object (sbfits_t *sbf, const char *object)
 {
     sbf->object = object ;
 }
 
-void sbfits_set_temperature (sbfits_t sbf, double setpoint, double temperature)
+void sbfits_set_temperature (sbfits_t *sbf, double setpoint, double temperature)
 {
     sbf->setpoint = setpoint;
     sbf->temperature = temperature;
 }
 
-void sbfits_set_focal_length (sbfits_t sbf, double d)
+void sbfits_set_focal_length (sbfits_t *sbf, double d)
 {
     sbf->focal_length = d;
 }
 
-void sbfits_set_aperture_diameter (sbfits_t sbf, double d)
+void sbfits_set_aperture_diameter (sbfits_t *sbf, double d)
 {
     sbf->aperture_diameter = d;
 }
 
-void sbfits_set_aperture_area (sbfits_t sbf, double d)
+void sbfits_set_aperture_area (sbfits_t *sbf, double d)
 {
     sbf->aperture_area = d;
 }
 
-void sbfits_set_site (sbfits_t sbf, const char *name,
+void sbfits_set_site (sbfits_t *sbf, const char *name,
                       const char *lat, const char *lng, double elev)
 {
     sbf->sitename = name;
@@ -250,39 +250,39 @@ void sbfits_set_site (sbfits_t sbf, const char *name,
     sbf->elevation = elev;
 }
 
-void sbfits_set_imagetype (sbfits_t sbf, sbfits_type_t image_type)
+void sbfits_set_imagetype (sbfits_t *sbf, sbfits_type_t image_type)
 {
     sbf->image_type = image_type;
 }
 
-void sbfits_set_annotation (sbfits_t sbf, const char *str)
+void sbfits_set_annotation (sbfits_t *sbf, const char *str)
 {
     sbf->annotation = str;
 }
 
-void sbfits_set_history (sbfits_t sbf, const char *swmodify, const char *str)
+void sbfits_set_history (sbfits_t *sbf, const char *swmodify, const char *str)
 {
     sbf->swmodify = swmodify;
     sbf->history = str;
 }
 
-void sbfits_set_swcreate (sbfits_t sbf, const char *swcreate)
+void sbfits_set_swcreate (sbfits_t *sbf, const char *swcreate)
 {
     sbf->swcreate = swcreate;
 }
 
-void sbfits_set_contrast (sbfits_t sbf, ulong cblack, ulong cwhite)
+void sbfits_set_contrast (sbfits_t *sbf, ulong cblack, ulong cwhite)
 {
     sbf->cblack = cblack;
     sbf->cwhite = cwhite;
 }
 
-void sbfits_set_pedestal (sbfits_t sbf, ulong pedestal)
+void sbfits_set_pedestal (sbfits_t *sbf, ulong pedestal)
 {
     sbf->pedestal = pedestal;
 }
 
-static int sbfits_write_image (sbfits_t sbf)
+static int sbfits_write_image (sbfits_t *sbf)
 {
     long naxes[2] = { sbf->width, sbf->height };
 
@@ -294,7 +294,7 @@ static int sbfits_write_image (sbfits_t sbf)
 
 }
 
-static int lookup_readoutmode_index (sbfits_t sbf)
+static int lookup_readoutmode_index (sbfits_t *sbf)
 {
     int i;
     for (i = 0; i < sbf->info0.readoutModes; i++) {
@@ -304,7 +304,7 @@ static int lookup_readoutmode_index (sbfits_t sbf)
     return -1;
 }
 
-static int sbfits_write_header (sbfits_t sbf)
+static int sbfits_write_header (sbfits_t *sbf)
 {
     char buf[64];
 
@@ -447,7 +447,7 @@ static int sbfits_write_header (sbfits_t sbf)
     return sbf->status ? -1 : 0;
 }
 
-int sbfits_write_file (sbfits_t sbf)
+int sbfits_write_file (sbfits_t *sbf)
 {
     if (sbfits_write_image (sbf) < 0)
         return -1;
