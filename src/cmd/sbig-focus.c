@@ -44,13 +44,13 @@
 #include "src/common/libutil/xzmalloc.h"
 #include "src/common/libsbig/sbfits.h"
 
-typedef struct opt_struct {
+struct options {
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
     double partial;
     double t;
     bool verbose;
-} opt_t;
+};
 
 #define OPTIONS "ht:C:r:p:"
 static const struct option longopts[] = {
@@ -64,7 +64,7 @@ static const struct option longopts[] = {
 
 static bool interrupted = false;
 
-void snap_series (sbig_t *sb, opt_t opt);
+void snap_series (sbig_t *sb, const struct options *opt);
 
 void usage (void)
 {
@@ -91,50 +91,50 @@ int main (int argc, char *argv[])
     int e, ch;
     sbig_t *sb;
     CAMERA_TYPE type;
-    opt_t opt;
+    struct options *opt;
     struct sigaction sa;
 
     log_init ("sbig-focus");
 
     /* Set default option values.
      */
-    memset (&opt, 0, sizeof (opt));
-    opt.chip = CCD_IMAGING;         /* main imaging ccd */
-    opt.readout_mode = RM_3X3;      /* lo resolution */
-    opt.t = 1.0;                    /* 1s exposure time */
-    opt.verbose = true;
-    opt.partial = 1.0;
+    opt = xzmalloc (sizeof (*opt));
+    opt->chip = CCD_IMAGING;         /* main imaging ccd */
+    opt->readout_mode = RM_3X3;      /* lo resolution */
+    opt->t = 1.0;                    /* 1s exposure time */
+    opt->verbose = true;
+    opt->partial = 1.0;
 
     optind = 0;
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
             case 'p': /* --partial */
-                opt.partial = strtod (optarg, NULL); 
-                if (opt.partial <= 0 || opt.partial > 1.0)
+                opt->partial = strtod (optarg, NULL); 
+                if (opt->partial <= 0 || opt->partial > 1.0)
                     usage ();
                 break;
             case 't': /* --exposure-time SEC */
-                opt.t = strtod (optarg, NULL);
-                if (opt.t < 0 || opt.t > 86400)
+                opt->t = strtod (optarg, NULL);
+                if (opt->t < 0 || opt->t > 86400)
                     msg_exit ("error parsing --exposure-time argument");
                 break;
             case 'C': /* --ccd-chip CHIP */
                 if (!strcmp (optarg, "imaging"))
-                    opt.chip = CCD_IMAGING;
+                    opt->chip = CCD_IMAGING;
                 else if (!strcmp (optarg, "tracking"))
-                    opt.chip = CCD_TRACKING;
+                    opt->chip = CCD_TRACKING;
                 else if (!strcmp (optarg, "ext-tracking"))
-                    opt.chip = CCD_EXT_TRACKING;
+                    opt->chip = CCD_EXT_TRACKING;
                 else
                     msg_exit ("error parsing --ccd-chip argument (imaging, tracking, ext-tracking)");
                 break;
             case 'r': /* --resolution hi|med|lo */
                 if (!strcmp (optarg, "hi"))
-                    opt.readout_mode = RM_1X1;
+                    opt->readout_mode = RM_1X1;
                 else if (!strcmp (optarg, "med"))
-                    opt.readout_mode = RM_2X2;
+                    opt->readout_mode = RM_2X2;
                 else if (!strcmp (optarg, "lo"))
-                    opt.readout_mode = RM_3X3;
+                    opt->readout_mode = RM_3X3;
                 else
                     msg_exit ("error parsing --resolution (hi, med, lo)");
                 break;
@@ -169,11 +169,11 @@ int main (int argc, char *argv[])
      */
     if ((e = sbig_open_device (sb, sbig_device)) != CE_NO_ERROR)
         msg_exit ("sbig_open_device: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("Device open");
     if ((e = sbig_establish_link (sb, &type)) != CE_NO_ERROR)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("Link established to %s", sbig_strcam (type));
 
     /* Take pictures.
@@ -182,20 +182,21 @@ int main (int argc, char *argv[])
 
     if ((e = sbig_close_device (sb)) != 0)
         msg_exit ("sbig_close_device: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("Device closed");
 
     sbig_destroy (sb);
+    free (opt);
     log_fini ();
     return 0;
 }
 
-bool exposure_wait (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
+bool exposure_wait (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt)
 {
     PAR_COMMAND_STATUS status;
     int e;
 
-    usleep (1E6 * opt.t);
+    usleep (1E6 * opt->t);
     do {
         if ((e = sbig_ccd_get_exposure_status (ccd, &status)) != CE_NO_ERROR)
             msg_exit ("sbig_get_exposure_status: %s", sbig_get_error_string (sb, e));
@@ -227,7 +228,7 @@ void preview_ds9 (sbfits_t *sbf)
     free (cmd);
 }
 
-bool snap (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
+bool snap (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt)
 {
     int e;
     int flags = START_SKIP_VDD; 
@@ -242,15 +243,15 @@ bool snap (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
 
     if ((e = sbig_ccd_set_shutter_mode (ccd, SC_OPEN_SHUTTER)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_shutter_mode: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
-        msg ("exposure (%.0fs)", opt.t);
-    if ((e = sbig_ccd_start_exposure (ccd, flags, opt.t)) != CE_NO_ERROR)
+    if (opt->verbose)
+        msg ("exposure (%.0fs)", opt->t);
+    if ((e = sbig_ccd_start_exposure (ccd, flags, opt->t)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_start_exposure: %s", sbig_get_error_string (sb, e));
     if (!exposure_wait (sb, ccd, opt))
         goto abort;
     if ((e = sbig_ccd_end_exposure (ccd, 0)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if (opt.verbose)
+    if (opt->verbose)
         msg ("readout");
     if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
@@ -273,19 +274,19 @@ abort:
     return false;
 }
 
-void snap_series (sbig_t *sb, opt_t opt)
+void snap_series (sbig_t *sb, const struct options *opt)
 {
     int e;
     sbig_ccd_t *ccd;
 
-    if ((e = sbig_ccd_create (sb, opt.chip, &ccd)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_create (sb, opt->chip, &ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
     if ((e = sbig_ccd_end_exposure (ccd, ABORT_DONT_END)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_end_exposure: %s", sbig_get_error_string (sb, e));
-    if ((e = sbig_ccd_set_readout_mode (ccd, opt.readout_mode)) != CE_NO_ERROR)
+    if ((e = sbig_ccd_set_readout_mode (ccd, opt->readout_mode)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_set_readout_mode: %s", sbig_get_error_string (sb, e));
-    if (opt.partial < 1.0) {
-        if ((e = sbig_ccd_set_partial_frame (ccd, opt.partial)) != CE_NO_ERROR)
+    if (opt->partial < 1.0) {
+        if ((e = sbig_ccd_set_partial_frame (ccd, opt->partial)) != CE_NO_ERROR)
             msg_exit ("sbig_ccd_set_partial_frame: %s", sbig_get_error_string (sb, e));
     }
     msg ("Type ctrl-C to interrupt");
