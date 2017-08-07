@@ -154,7 +154,7 @@ done:
     return rc;
 }
 
-void sbfits_set_ccdinfo (sbfits_t sbf, sbig_ccd_t ccd)
+void sbfits_set_ccdinfo (sbfits_t sbf, sbig_ccd_t *ccd)
 {
     ushort top, left, height, width;
     sbf->t_obs         = sbig_ccd_get_start_time (ccd);

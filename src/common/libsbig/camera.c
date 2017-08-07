@@ -57,7 +57,7 @@ struct sbig_ccd_struct {
     time_t exposureStart;
 };
 
-static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
+static int lookup_roinfo (sbig_ccd_t *ccd, READOUT_BINNING_MODE mode)
 {
     int i;
 
@@ -67,7 +67,7 @@ static int lookup_roinfo (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
     return -1;
 }
 
-static void realloc_frame (sbig_ccd_t ccd)
+static void realloc_frame (sbig_ccd_t *ccd)
 {
     if (ccd->frame)
         free (ccd->frame);
@@ -76,9 +76,9 @@ static void realloc_frame (sbig_ccd_t ccd)
 
 /* FIXME: PixCel255/237 doesn't support info0 on tracking ccd
  */
-int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
+int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t **ccdp)
 {
-    sbig_ccd_t ccd = xzmalloc (sizeof (*ccd));
+    sbig_ccd_t *ccd = xzmalloc (sizeof (*ccd));
     ccd->ccd = chip;
     ccd->sb = sb;
     int e = sbig_ccd_get_info0 (ccd, &ccd->info0);
@@ -116,14 +116,14 @@ int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
     return CE_NO_ERROR;     
 }
 
-void sbig_ccd_destroy (sbig_ccd_t ccd)
+void sbig_ccd_destroy (sbig_ccd_t *ccd)
 {
     if (ccd->frame)
         free (ccd->frame);
     free (ccd);
 }
 
-int sbig_ccd_get_info0 (sbig_ccd_t ccd, GetCCDInfoResults0 *info)
+int sbig_ccd_get_info0 (sbig_ccd_t *ccd, GetCCDInfoResults0 *info)
 {
     GetCCDInfoParams in;
 
@@ -136,7 +136,7 @@ int sbig_ccd_get_info0 (sbig_ccd_t ccd, GetCCDInfoResults0 *info)
     return ccd->sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
-int sbig_ccd_get_info2 (sbig_ccd_t ccd, GetCCDInfoResults2 *info)
+int sbig_ccd_get_info2 (sbig_ccd_t *ccd, GetCCDInfoResults2 *info)
 {
     GetCCDInfoParams in;
 
@@ -147,7 +147,7 @@ int sbig_ccd_get_info2 (sbig_ccd_t ccd, GetCCDInfoResults2 *info)
     return ccd->sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
-int sbig_ccd_get_info4 (sbig_ccd_t ccd, GetCCDInfoResults4 *info)
+int sbig_ccd_get_info4 (sbig_ccd_t *ccd, GetCCDInfoResults4 *info)
 {
     GetCCDInfoParams in;
 
@@ -160,19 +160,19 @@ int sbig_ccd_get_info4 (sbig_ccd_t ccd, GetCCDInfoResults4 *info)
     return ccd->sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
-int sbig_ccd_set_abg_mode (sbig_ccd_t ccd, ABG_STATE7 mode)
+int sbig_ccd_set_abg_mode (sbig_ccd_t *ccd, ABG_STATE7 mode)
 {
     ccd->abg_mode = mode;
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_get_abg_mode (sbig_ccd_t ccd, ABG_STATE7 *modep)
+int sbig_ccd_get_abg_mode (sbig_ccd_t *ccd, ABG_STATE7 *modep)
 {
     *modep = ccd->abg_mode;
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_set_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
+int sbig_ccd_set_readout_mode (sbig_ccd_t *ccd, READOUT_BINNING_MODE mode)
 {
     int ro_index = lookup_roinfo (ccd, mode);
 
@@ -187,19 +187,19 @@ int sbig_ccd_set_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE mode)
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_get_readout_mode (sbig_ccd_t ccd, READOUT_BINNING_MODE *modep)
+int sbig_ccd_get_readout_mode (sbig_ccd_t *ccd, READOUT_BINNING_MODE *modep)
 {
     *modep = ccd->readout_mode;
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_set_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND mode)
+int sbig_ccd_set_shutter_mode (sbig_ccd_t *ccd, SHUTTER_COMMAND mode)
 {
     ccd->shutter_mode = mode;
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_get_shutter_mode (sbig_ccd_t ccd, SHUTTER_COMMAND *modep)
+int sbig_ccd_get_shutter_mode (sbig_ccd_t *ccd, SHUTTER_COMMAND *modep)
 {
     *modep = ccd->shutter_mode;
     return CE_NO_ERROR;
@@ -220,7 +220,7 @@ static double cfe (double m, double F, double *a)
     return (b - *a);
 }
 
-int sbig_ccd_set_partial_frame (sbig_ccd_t ccd, double part)
+int sbig_ccd_set_partial_frame (sbig_ccd_t *ccd, double part)
 {
     int ro_index = lookup_roinfo (ccd, ccd->readout_mode);
     double top, left;
@@ -233,7 +233,7 @@ int sbig_ccd_set_partial_frame (sbig_ccd_t ccd, double part)
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_set_window (sbig_ccd_t ccd, ushort top, ushort left,
+int sbig_ccd_set_window (sbig_ccd_t *ccd, ushort top, ushort left,
                          ushort height, ushort width)
 {
     if (top > ccd->height || left > ccd->width || height > ccd->height
@@ -247,7 +247,7 @@ int sbig_ccd_set_window (sbig_ccd_t ccd, ushort top, ushort left,
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_get_window (sbig_ccd_t ccd, ushort *topp, ushort *leftp,
+int sbig_ccd_get_window (sbig_ccd_t *ccd, ushort *topp, ushort *leftp,
                          ushort *heightp, ushort *widthp)
 {
     *topp = ccd->top;
@@ -257,7 +257,7 @@ int sbig_ccd_get_window (sbig_ccd_t ccd, ushort *topp, ushort *leftp,
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_set_exposure_flags (sbig_ccd_t ccd, ulong flags)
+int sbig_ccd_set_exposure_flags (sbig_ccd_t *ccd, ulong flags)
 {
     if ((flags & EXP_TIME_MASK) || (flags & EXP_MS_EXPOSURE))
         return CE_BAD_PARAMETER;
@@ -265,7 +265,7 @@ int sbig_ccd_set_exposure_flags (sbig_ccd_t ccd, ulong flags)
     return CE_NO_ERROR;
 }
 
-int sbig_ccd_clr_exposure_flags (sbig_ccd_t ccd, ulong flags)
+int sbig_ccd_clr_exposure_flags (sbig_ccd_t *ccd, ulong flags)
 {
     if ((flags & EXP_TIME_MASK) || (flags & EXP_MS_EXPOSURE))
         return CE_BAD_PARAMETER;
@@ -273,7 +273,7 @@ int sbig_ccd_clr_exposure_flags (sbig_ccd_t ccd, ulong flags)
     return CE_NO_ERROR;
 }
 
-static bool has_cap_eshutter (sbig_ccd_t ccd)
+static bool has_cap_eshutter (sbig_ccd_t *ccd)
 {
     ushort cap = ccd->info4.capabilitiesBits;
 
@@ -283,7 +283,7 @@ static bool has_cap_eshutter (sbig_ccd_t ccd)
 /* Min exposure in seconds
  * FIXME: I've been conservative in grouping the ? cameras with ST7.
  */
-static double min_exposure (sbig_ccd_t ccd)
+static double min_exposure (sbig_ccd_t *ccd)
 {
     double m;
 
@@ -330,7 +330,7 @@ static double min_exposure (sbig_ccd_t ccd)
     return m;
 }
 
-int sbig_ccd_start_exposure (sbig_ccd_t ccd, unsigned short flags,
+int sbig_ccd_start_exposure (sbig_ccd_t *ccd, unsigned short flags,
                              double exposureTime)
 {
     StartExposureParams2 in = { .ccd = ccd->ccd | flags,
@@ -353,7 +353,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t ccd, unsigned short flags,
     return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 
-int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, PAR_COMMAND_STATUS *sp)
+int sbig_ccd_get_exposure_status (sbig_ccd_t *ccd, PAR_COMMAND_STATUS *sp)
 {
     ushort status;
     int e = sbig_query_cmd_status (ccd->sb, CC_START_EXPOSURE, &status);
@@ -367,14 +367,14 @@ int sbig_ccd_get_exposure_status (sbig_ccd_t ccd, PAR_COMMAND_STATUS *sp)
     return e;
 }
 
-int sbig_ccd_end_exposure (sbig_ccd_t ccd, ushort flags)
+int sbig_ccd_end_exposure (sbig_ccd_t *ccd, ushort flags)
 {
     EndExposureParams in = { .ccd = ccd->ccd | flags };
 
     return ccd->sb->fun (CC_END_EXPOSURE, &in, NULL);
 }
 
-static int start_readout (sbig_ccd_t ccd)
+static int start_readout (sbig_ccd_t *ccd)
 {
     StartReadoutParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
                               .top = ccd->top, .left = ccd->left,
@@ -386,14 +386,14 @@ static int start_readout (sbig_ccd_t ccd)
 /* On ST-7/8/etc, end_readout turns off CCD preamp and unfreezes TE if
  * autofreeze enabled
  */
-static int end_readout (sbig_ccd_t ccd)
+static int end_readout (sbig_ccd_t *ccd)
 {
     EndReadoutParams in = { .ccd = ccd->ccd };
 
     return ccd->sb->fun (CC_END_READOUT, &in, NULL);
 }
 
-static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, ushort *buf)
+static int readout_line (sbig_ccd_t *ccd, ushort start, ushort len, ushort *buf)
 {
     ReadoutLineParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
                              .pixelStart = start, .pixelLength = len };
@@ -401,7 +401,7 @@ static int readout_line (sbig_ccd_t ccd, ushort start, ushort len, ushort *buf)
     return ccd->sb->fun (CC_READOUT_LINE, &in, buf);
 }
 
-static int read_subtract_line (sbig_ccd_t ccd, ushort start, ushort len, ushort *buf)
+static int read_subtract_line (sbig_ccd_t *ccd, ushort start, ushort len, ushort *buf)
 {
     ReadoutLineParams in = { .ccd = ccd->ccd, .readoutMode = ccd->readout_mode,
                              .pixelStart = start, .pixelLength = len };
@@ -409,7 +409,7 @@ static int read_subtract_line (sbig_ccd_t ccd, ushort start, ushort len, ushort 
     return ccd->sb->fun (CC_READ_SUBTRACT_LINE, &in, buf);
 }
 
-int sbig_ccd_readout (sbig_ccd_t ccd)
+int sbig_ccd_readout (sbig_ccd_t *ccd)
 {
     ushort *pp = ccd->frame;
     int i, e;
@@ -427,7 +427,7 @@ int sbig_ccd_readout (sbig_ccd_t ccd)
     return e;
 }
 
-int sbig_ccd_readout_subtract (sbig_ccd_t ccd)
+int sbig_ccd_readout_subtract (sbig_ccd_t *ccd)
 {
     ushort *pp = ccd->frame;
     int i, e;
@@ -449,7 +449,7 @@ int sbig_ccd_readout_subtract (sbig_ccd_t ccd)
  * in host byte order.
  */
 
-int sbig_ccd_writemem (sbig_ccd_t ccd, ushort *buf, int len)
+int sbig_ccd_writemem (sbig_ccd_t *ccd, ushort *buf, int len)
 {
     int i;
 
@@ -460,7 +460,7 @@ int sbig_ccd_writemem (sbig_ccd_t ccd, ushort *buf, int len)
     return CE_NO_ERROR;
 }
 
-static int add_comments (sbig_ccd_t ccd, FILE *f)
+static int add_comments (sbig_ccd_t *ccd, FILE *f)
 {
     int i = lookup_roinfo (ccd, ccd->readout_mode);
 
@@ -483,7 +483,7 @@ static int add_comments (sbig_ccd_t ccd, FILE *f)
     return 0;
 }
 
-int sbig_ccd_writepgm (sbig_ccd_t ccd, const char *filename)
+int sbig_ccd_writepgm (sbig_ccd_t *ccd, const char *filename)
 {
     ushort *pp = ccd->frame;
     ushort *nrow;
@@ -515,24 +515,24 @@ error:
     return CE_OS_ERROR;
 }
 
-ushort *sbig_ccd_get_data (sbig_ccd_t ccd, ushort *height, ushort *width)
+ushort *sbig_ccd_get_data (sbig_ccd_t *ccd, ushort *height, ushort *width)
 {
     *height = ccd->height;
     *width = ccd->width;
     return ccd->frame;
 }
 
-time_t sbig_ccd_get_start_time (sbig_ccd_t ccd)
+time_t sbig_ccd_get_start_time (sbig_ccd_t *ccd)
 {
     return ccd->exposureStart;
 }
 
-double sbig_ccd_get_exposure_time (sbig_ccd_t ccd)
+double sbig_ccd_get_exposure_time (sbig_ccd_t *ccd)
 {
     return ccd->exposureTime;
 }
 
-int sbig_ccd_get_max (sbig_ccd_t ccd, ushort *maxp)
+int sbig_ccd_get_max (sbig_ccd_t *ccd, ushort *maxp)
 {
     int i, j;
     ushort max = 0;
@@ -548,7 +548,7 @@ int sbig_ccd_get_max (sbig_ccd_t ccd, ushort *maxp)
 
 /* Borrowed from CSBIGImg::AutoBackgroundAndRange() (sdk/app).
  */
-int sbig_ccd_auto_contrast (sbig_ccd_t ccd, long *cblack, long *cwhite)
+int sbig_ccd_auto_contrast (sbig_ccd_t *ccd, long *cblack, long *cwhite)
 {
     ushort *pp = ccd->frame;
     ulong hist[4096];

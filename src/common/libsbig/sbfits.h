@@ -17,7 +17,7 @@ int sbfits_close_file (sbfits_t sbf);
 const char *sbfits_get_errstr (sbfits_t sbf);
 const char *sbfits_get_filename (sbfits_t sbf);
 
-void sbfits_set_ccdinfo (sbfits_t sbf, sbig_ccd_t ccd);
+void sbfits_set_ccdinfo (sbfits_t sbf, sbig_ccd_t *ccd);
 void sbfits_set_num_exposures (sbfits_t sbf, ushort num_exposures);
 void sbfits_set_observer (sbfits_t sbf, const char *observer);
 void sbfits_set_telescope (sbfits_t sbf, const char *telescope);

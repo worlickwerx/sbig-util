@@ -190,7 +190,7 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
     double fov_height, fov_width;       /* field of view in arcmin */
     double vres, hres;                  /* pixel resolution in arcsec/pixel */
     int e, rm_index;
-    sbig_ccd_t ccd;
+    sbig_ccd_t *ccd;
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
     GetCCDInfoResults0 info;
@@ -344,7 +344,7 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
     int i, e;
     GetCCDInfoResults0 info;
     char version[16];
-    sbig_ccd_t ccd;
+    sbig_ccd_t *ccd;
     sbig_t *sb;
     CCD_REQUEST chip;
 

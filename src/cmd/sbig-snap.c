@@ -392,7 +392,7 @@ int config_cb (void *user, const char *section, const char *name,
 /* Wait for an exposure in progress to complete.
  * We avoid polling the camera excessively.
  */
-bool exposure_wait (sbig_t *sb, sbig_ccd_t ccd, opt_t opt)
+bool exposure_wait (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
 {
     PAR_COMMAND_STATUS status;
     int e;
@@ -413,7 +413,7 @@ bool exposure_wait (sbig_t *sb, sbig_ccd_t ccd, opt_t opt)
  * SNAP_LF: take a light frame
  * SNAP_AUTO: take a light frame, subtracting previous DF during readout
  */
-bool snap (sbig_t *sb, sbig_ccd_t ccd, opt_t opt, snap_type_t type, int seq)
+bool snap (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, snap_type_t type, int seq)
 {
     int e;
 
@@ -469,7 +469,7 @@ bool get_temp (sbig_t *sb, double *ccd_temp, double *setpoint)
     return temp.coolingEnabled;
 }
 
-void update_fitsheader (sbig_t *sb, sbfits_t sbf, sbig_ccd_t ccd, opt_t opt,
+void update_fitsheader (sbig_t *sb, sbfits_t sbf, sbig_ccd_t *ccd, opt_t opt,
                        double temp_setpoint, double temp)
 {
     long cwhite, cblack;
@@ -532,7 +532,7 @@ void preview_ds9 (sbfits_t sbf)
     free (cmd);
 }
 
-void snap_one_autodark (sbig_t *sb, sbig_ccd_t ccd, opt_t opt, int seq)
+void snap_one_autodark (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
     sbfits_t sbf;
@@ -574,7 +574,7 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_one_df (sbig_t *sb, sbig_ccd_t ccd, opt_t opt, int seq)
+void snap_one_df (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
     sbfits_t sbf;
@@ -603,7 +603,7 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_one_lf (sbig_t *sb, sbig_ccd_t ccd, opt_t opt, int seq)
+void snap_one_lf (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
     sbfits_t sbf;
@@ -636,7 +636,7 @@ abort:
 void snap_series (sbig_t *sb, opt_t opt)
 {
     int e, i;
-    sbig_ccd_t ccd;
+    sbig_ccd_t *ccd;
 
     if ((e = sbig_ccd_create (sb, opt.chip, &ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));

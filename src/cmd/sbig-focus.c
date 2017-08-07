@@ -190,7 +190,7 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-bool exposure_wait (sbig_t *sb, sbig_ccd_t ccd, opt_t opt)
+bool exposure_wait (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
 {
     PAR_COMMAND_STATUS status;
     int e;
@@ -227,7 +227,7 @@ void preview_ds9 (sbfits_t sbf)
     free (cmd);
 }
 
-bool snap (sbig_t *sb, sbig_ccd_t ccd, opt_t opt)
+bool snap (sbig_t *sb, sbig_ccd_t *ccd, opt_t opt)
 {
     int e;
     int flags = START_SKIP_VDD; 
@@ -276,7 +276,7 @@ abort:
 void snap_series (sbig_t *sb, opt_t opt)
 {
     int e;
-    sbig_ccd_t ccd;
+    sbig_ccd_t *ccd;
 
     if ((e = sbig_ccd_create (sb, opt.chip, &ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
