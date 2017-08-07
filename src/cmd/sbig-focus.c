@@ -109,7 +109,7 @@ int main (int argc, char *argv[])
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
             case 'p': /* --partial */
-                opt->partial = strtod (optarg, NULL); 
+                opt->partial = strtod (optarg, NULL);
                 if (opt->partial <= 0 || opt->partial > 1.0)
                     usage ();
                 break;
@@ -231,7 +231,7 @@ void preview_ds9 (sbfits_t *sbf)
 bool snap (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt)
 {
     int e;
-    int flags = START_SKIP_VDD; 
+    int flags = START_SKIP_VDD;
     sbfits_t *sbf;
     const char *tmpdir = getenv ("TMPDIR");
     if (!tmpdir)
