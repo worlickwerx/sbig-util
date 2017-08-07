@@ -11,7 +11,7 @@ typedef struct sbig_ccd_struct *sbig_ccd_t;
 /* Call before any camera commands.  Camera type (model) is returned.
  * Somewhat vestigual as far as I can tell.
  */
-int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type);
+int sbig_establish_link (sbig_t *sb, CAMERA_TYPE *type);
 
 /* Convert CAMERA_TYPE to camera model string
  */
@@ -21,7 +21,7 @@ const char *sbig_strcam (CAMERA_TYPE type);
  *  CCD_IMAGING, CCD_TRACKING, CCD_EXT_TRACKING
  * Internally, create calls get_info0.
  */
-int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp);
+int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t *ccdp);
 void sbig_ccd_destroy (sbig_ccd_t ccd);
 
 /* Query ccd info

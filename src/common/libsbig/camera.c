@@ -43,7 +43,7 @@
 #include "src/common/libutil/xzmalloc.h"
 
 struct sbig_ccd_struct {
-    sbig_t sb;
+    sbig_t *sb;
     CCD_REQUEST ccd;
     ABG_STATE7 abg_mode;
     READOUT_BINNING_MODE readout_mode;
@@ -76,7 +76,7 @@ static void realloc_frame (sbig_ccd_t ccd)
 
 /* FIXME: PixCel255/237 doesn't support info0 on tracking ccd
  */
-int sbig_ccd_create (sbig_t sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
+int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t *ccdp)
 {
     sbig_ccd_t ccd = xzmalloc (sizeof (*ccd));
     ccd->ccd = chip;
@@ -601,7 +601,7 @@ int sbig_ccd_auto_contrast (sbig_ccd_t ccd, long *cblack, long *cwhite)
     return CE_NO_ERROR;
 }
 
-int sbig_establish_link (sbig_t sb, CAMERA_TYPE *type)
+int sbig_establish_link (sbig_t *sb, CAMERA_TYPE *type)
 {
     EstablishLinkParams in = { .sbigUseOnly = 0 };
     EstablishLinkResults out;

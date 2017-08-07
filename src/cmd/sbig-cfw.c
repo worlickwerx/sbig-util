@@ -36,8 +36,8 @@
 #include "src/common/libsbig/sbig.h"
 #include "src/common/libutil/log.h"
 
-void cfw_query (sbig_t sb, int ac, char **av);
-void cfw_goto (sbig_t sb, int ac, char **av);
+void cfw_query (sbig_t *sb, int ac, char **av);
+void cfw_goto (sbig_t *sb, int ac, char **av);
 
 #define OPTIONS "h"
 static const struct option longopts[] = {
@@ -56,7 +56,7 @@ void usage (void)
 
 int main (int argc, char *argv[])
 {
-    sbig_t sb;
+    sbig_t *sb;
     const char *sbig_udrv = getenv ("SBIG_UDRV");
     const char *sbig_device = getenv ("SBIG_DEVICE");
     int e;
@@ -107,7 +107,7 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-void cfw_goto (sbig_t sb, int ac, char **av)
+void cfw_goto (sbig_t *sb, int ac, char **av)
 {
     int e;
     CFW_STATUS status;
@@ -131,7 +131,7 @@ void cfw_goto (sbig_t sb, int ac, char **av)
         msg ("position: %d", actual);
 }
 
-void cfw_query (sbig_t sb, int ac, char **av)
+void cfw_query (sbig_t *sb, int ac, char **av)
 {
     int e;
     CFW_STATUS status;

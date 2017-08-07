@@ -55,7 +55,7 @@ int main (int argc, char *argv[])
 {
     const char *sbig_udrv = getenv ("SBIG_UDRV");
     const char *sbig_device = getenv ("SBIG_DEVICE");
-    sbig_t sb;
+    sbig_t *sb;
     int e;
     int ch;
     CAMERA_TYPE type;

@@ -99,8 +99,8 @@ static const struct option longopts[] = {
     {0, 0, 0, 0},
 };
 
-bool get_temp (sbig_t sb, double *ccd_temp, double *setpoint);
-void snap_series (sbig_t sb, opt_t snap);
+bool get_temp (sbig_t *sb, double *ccd_temp, double *setpoint);
+void snap_series (sbig_t *sb, opt_t snap);
 int config_cb (void *user, const char *section, const char *name,
                const char *value);
 
@@ -137,7 +137,7 @@ int main (int argc, char *argv[])
     const char *sbig_device = getenv ("SBIG_DEVICE");
     const char *config_filename = getenv ("SBIG_CONFIG_FILE");
     int e, ch, i;
-    sbig_t sb;
+    sbig_t *sb;
     opt_t opt;
     CAMERA_TYPE type;
     bool force = false;
@@ -392,7 +392,7 @@ int config_cb (void *user, const char *section, const char *name,
 /* Wait for an exposure in progress to complete.
  * We avoid polling the camera excessively.
  */
-bool exposure_wait (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
+bool exposure_wait (sbig_t *sb, sbig_ccd_t ccd, opt_t opt)
 {
     PAR_COMMAND_STATUS status;
     int e;
@@ -413,7 +413,7 @@ bool exposure_wait (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
  * SNAP_LF: take a light frame
  * SNAP_AUTO: take a light frame, subtracting previous DF during readout
  */
-bool snap (sbig_t sb, sbig_ccd_t ccd, opt_t opt, snap_type_t type, int seq)
+bool snap (sbig_t *sb, sbig_ccd_t ccd, opt_t opt, snap_type_t type, int seq)
 {
     int e;
 
@@ -456,7 +456,7 @@ abort:
     return false;
 }
 
-bool get_temp (sbig_t sb, double *ccd_temp, double *setpoint)
+bool get_temp (sbig_t *sb, double *ccd_temp, double *setpoint)
 {
     QueryTemperatureStatusResults2 temp;
     int e;
@@ -469,7 +469,7 @@ bool get_temp (sbig_t sb, double *ccd_temp, double *setpoint)
     return temp.coolingEnabled;
 }
 
-void update_fitsheader (sbig_t sb, sbfits_t sbf, sbig_ccd_t ccd, opt_t opt,
+void update_fitsheader (sbig_t *sb, sbfits_t sbf, sbig_ccd_t ccd, opt_t opt,
                        double temp_setpoint, double temp)
 {
     long cwhite, cblack;
@@ -532,7 +532,7 @@ void preview_ds9 (sbfits_t sbf)
     free (cmd);
 }
 
-void snap_one_autodark (sbig_t sb, sbig_ccd_t ccd, opt_t opt, int seq)
+void snap_one_autodark (sbig_t *sb, sbig_ccd_t ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
     sbfits_t sbf;
@@ -574,7 +574,7 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_one_df (sbig_t sb, sbig_ccd_t ccd, opt_t opt, int seq)
+void snap_one_df (sbig_t *sb, sbig_ccd_t ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
     sbfits_t sbf;
@@ -603,7 +603,7 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_one_lf (sbig_t sb, sbig_ccd_t ccd, opt_t opt, int seq)
+void snap_one_lf (sbig_t *sb, sbig_ccd_t ccd, opt_t opt, int seq)
 {
     double temp, setpoint;
     sbfits_t sbf;
@@ -633,7 +633,7 @@ abort:
     sbfits_destroy (sbf);
 }
 
-void snap_series (sbig_t sb, opt_t opt)
+void snap_series (sbig_t *sb, opt_t opt)
 {
     int e, i;
     sbig_ccd_t ccd;

@@ -42,24 +42,24 @@
 
 #include "src/common/libutil/bcd.h"
 
-int sbig_open_driver (sbig_t sb)
+int sbig_open_driver (sbig_t *sb)
 {
     return sb->fun (CC_OPEN_DRIVER, NULL, NULL); 
 }
 
-int sbig_close_driver (sbig_t sb)
+int sbig_close_driver (sbig_t *sb)
 {
     return sb->fun (CC_CLOSE_DRIVER, NULL, NULL); 
 }
 
-int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
+int sbig_get_driver_info (sbig_t *sb, DRIVER_REQUEST request,
                           GetDriverInfoResults0 *info)
 {
     GetDriverInfoParams in = { .request = request };
     return sb->fun (CC_GET_DRIVER_INFO, &in, info);
 }
 
-int sbig_open_device (sbig_t sb, const char *name) 
+int sbig_open_device (sbig_t *sb, const char *name) 
 {
     struct in_addr addr;
     memset (&addr, 0, sizeof (addr));
@@ -74,12 +74,12 @@ int sbig_open_device (sbig_t sb, const char *name)
     return sb->fun (CC_OPEN_DEVICE, &in, NULL);
 }
 
-int sbig_close_device (sbig_t sb)
+int sbig_close_device (sbig_t *sb)
 {
     return sb->fun (CC_CLOSE_DEVICE, NULL, NULL);
 }
 
-int sbig_query_cmd_status (sbig_t sb, ushort cmd, ushort *outp)
+int sbig_query_cmd_status (sbig_t *sb, ushort cmd, ushort *outp)
 {
     QueryCommandStatusParams in = { .command = cmd };
     QueryCommandStatusResults out;

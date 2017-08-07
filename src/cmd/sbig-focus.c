@@ -64,7 +64,7 @@ static const struct option longopts[] = {
 
 static bool interrupted = false;
 
-void snap_series (sbig_t sb, opt_t opt);
+void snap_series (sbig_t *sb, opt_t opt);
 
 void usage (void)
 {
@@ -89,7 +89,7 @@ int main (int argc, char *argv[])
     const char *sbig_udrv = getenv ("SBIG_UDRV");
     const char *sbig_device = getenv ("SBIG_DEVICE");
     int e, ch;
-    sbig_t sb;
+    sbig_t *sb;
     CAMERA_TYPE type;
     opt_t opt;
     struct sigaction sa;
@@ -190,7 +190,7 @@ int main (int argc, char *argv[])
     return 0;
 }
 
-bool exposure_wait (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
+bool exposure_wait (sbig_t *sb, sbig_ccd_t ccd, opt_t opt)
 {
     PAR_COMMAND_STATUS status;
     int e;
@@ -227,7 +227,7 @@ void preview_ds9 (sbfits_t sbf)
     free (cmd);
 }
 
-bool snap (sbig_t sb, sbig_ccd_t ccd, opt_t opt)
+bool snap (sbig_t *sb, sbig_ccd_t ccd, opt_t opt)
 {
     int e;
     int flags = START_SKIP_VDD; 
@@ -273,7 +273,7 @@ abort:
     return false;
 }
 
-void snap_series (sbig_t sb, opt_t opt)
+void snap_series (sbig_t *sb, opt_t opt)
 {
     int e;
     sbig_ccd_t ccd;

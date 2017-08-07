@@ -35,9 +35,9 @@
 #include "handle_impl.h"
 #include "sbigudrv.h"
 
-sbig_t sbig_new (void)
+sbig_t *sbig_new (void)
 {
-    sbig_t sb = malloc (sizeof (*sb));
+    sbig_t *sb = malloc (sizeof (*sb));
     if (!sb) {
         errno = ENOMEM;
         return NULL;
@@ -46,7 +46,7 @@ sbig_t sbig_new (void)
     return sb;
 }
 
-int sbig_dlopen (sbig_t sb, const char *path)
+int sbig_dlopen (sbig_t *sb, const char *path)
 {
     dlerror ();
     if (!(sb->dso = dlopen (path, RTLD_LAZY | RTLD_LOCAL)))
@@ -56,14 +56,14 @@ int sbig_dlopen (sbig_t sb, const char *path)
     return CE_NO_ERROR;
 }
 
-void sbig_destroy (sbig_t sb)
+void sbig_destroy (sbig_t *sb)
 {
     if (sb->dso)
         dlclose (sb->dso);
     free (sb);
 }
 
-const char *sbig_get_error_string (sbig_t sb, unsigned short errorNo)
+const char *sbig_get_error_string (sbig_t *sb, unsigned short errorNo)
 {
     GetErrorStringParams in = { .errorNo = errorNo };
     static GetErrorStringResults out;

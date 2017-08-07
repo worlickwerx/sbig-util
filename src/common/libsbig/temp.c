@@ -31,7 +31,7 @@
 #include "sbigudrv.h"
 #include "sbig.h"
 
-int sbig_temp_set (sbig_t sb, TEMPERATURE_REGULATION reg, double ccdSetpoint)
+int sbig_temp_set (sbig_t *sb, TEMPERATURE_REGULATION reg, double ccdSetpoint)
 {
     SetTemperatureRegulationParams2 in = { .regulation = reg,
                                            .ccdSetpoint = ccdSetpoint };
@@ -39,7 +39,7 @@ int sbig_temp_set (sbig_t sb, TEMPERATURE_REGULATION reg, double ccdSetpoint)
     return sb->fun (CC_SET_TEMPERATURE_REGULATION2, &in, NULL); 
 }
 
-int sbig_temp_get_info (sbig_t sb, QueryTemperatureStatusResults2 *info)
+int sbig_temp_get_info (sbig_t *sb, QueryTemperatureStatusResults2 *info)
 {
     QueryTemperatureStatusParams in = { .request = TEMP_STATUS_ADVANCED};
     return sb->fun (CC_QUERY_TEMPERATURE_STATUS, &in, info); 

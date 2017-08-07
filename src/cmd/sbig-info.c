@@ -132,10 +132,10 @@ int config_cb (void *user, const char *section, const char *name,
     return 0;
 }
 
-sbig_t init_driver (const char *sbig_udrv)
+sbig_t *init_driver (const char *sbig_udrv)
 {
     int e;
-    sbig_t sb;
+    sbig_t *sb;
 
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
@@ -146,12 +146,12 @@ sbig_t init_driver (const char *sbig_udrv)
     return sb;
 }
 
-void fini_driver (sbig_t sb)
+void fini_driver (sbig_t *sb)
 {
     sbig_destroy (sb);
 }
 
-void init_device (sbig_t sb, const char *sbig_device)
+void init_device (sbig_t *sb, const char *sbig_device)
 {
     CAMERA_TYPE type;
     int e;
@@ -162,7 +162,7 @@ void init_device (sbig_t sb, const char *sbig_device)
         msg_exit ("sbig_establish_link: %s", sbig_get_error_string (sb, e));
 }
 
-void fini_device (sbig_t sb)
+void fini_device (sbig_t *sb)
 {
     int e;
     if ((e = sbig_close_device (sb)) != 0)
@@ -183,7 +183,7 @@ static int lookup_readoutmode_index (GetCCDInfoResults0 info,
 void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
                int ac, char **av)
 {
-    sbig_t sb;
+    sbig_t *sb;
     double focal_length;                /* telescope FL in mm */
     double pixel_width, pixel_height;   /* pixel dims in um */
     double sensor_width, sensor_height; /* sensor dims in mm */
@@ -259,7 +259,7 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
 void show_cooler_info (const char *sbig_udrv, const char *sbig_device,
                        int ac, char **av)
 {
-    sbig_t sb;
+    sbig_t *sb;
     QueryTemperatureStatusResults2 info;
     int e;
 
@@ -297,7 +297,7 @@ void show_driver_info (const char *sbig_udrv, int ac, char **av)
     GetDriverInfoResults0 info;
     int e;
     char version[16];
-    sbig_t sb;
+    sbig_t *sb;
 
     if (ac != 0)
         msg_exit ("driver takes no arguments");
@@ -320,7 +320,7 @@ void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
     int e;
     ulong fwrev, numpos;
     CFW_MODEL_SELECT model;
-    sbig_t sb;
+    sbig_t *sb;
 
     if (ac != 0)
         msg_exit ("cfw takes no arguments");
@@ -345,7 +345,7 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
     GetCCDInfoResults0 info;
     char version[16];
     sbig_ccd_t ccd;
-    sbig_t sb;
+    sbig_t *sb;
     CCD_REQUEST chip;
 
     if (ac != 1)

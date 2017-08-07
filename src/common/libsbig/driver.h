@@ -7,8 +7,8 @@
 /* Initialize/finalize driver
  * Ref SBIGUDrv sec 3.1.1, 3.1.2
  */
-int sbig_open_driver (sbig_t sb);
-int sbig_close_driver (sbig_t sb);
+int sbig_open_driver (sbig_t *sb);
+int sbig_close_driver (sbig_t *sb);
 
 /* Initialize/finalize low level transport (N.B. only tested on USB)
  * usb: "USB" picks first camera, "USB1"..."USB8" picks specific one.
@@ -16,13 +16,13 @@ int sbig_close_driver (sbig_t sb);
  * ethernet: "a.b.c.d" is parsed as the camera's IPv4 address.
  * Ref SBIGUDrv sec 3.1.3, 3.1.4
  */
-int sbig_open_device (sbig_t sb, const char *name);
-int sbig_close_device (sbig_t sb);
+int sbig_open_device (sbig_t *sb, const char *name);
+int sbig_close_device (sbig_t *sb);
 
 /* Get info about driver code
  * Ref SBIGUDrv sec 3.1.5
  */
-int sbig_get_driver_info (sbig_t sb, DRIVER_REQUEST request,
+int sbig_get_driver_info (sbig_t *sb, DRIVER_REQUEST request,
                           GetDriverInfoResults0 *info);
 
 /* Get/set driver handle
@@ -34,7 +34,7 @@ int sbig_set_driver_handle (); // unimplemented
 /* Get command status
  * Ref SBIGUdrv sec 3.5.4
  */
-int sbig_query_cmd_status (sbig_t sb, ushort cmd, ushort *outp);
+int sbig_query_cmd_status (sbig_t *sb, ushort cmd, ushort *outp);
 
 /* Convert string to device type and vv
  */

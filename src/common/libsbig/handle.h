@@ -5,13 +5,13 @@
  * described in SBIGUdrv sec 3.1.6.
  */
 
-typedef struct sbig_struct *sbig_t;
+typedef struct sbig_struct sbig_t;
 
-sbig_t sbig_new (void);
-int sbig_dlopen (sbig_t sb, const char *path);
-void sbig_destroy (sbig_t sb);
+sbig_t *sbig_new (void);
+int sbig_dlopen (sbig_t *sb, const char *path);
+void sbig_destroy (sbig_t *sb);
 
-const char *sbig_get_error_string (sbig_t sb, unsigned short errorNo);
+const char *sbig_get_error_string (sbig_t *sb, unsigned short errorNo);
 #endif
 
 /*

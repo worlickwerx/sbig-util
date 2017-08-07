@@ -7,11 +7,11 @@
  *        REGULATION__ENABLE_AUTOFREEZE, _DISABLE_AUTOFREEZE.
  * ccdSetpoint is in degrees Celcius
  */
-int sbig_temp_set (sbig_t sb, TEMPERATURE_REGULATION reg, double ccdSetpoint);
+int sbig_temp_set (sbig_t *sb, TEMPERATURE_REGULATION reg, double ccdSetpoint);
 
 /* Query temperature status
  */
-int sbig_temp_get_info (sbig_t sb, QueryTemperatureStatusResults2 *info);
+int sbig_temp_get_info (sbig_t *sb, QueryTemperatureStatusResults2 *info);
 
 #endif
 
