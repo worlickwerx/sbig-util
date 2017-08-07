@@ -47,7 +47,7 @@
 #include "src/common/libutil/xzmalloc.h"
 #include "src/common/libutil/bcd.h"
 
-struct sbfits_struct {
+struct sbfits {
     fitsfile *fptr;
     int status;
     char error_string[31];       /* buffer for err str (<=30 chars per docs) */

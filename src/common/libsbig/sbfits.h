@@ -1,4 +1,4 @@
-typedef struct sbfits_struct sbfits_t;
+typedef struct sbfits sbfits_t;
 
 typedef enum {
     SBFITS_TYPE_LF,
