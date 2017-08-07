@@ -42,11 +42,11 @@
 #include "src/common/libutil/xzmalloc.h"
 #include "src/common/libini/ini.h"
 
-typedef struct {
+struct options {
     char *device;
     char *sbigudrv;
     char *xpa_nsinet;
-} opt_t;
+};
 
 static char *prog;
 char *dir_self (void);
@@ -97,10 +97,10 @@ int main (int argc, char *argv[])
     int ch;
     bool hopt = false;
     char *config_filename = NULL;
-    opt_t opt;
+    struct options *opt;
 
-    memset (&opt, 0, sizeof (opt));
-    opt.device = xstrdup ("USB1");
+    opt = xzmalloc (sizeof (*opt));
+    opt->device = xstrdup ("USB1");
 
     prog = basename (argv[0]);
 
@@ -122,7 +122,7 @@ int main (int argc, char *argv[])
     }
     if (setenv ("SBIG_CONFIG_FILE", config_filename, 1) < 0)
         err_exit ("setenv");
-    (void)ini_parse (config_filename, config_cb, &opt);
+    (void)ini_parse (config_filename, config_cb, opt);
 
     optind = 0;
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
@@ -130,23 +130,23 @@ int main (int argc, char *argv[])
             case 'c': /* --config FILE */
                 break;
             case 'X': /* --xpa-nsinet */
-                if (opt.xpa_nsinet)
-                    free (opt.xpa_nsinet);
-                opt.xpa_nsinet = xstrdup (optarg);
+                if (opt->xpa_nsinet)
+                    free (opt->xpa_nsinet);
+                opt->xpa_nsinet = xstrdup (optarg);
                 break;
             case 'x': /* --exec-dir */
                 if (setenv ("SBIG_EXEC_DIR", optarg, 1) < 0)
                     err_exit ("setenv");
                 break;
             case 'S': /* --sbig-udrv FILE */
-                if (opt.sbigudrv)
-                    free (opt.sbigudrv);
-                opt.sbigudrv = xstrdup (optarg);                
+                if (opt->sbigudrv)
+                    free (opt->sbigudrv);
+                opt->sbigudrv = xstrdup (optarg);                
                 break;
             case 'd': /* --device DEV */
-                if (opt.device)
-                    free (opt.device);
-                opt.device = xstrdup (optarg);
+                if (opt->device)
+                    free (opt->device);
+                opt->device = xstrdup (optarg);
                 break;
             case 'h': /* --help  */
                 hopt = true;
@@ -159,15 +159,15 @@ int main (int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
-    if (opt.sbigudrv) {
-        if (setenv ("SBIG_UDRV", opt.sbigudrv, 1) < 0)
+    if (opt->sbigudrv) {
+        if (setenv ("SBIG_UDRV", opt->sbigudrv, 1) < 0)
             err_exit ("setenv");
     }
-    if (opt.xpa_nsinet) {
-        if (setenv ("XPA_NSINET", opt.xpa_nsinet, 1) < 0)
+    if (opt->xpa_nsinet) {
+        if (setenv ("XPA_NSINET", opt->xpa_nsinet, 1) < 0)
             err_exit ("setenv");
     }
-    if (setenv ("SBIG_DEVICE", opt.device, 1) < 0)
+    if (setenv ("SBIG_DEVICE", opt->device, 1) < 0)
         err_exit ("setenv");
 
     if (!strcmp (dir_self (), X_BINDIR)) {
@@ -199,13 +199,14 @@ int main (int argc, char *argv[])
     fprintf (stderr, "`%s' is not an sbig command.  See 'sbig --help\n'",
              argv[0]);
 
+    free (opt);
     return 0;
 }
 
 int config_cb (void *user, const char *section, const char *name,
                const char *value)
 {
-    opt_t *opt = user;
+    struct options *opt = user;
 
     if (!strcmp (section, "system")) {
         if (!strcmp (name, "sbigudrv")) {
