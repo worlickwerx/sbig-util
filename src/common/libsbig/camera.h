@@ -6,7 +6,7 @@
 #include "handle.h"
 #include "sbigudrv.h"
 
-typedef struct sbig_ccd_struct sbig_ccd_t;
+typedef struct sbig_ccd sbig_ccd_t;
 
 /* Call before any camera commands.  Camera type (model) is returned.
  * Somewhat vestigual as far as I can tell.

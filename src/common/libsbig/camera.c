@@ -42,7 +42,7 @@
 #include "src/common/libutil/bcd.h"
 #include "src/common/libutil/xzmalloc.h"
 
-struct sbig_ccd_struct {
+struct sbig_ccd {
     sbig_t *sb;
     CCD_REQUEST ccd;
     ABG_STATE7 abg_mode;
