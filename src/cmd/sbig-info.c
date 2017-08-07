@@ -34,13 +34,14 @@
 #include <getopt.h>
 
 #include "src/common/libsbig/sbig.h"
+#include "src/common/libutil/xzmalloc.h"
 #include "src/common/libutil/log.h"
 #include "src/common/libutil/bcd.h"
 #include "src/common/libini/ini.h"
 
-typedef struct {
+struct options {
     double focal_length;
-} opt_t;
+};
 
 void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
                     int ac, char **av);
@@ -49,8 +50,8 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
                     int ac, char **av);
 void show_cooler_info (const char *sbig_udrv, const char *sbig_device,
                        int ac, char **av);
-void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
-               int ac, char **av);
+void show_fov (const char *sbig_udrv, const char *sbig_device,
+               const struct options *opt, int ac, char **av);
 int config_cb (void *user, const char *section, const char *name,
                const char *value);
 
@@ -79,11 +80,11 @@ int main (int argc, char *argv[])
     const char *config_filename = getenv ("SBIG_CONFIG_FILE");
     int ch;
     char *cmd;
-    opt_t opt;
+    struct options *opt;
 
     log_init ("sbig-info");
 
-    memset (&opt, 0, sizeof (opt));
+    opt = xzmalloc (sizeof (*opt));
 
     while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
         switch (ch) {
@@ -102,7 +103,7 @@ int main (int argc, char *argv[])
         msg_exit ("SBIG_DEVICE is not set");
     if (!config_filename)
         msg_exit ("SBIG_CONFIG_FILE is not set");
-    (void)ini_parse (config_filename, config_cb, &opt);
+    (void)ini_parse (config_filename, config_cb, opt);
 
     if (!strcmp (cmd, "ccd")) {
         show_ccd_info (sbig_udrv, sbig_device, argc - optind, argv + optind);
@@ -118,13 +119,14 @@ int main (int argc, char *argv[])
         usage ();
 
     log_fini ();
+    free (opt);
     return 0;
 }
 
 int config_cb (void *user, const char *section, const char *name,
                const char *value)
 {
-    opt_t *opt = user;
+    struct options *opt = user;
     if (!strcmp (section, "config")) {
         if (!strcmp (name, "focal_length"))
             opt->focal_length = strtod (value, NULL);
@@ -180,8 +182,8 @@ static int lookup_readoutmode_index (GetCCDInfoResults0 info,
     return -1;
 }
 
-void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
-               int ac, char **av)
+void show_fov (const char *sbig_udrv, const char *sbig_device,
+               const struct options *opt, int ac, char **av)
 {
     sbig_t *sb;
     double focal_length;                /* telescope FL in mm */
@@ -215,9 +217,9 @@ void show_fov (const char *sbig_udrv, const char *sbig_device, opt_t opt,
     if (ac == 3)
         focal_length = strtod (av[2], NULL);
     else {    
-        if (opt.focal_length == 0)
+        if (opt->focal_length == 0)
             msg_exit("Please set focal_length");
-        focal_length = opt.focal_length;
+        focal_length = opt->focal_length;
     }
     msg ("focal length: %.2fmm", focal_length);
 
