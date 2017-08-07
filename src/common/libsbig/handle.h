@@ -5,7 +5,7 @@
  * described in SBIGUdrv sec 3.1.6.
  */
 
-typedef struct sbig_struct sbig_t;
+typedef struct sbig sbig_t;
 
 sbig_t *sbig_new (void);
 int sbig_dlopen (sbig_t *sb, const char *path);
