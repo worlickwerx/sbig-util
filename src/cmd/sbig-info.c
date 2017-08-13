@@ -340,86 +340,100 @@ void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
     fini_driver (sb);
 }
 
-void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
-                    int ac, char **av)
+/* All cameras support GetCCDInfoResults0 (imaging or tracking)
+*/
+static void show_ccd_info0 (sbig_t *sb, sbig_ccd_t *ccd)
 {
+    GetCCDInfoResults0 info0;
     int i, e;
-    GetCCDInfoResults0 info;
-    GetCCDInfoResults4 info4;
     char version[16];
-    sbig_ccd_t *ccd;
-    sbig_t *sb;
-    CCD_REQUEST chip;
+    const char *camera_type;
+
+    e = sbig_ccd_get_info0 (ccd, &info0);
+    if (e != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_get_info: %s", sbig_get_error_string (sb, e));
+
+    bcd4str (info0.firmwareVersion, version, sizeof (version));
+    msg ("firmware-version: %s", version);
+  
+    camera_type = sbig_strcam (info0.cameraType);  
+    if (info0.cameraType == STX_CAMERA) { /* fixup STXL - reports as STX */
+        GetCCDInfoResults6 info6;
+        if (sbig_ccd_get_info6 (ccd, &info6) == CE_NO_ERROR) {
+            if (info6.cameraBits & 1)
+                camera_type = "STXL";
+        }
+    }
+    msg ("camera-type:      %s", camera_type);
+    msg ("name:             %s", info0.name);
+
+    msg ("readout-modes:");
+    for (i = 0; i < info0.readoutModes; i++) {
+        msg ("%2d: %4d x %-4d %2.2f e-/ADU %3.2f x %-3.2f microns",
+             info0.readoutInfo[i].mode,
+             info0.readoutInfo[i].width,
+             info0.readoutInfo[i].height,
+             bcd2_2 (info0.readoutInfo[i].gain),
+             bcd6_2 (info0.readoutInfo[i].pixelWidth),
+             bcd6_2 (info0.readoutInfo[i].pixelHeight));
+    }
+}
+
+/* All cameras but ST5C and ST237 support GetCCDInfoResults2,
+ * imaging chip only.
+ */
+static void show_ccd_info2 (sbig_t *sb, sbig_ccd_t *ccd)
+{
+    GetCCDInfoResults2 info2;
+    int e;
+
+    e = sbig_ccd_get_info2 (ccd, &info2);
+    if (e != CE_NO_ERROR) {
+        if (e == CE_BAD_PARAMETER)
+            return;
+        msg_exit ("sbig_ccd_get_info2: %s", sbig_get_error_string (sb, e));
+    }
+    msg ("bad-columns:       %d", info2.badColumns);
+    msg ("ABG:               %s", info2.imagingABG == ABG_PRESENT
+                                  ? "yes" : "no");
+    msg ("serial-number:     %s", info2.serialNumber);
+}
+
+/* Only ST5C and ST237 cameras support GetCCDInfoResults3.
+ * If tracking chip was selected, that would have failed earlier.
+ */
+static void show_ccd_info3 (sbig_t *sb, sbig_ccd_t *ccd)
+{
+    GetCCDInfoResults3 info3;
+    int e;
+
+    e = sbig_ccd_get_info3 (ccd, &info3);
+    if (e != CE_NO_ERROR) {
+        if (e == CE_BAD_PARAMETER)
+            return;
+        msg_exit ("sbig_ccd_get_info3: %s", sbig_get_error_string (sb, e));
+    }
+    msg ("A/D-bits:          %s", info3.adSize == AD_UNKNOWN ? "unknown" :
+                                  info3.adSize == AD_12_BITS ? "12" :
+                                  info3.adSize == AD_16_BITS ? "16" :
+                                  "invalid");
+    msg ("filter-type:       %s", info3.filterType == FW_UNKNOWN ? "unknown" :
+                                  info3.filterType == FW_EXTERNAL ? "external" :
+                                  info3.filterType == FW_VANE ? "2 position" :
+                                  info3.filterType == FW_FILTER_WHEEL
+                                                  ? "5 position" : "invalid");
+}
+
+/* All cameras support GetCCDInfoResults4 (imaging or tracking)
+ */
+static void show_ccd_info4 (sbig_t *sb, sbig_ccd_t *ccd)
+{
+    GetCCDInfoResults4 info4;
+    int e;
     ushort cap;
 
-    if (ac != 1)
-        usage ();
-    if (!strcmp (av[0], "tracking"))
-        chip = CCD_TRACKING;
-    else if (!strcmp (av[0], "imaging"))
-        chip = CCD_IMAGING;
-    else
-        usage ();
-
-    sb = init_driver (sbig_udrv);
-    init_device (sb, sbig_device);
-
-    if ((e = sbig_ccd_create (sb, chip, &ccd)))
-        msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
-
-    /* All cameras support GetCCDInfoResults0 (imaging or tracking)
-     */
-    if ((e = sbig_ccd_get_info0 (ccd, &info)) != 0)
-        msg_exit ("sbig_ccd_get_info: %s", sbig_get_error_string (sb, e));
-    bcd4str (info.firmwareVersion, version, sizeof (version));
-    msg ("firmware-version: %s", version);
-    msg ("camera-type:      %s", sbig_strcam (info.cameraType));
-    msg ("name:             %s", info.name);
-    msg ("readout-modes:");
-    for (i = 0; i < info.readoutModes; i++) {
-        msg ("%2d: %4d x %-4d %2.2f e-/ADU %3.2f x %-3.2f microns",
-             info.readoutInfo[i].mode,
-             info.readoutInfo[i].width,
-             info.readoutInfo[i].height,
-             bcd2_2 (info.readoutInfo[i].gain),
-             bcd6_2 (info.readoutInfo[i].pixelWidth),
-             bcd6_2 (info.readoutInfo[i].pixelHeight));
-    }
-
-    /* All cameras but ST5C and ST237 support GetCCDInfoResults2 (imaging)
-     */
-    if (chip == CCD_IMAGING && info.cameraType != ST5C_CAMERA
-                            && info.cameraType == ST237_CAMERA) {
-        GetCCDInfoResults2 xinfo;
-        if ((e = sbig_ccd_get_info2 (ccd, &xinfo)))
-            msg_exit ("sbig_ccd_get_info2: %s", sbig_get_error_string (sb, e));
-        msg ("bad-columns:       %d", xinfo.badColumns);
-        msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT
-                                      ? "yes" : "no");
-        msg ("serial-number:     %s", xinfo.serialNumber);
-    }
-
-    /* Only ST5C and ST237 support GetCCDInfoResults3 (imaging)
-     */
-    if (chip == CCD_IMAGING && (info.cameraType == ST5C_CAMERA
-                                || info.cameraType == ST237_CAMERA)) {
-        GetCCDInfoResults3 xinfo;
-        if ((e = sbig_ccd_get_info3 (ccd, &xinfo)))
-            msg_exit ("sbig_ccd_get_info3: %s", sbig_get_error_string (sb, e));
-        msg ("A/D-bits:          %s",
-               xinfo.adSize == AD_UNKNOWN ? "unknown" :
-               xinfo.adSize == AD_12_BITS ? "12" :
-               xinfo.adSize == AD_16_BITS ? "16" : "invalid");
-        msg ("filter-type:       %s",
-               xinfo.filterType == FW_UNKNOWN ? "unknown" :
-               xinfo.filterType == FW_EXTERNAL ? "external" :
-               xinfo.filterType == FW_VANE ? "2 position" :
-               xinfo.filterType == FW_FILTER_WHEEL ? "5 position" : "invalid");
-    }
-
-    /* All cameras support GetCCDInfoResults4 (imaging or tracking)
-     */
-    if ((e = sbig_ccd_get_info4 (ccd, &info4)) != 0)
+    e = sbig_ccd_get_info4 (ccd, &info4);
+    if (e != CE_NO_ERROR)
         msg_exit ("sbig_get_ccd_xinfo4: %s", sbig_get_error_string (sb, e));
     cap = info4.capabilitiesBits;
     msg ("ccd-type:          %s", (cap & CB_CCD_TYPE_FRAME_TRANSFER)
@@ -434,20 +448,54 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
                                   ? "yes" : "no");
     msg ("use-startexp2:     %s", (cap & CB_REQUIRES_STARTEXP2_YES)
                                   ? "yes" : "no");
+}
 
-    /* All cameras support info6 (imaging)
-     */
-    if (chip == CCD_IMAGING) {
-        GetCCDInfoResults6 info6;
-        if ((e = sbig_ccd_get_info6 (ccd, &info6)))
-            msg_exit ("sbig_ccd_get_info6: %s", sbig_get_error_string (sb, e));
-        msg ("stx-type:          %s",
-                      info.cameraType != STX_CAMERA ? "n/a" :
-                      !(info6.cameraBits & 1) ? "STX" : "STXL");
-        msg ("color-type:        %s",
-                      !(info6.ccdBits & 1) ? "mono" :
-                      !(info6.ccdBits & 2) ? "bayer" : "truesense");
+/* All cameras support GetCCDInfoREsults6, imaging only.
+*/
+static void show_ccd_info6 (sbig_t *sb, sbig_ccd_t *ccd)
+{
+    GetCCDInfoResults6 info6;
+    int e;
+    
+    e = sbig_ccd_get_info6 (ccd, &info6);
+    if (e != CE_NO_ERROR) {
+        if (e == CE_BAD_PARAMETER)
+            return;
+        msg_exit ("sbig_ccd_get_info6: %s", sbig_get_error_string (sb, e));
     }
+    msg ("color-type:        %s", !(info6.ccdBits & 1) ? "mono" :
+                                  !(info6.ccdBits & 2) ? "bayer" : "truesense");
+}
+
+void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
+                    int ac, char **av)
+{
+    int e;
+    CCD_REQUEST chip;
+    sbig_ccd_t *ccd;
+    sbig_t *sb;
+
+    if (ac != 1)
+        usage ();
+    if (!strcmp (av[0], "tracking"))
+        chip = CCD_TRACKING;
+    else if (!strcmp (av[0], "imaging"))
+        chip = CCD_IMAGING;
+    else
+        usage ();
+
+    sb = init_driver (sbig_udrv);
+    init_device (sb, sbig_device);
+
+    e = sbig_ccd_create (sb, chip, &ccd);
+    if (e != CE_NO_ERROR)
+        msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
+
+    show_ccd_info0 (sb, ccd);
+    show_ccd_info2 (sb, ccd);
+    show_ccd_info3 (sb, ccd);
+    show_ccd_info4 (sb, ccd);
+    show_ccd_info6 (sb, ccd);
 
     sbig_ccd_destroy (ccd);
     fini_device (sb);
