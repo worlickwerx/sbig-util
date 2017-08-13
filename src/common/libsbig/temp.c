@@ -41,7 +41,7 @@ int sbig_temp_set (sbig_t *sb, TEMPERATURE_REGULATION reg, double ccdSetpoint)
 
 int sbig_temp_get_info (sbig_t *sb, QueryTemperatureStatusResults2 *info)
 {
-    QueryTemperatureStatusParams in = { .request = TEMP_STATUS_ADVANCED};
+    QueryTemperatureStatusParams in = { .request = TEMP_STATUS_ADVANCED2};
     return sb->fun (CC_QUERY_TEMPERATURE_STATUS, &in, info); 
 }
 
