@@ -120,7 +120,7 @@ void show_eth (sbig_t *sb)
         msg_exit ("sbig_query_ethernet: %s", sbig_get_error_string (sb, e));
     for (i = 0; i < devices.camerasFound; i++) {
         if (devices.ethernetInfo[i].cameraFound)
-            msg ("%lu.%lu.%lu.%lu: %s '%s' %s\n",
+            printf ("%lu.%lu.%lu.%lu: %s '%s' %s\n",
                  (devices.ethernetInfo[i].ipAddress >> 24) & 0xff,
                  (devices.ethernetInfo[i].ipAddress >> 16) & 0xff,
                  (devices.ethernetInfo[i].ipAddress >> 8) & 0xff,
@@ -141,7 +141,7 @@ void show_usb (sbig_t *sb)
         msg_exit ("sbig_query_usb: %s", sbig_get_error_string (sb, e));
     for (i = 0; i < devices.camerasFound; i++) {
         if (devices.usbInfo[i].cameraFound)
-            msg ("USB%d: %s '%s' %s\n", i + 1,
+            printf ("USB%d: %s '%s' %s\n", i + 1,
                  sbig_strcam (devices.usbInfo[i].cameraType),
                  devices.usbInfo[i].name,
                  devices.usbInfo[i].serialNumber);
@@ -164,7 +164,7 @@ void show_device_info (sbig_t *sb, const char *device)
     e = sbig_ccd_get_info2 (ccd, &info2);
     if (e == CE_NO_ERROR)
         serial = info2.serialNumber;
-    msg ("%s: %s '%s' %s", device,
+    printf ("%s: %s '%s' %s\n", device,
         sbig_strcam (info0.cameraType),
         info0.name,
         serial);
