@@ -435,6 +435,20 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
     msg ("use-startexp2:     %s", (cap & CB_REQUIRES_STARTEXP2_YES)
                                   ? "yes" : "no");
 
+    /* All cameras support info6 (imaging)
+     */
+    if (chip == CCD_IMAGING) {
+        GetCCDInfoResults6 info6;
+        if ((e = sbig_ccd_get_info6 (ccd, &info6)))
+            msg_exit ("sbig_ccd_get_info6: %s", sbig_get_error_string (sb, e));
+        msg ("stx-type:          %s",
+                      info.cameraType != STX_CAMERA ? "n/a" :
+                      !(info6.cameraBits & 1) ? "STX" : "STXL");
+        msg ("color-type:        %s",
+                      !(info6.ccdBits & 1) ? "mono" :
+                      !(info6.ccdBits & 2) ? "bayer" : "truesense");
+    }
+
     sbig_ccd_destroy (ccd);
     fini_device (sb);
     fini_driver (sb);
