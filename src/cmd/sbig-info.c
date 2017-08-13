@@ -206,17 +206,17 @@ void show_fov (const char *sbig_udrv, const char *sbig_device,
     else
         usage ();
     if (!strcmp (av[1], "lo"))
-        readout_mode = RM_3X3; 
+        readout_mode = RM_3X3;
     else if (!strcmp (av[1], "med"))
-        readout_mode = RM_2X2; 
+        readout_mode = RM_2X2;
     else if (!strcmp (av[1], "hi"))
-        readout_mode = RM_1X1; 
+        readout_mode = RM_1X1;
     else
         usage ();
 
     if (ac == 3)
         focal_length = strtod (av[2], NULL);
-    else {    
+    else {
         if (opt->focal_length == 0)
             msg_exit("Please set focal_length");
         focal_length = opt->focal_length;
@@ -283,7 +283,7 @@ void show_cooler_info (const char *sbig_udrv, const char *sbig_device,
     msg ("imaging pwr:          %.0f%%", info.imagingCCDPower);
     msg ("tracking pwr:         %.0f%%", info.trackingCCDPower);
     //msg ("ext-track pwr:        %.0f percent", info.externalTrackingCCDPower);
-    
+
     msg ("fan:                  %s", info.fanEnabled == FS_OFF ? "off"
                                    : info.fanEnabled == FS_ON ? "manual"
                                    : "auto");
@@ -333,7 +333,7 @@ void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
 
     if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos)) != 0)
         msg_exit ("sbig_cfw_get_info: %s", sbig_get_error_string (sb, e));
-  
+
     msg ("model:            %s", sbig_strcfw (model));
     bcd4str (fwrev, version, sizeof (version));
     msg ("firmware-version: %s", version);
@@ -358,8 +358,8 @@ static void show_ccd_info0 (sbig_t *sb, sbig_ccd_t *ccd)
 
     bcd4str (info0.firmwareVersion, version, sizeof (version));
     msg ("firmware-version: %s", version);
-  
-    camera_type = sbig_strcam (info0.cameraType);  
+
+    camera_type = sbig_strcam (info0.cameraType);
     if (info0.cameraType == STX_CAMERA) { /* fixup STXL - reports as STX */
         GetCCDInfoResults6 info6;
         if (sbig_ccd_get_info6 (ccd, &info6) == CE_NO_ERROR) {
@@ -459,7 +459,7 @@ static void show_ccd_info6 (sbig_t *sb, sbig_ccd_t *ccd)
 {
     GetCCDInfoResults6 info6;
     int e;
-    
+
     e = sbig_ccd_get_info6 (ccd, &info6);
     if (e != CE_NO_ERROR) {
         if (e == CE_BAD_PARAMETER)
