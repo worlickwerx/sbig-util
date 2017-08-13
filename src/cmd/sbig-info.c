@@ -345,10 +345,12 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
 {
     int i, e;
     GetCCDInfoResults0 info;
+    GetCCDInfoResults4 info4;
     char version[16];
     sbig_ccd_t *ccd;
     sbig_t *sb;
     CCD_REQUEST chip;
+    ushort cap;
 
     if (ac != 1)
         usage ();
@@ -364,14 +366,11 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
 
     if ((e = sbig_ccd_create (sb, chip, &ccd)))
         msg_exit ("sbig_ccd_create: %s", sbig_get_error_string (sb, e));
+
+    /* All cameras support GetCCDInfoResults0 (imaging or tracking)
+     */
     if ((e = sbig_ccd_get_info0 (ccd, &info)) != 0)
         msg_exit ("sbig_ccd_get_info: %s", sbig_get_error_string (sb, e));
-
-    /* FIXME: ST5C/237/237A (PixCel 255/237) only support req 0,3,4,5
-     * We are making requests 0,1,2,4,5 for ST-7/8/etc
-     * Req 6 is STX/STXL specific - but supported by all CCD's.
-     */
-
     bcd4str (info.firmwareVersion, version, sizeof (version));
     msg ("firmware-version: %s", version);
     msg ("camera-type:      %s", sbig_strcam (info.cameraType));
@@ -386,43 +385,56 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
              bcd6_2 (info.readoutInfo[i].pixelWidth),
              bcd6_2 (info.readoutInfo[i].pixelHeight));
     }
-    if (chip == CCD_IMAGING) {
-        GetCCDInfoResults2 xinfo;
-        e = sbig_ccd_get_info2 (ccd, &xinfo);
-        if (e == CE_BAD_PARAMETER) {
-            msg ("bad columns:       unknown");
-            msg ("ABG:               unknown");
-            msg ("serial-number:     unknown");
-        }
-        else if (e == 0) {
-            msg ("bad columns:       %d", xinfo.badColumns);
-            msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT
-							? "yes" : "no");
-            msg ("serial-number:     %s", xinfo.serialNumber);
-        }
-        else
-            msg_exit ("sbig_ccd_get_xinfo: %s", sbig_get_error_string (sb, e));
 
+    /* All cameras but ST5C and ST237 support GetCCDInfoResults2 (imaging)
+     */
+    if (chip == CCD_IMAGING && info.cameraType != ST5C_CAMERA
+                            && info.cameraType == ST237_CAMERA) {
+        GetCCDInfoResults2 xinfo;
+        if ((e = sbig_ccd_get_info2 (ccd, &xinfo)))
+            msg_exit ("sbig_ccd_get_info2: %s", sbig_get_error_string (sb, e));
+        msg ("bad-columns:       %d", xinfo.badColumns);
+        msg ("ABG:               %s", xinfo.imagingABG == ABG_PRESENT
+                                      ? "yes" : "no");
+        msg ("serial-number:     %s", xinfo.serialNumber);
     }
-    if (chip == CCD_IMAGING) {
-        GetCCDInfoResults4 xinfo;
-        ushort cap;
-        if ((e = sbig_ccd_get_info4 (ccd, &xinfo)) != 0)
-            msg_exit ("sbig_get_ccd_xinfo2: %s", sbig_get_error_string (sb, e));
-        cap = xinfo.capabilitiesBits;
-        msg ("ccd-type:          %s", (cap & CB_CCD_TYPE_FRAME_TRANSFER)
-                                      ? "frame_transfer" : "full frame");
-        msg ("electronic-shutter:%s", !(cap & CB_CCD_ESHUTTER_YES) ? "no"
-             : "Interline Imaging CCD with electronic shutter and ms exposure");
-        msg ("remote-guide-port: %s", (cap & CB_CCD_EXT_TRACKER_YES)
-                                      ? "yes" : "no");
-        msg ("biorad-tdi-mode:   %s", (cap & CB_CCD_BTDI_YES) ? "yes" : "no");
-        msg ("AO8-detected:      %s", (cap & CB_AO8_YES) ? "yes" : "no");
-        msg ("frame-buffer:      %s", (cap & CB_FRAME_BUFFER_YES)
-                                      ? "yes" : "no");
-        msg ("use-startexp2:     %s", (cap & CB_REQUIRES_STARTEXP2_YES)
-                                      ? "yes" : "no");
+
+    /* Only ST5C and ST237 support GetCCDInfoResults3 (imaging)
+     */
+    if (chip == CCD_IMAGING && (info.cameraType == ST5C_CAMERA
+                                || info.cameraType == ST237_CAMERA)) {
+        GetCCDInfoResults3 xinfo;
+        if ((e = sbig_ccd_get_info3 (ccd, &xinfo)))
+            msg_exit ("sbig_ccd_get_info3: %s", sbig_get_error_string (sb, e));
+        msg ("A/D-bits:          %s",
+               xinfo.adSize == AD_UNKNOWN ? "unknown" :
+               xinfo.adSize == AD_12_BITS ? "12" :
+               xinfo.adSize == AD_16_BITS ? "16" : "invalid");
+        msg ("filter-type:       %s",
+               xinfo.filterType == FW_UNKNOWN ? "unknown" :
+               xinfo.filterType == FW_EXTERNAL ? "external" :
+               xinfo.filterType == FW_VANE ? "2 position" :
+               xinfo.filterType == FW_FILTER_WHEEL ? "5 position" : "invalid");
     }
+
+    /* All cameras support GetCCDInfoResults4 (imaging or tracking)
+     */
+    if ((e = sbig_ccd_get_info4 (ccd, &info4)) != 0)
+        msg_exit ("sbig_get_ccd_xinfo4: %s", sbig_get_error_string (sb, e));
+    cap = info4.capabilitiesBits;
+    msg ("ccd-type:          %s", (cap & CB_CCD_TYPE_FRAME_TRANSFER)
+                                  ? "frame_transfer" : "full frame");
+    msg ("electronic-shutter:%s", !(cap & CB_CCD_ESHUTTER_YES) ? "no"
+         : "Interline Imaging CCD with electronic shutter and ms exposure");
+    msg ("remote-guide-port: %s", (cap & CB_CCD_EXT_TRACKER_YES)
+                                  ? "yes" : "no");
+    msg ("biorad-tdi-mode:   %s", (cap & CB_CCD_BTDI_YES) ? "yes" : "no");
+    msg ("AO8-detected:      %s", (cap & CB_AO8_YES) ? "yes" : "no");
+    msg ("frame-buffer:      %s", (cap & CB_FRAME_BUFFER_YES)
+                                  ? "yes" : "no");
+    msg ("use-startexp2:     %s", (cap & CB_REQUIRES_STARTEXP2_YES)
+                                  ? "yes" : "no");
+
     sbig_ccd_destroy (ccd);
     fini_device (sb);
     fini_driver (sb);
