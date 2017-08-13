@@ -171,6 +171,17 @@ int sbig_ccd_get_info4 (sbig_ccd_t *ccd, GetCCDInfoResults4 *info)
     return ccd->sb->fun (CC_GET_CCD_INFO, &in, info);
 }
 
+int sbig_ccd_get_info6 (sbig_ccd_t *ccd, GetCCDInfoResults6 *info)
+{
+    GetCCDInfoParams in;
+
+    if (ccd->ccd == CCD_IMAGING)
+        in.request = CCD_INFO_EXTENDED3;
+    else
+        return CE_BAD_PARAMETER;
+    return ccd->sb->fun (CC_GET_CCD_INFO, &in, info);
+}
+
 int sbig_ccd_set_abg_mode (sbig_ccd_t *ccd, ABG_STATE7 mode)
 {
     ccd->abg_mode = mode;

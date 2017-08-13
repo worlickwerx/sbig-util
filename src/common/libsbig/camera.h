@@ -25,13 +25,18 @@ int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t **ccdp);
 void sbig_ccd_destroy (sbig_ccd_t *ccd);
 
 /* Query ccd info
- * info0: all ccds, info2: imaging only, info4: imaging/tracking
+ * info0: all ccds
+ * info2: imaging only (non-5C,237)
+ * info3: imaging only (5C,237)
+ * info4: imaging/tracking
+ * info6: tracking only
  * Ref SBIGUDrv sec 3.5.2
  */
 int sbig_ccd_get_info0 (sbig_ccd_t *ccd, GetCCDInfoResults0 *info);
 int sbig_ccd_get_info2 (sbig_ccd_t *ccd, GetCCDInfoResults2 *info);
 int sbig_ccd_get_info3 (sbig_ccd_t *ccd, GetCCDInfoResults3 *info);
 int sbig_ccd_get_info4 (sbig_ccd_t *ccd, GetCCDInfoResults4 *info);
+int sbig_ccd_get_info6 (sbig_ccd_t *ccd, GetCCDInfoResults6 *info);
 
 /* Get/set ccd anti-blooming gate state (used on next exposure/readout)
  *  ABG_LOW7, ABG_CLK_LOW7, ABG_CLK_MED7, ABG_CLK_HI7
