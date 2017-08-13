@@ -323,6 +323,7 @@ void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
     ulong fwrev, numpos;
     CFW_MODEL_SELECT model;
     sbig_t *sb;
+    char version[16];
 
     if (ac != 0)
         msg_exit ("cfw takes no arguments");
@@ -332,8 +333,10 @@ void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
 
     if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos)) != 0)
         msg_exit ("sbig_cfw_get_info: %s", sbig_get_error_string (sb, e));
+  
     msg ("model:            %s", sbig_strcfw (model));
-    msg ("firmware-version: %lu", fwrev);
+    bcd4str (fwrev, version, sizeof (version));
+    msg ("firmware-version: %s", version);
     msg ("num-positions:    %lu", numpos);
 
     fini_device (sb);
