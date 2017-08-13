@@ -89,6 +89,16 @@ int sbig_query_cmd_status (sbig_t *sb, ushort cmd, ushort *outp)
     return e;
 }
 
+int sbig_query_usb (sbig_t *sb, QueryUSBResults *results)
+{
+    return sb->fun (CC_QUERY_USB, NULL, results);
+}
+
+int sbig_query_ethernet (sbig_t *sb, QueryEthernetResults *results)
+{
+    return sb->fun (CC_QUERY_ETHERNET, NULL, results);
+}
+
 typedef struct {
     SBIG_DEVICE_TYPE type;
     const char *desc;

@@ -41,6 +41,16 @@ int sbig_query_cmd_status (sbig_t *sb, ushort cmd, ushort *outp);
 const char *sbig_strdev (SBIG_DEVICE_TYPE type);
 SBIG_DEVICE_TYPE sbig_devstr (const char *str);
 
+/* Query USB
+ * Ref SBIGUdrv sec 3.5.16
+ */
+int sbig_query_usb (sbig_t *sb, QueryUSBResults *results);
+
+/* Query ethernet
+ * Ref SBIGUdrv sec 3.5.17
+ */
+int sbig_query_ethernet (sbig_t *sb, QueryEthernetResults *results);
+
 #endif
 
 /*
