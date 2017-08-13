@@ -30,6 +30,7 @@ void sbig_ccd_destroy (sbig_ccd_t *ccd);
  */
 int sbig_ccd_get_info0 (sbig_ccd_t *ccd, GetCCDInfoResults0 *info);
 int sbig_ccd_get_info2 (sbig_ccd_t *ccd, GetCCDInfoResults2 *info);
+int sbig_ccd_get_info3 (sbig_ccd_t *ccd, GetCCDInfoResults3 *info);
 int sbig_ccd_get_info4 (sbig_ccd_t *ccd, GetCCDInfoResults4 *info);
 
 /* Get/set ccd anti-blooming gate state (used on next exposure/readout)
