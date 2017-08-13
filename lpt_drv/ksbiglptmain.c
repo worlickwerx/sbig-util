@@ -207,12 +207,25 @@ static void sbig_cleanup_module(void)
 	class_destroy(sbig_class);
 	unregister_chrdev_region(sbig_dev, SBIG_NO);
 }
-//========================================================================
 
 module_init(sbig_init_module);
 module_exit(sbig_cleanup_module);
 
-// N.B. no license was declared with orig. SBIG source code.
-// This *file* is declared GPL by its author (Jim Garlick).
-// TODO: see if we can get a statement from copyright holders of the other bits.
+// device_create() and device_destroy() require this
 MODULE_LICENSE("GPL");
+
+// N.B.  This *file* is a new work, and is declared GPL by its author,
+// who is not affiliated with the copyright holders of the original SBIG
+// parallel port Linux driver.
+//
+// Some of the SBIG files linked with it were brought over from Windows
+// and do not contain a license declaration, so we assume "proprietary",
+// noting that they were publicly distributed with SBIG's original linux
+// driver for many years.
+//
+// Is this a problem?  This driver would seem to be analogous to the
+// AFS example cited in an email discussing "gray areas" by Linus Torvalds:
+//   https://lkml.org/lkml/2003/12/3/228
+//
+// Hopefully declaring the module license to be GPL doesn't offend anyone.
+// I'm not sure how one can do otherwise and get anything to work!
