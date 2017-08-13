@@ -54,7 +54,7 @@ struct sbfits {
     time_t t_create;             /* time of file creation */
     time_t t_obs;                /* time of observation */
     char filename[PATH_MAX];     /* full path of output file */
-    const char *annotation;      /* (opt) an extra note from teh observer */
+    const char *annotation;      /* (opt) an extra note from the observer */
     double exposure_time;        /* length of exposure in seconds */
     ushort num_exposures;        /* number of exposures co-added */
     double temperature;          /* temperature of CCD at start of exp */
