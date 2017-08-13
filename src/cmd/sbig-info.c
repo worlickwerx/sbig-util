@@ -221,7 +221,7 @@ void show_fov (const char *sbig_udrv, const char *sbig_device,
             msg_exit("Please set focal_length");
         focal_length = opt->focal_length;
     }
-    msg ("focal length: %.2fmm", focal_length);
+    printf ("focal length: %.2fmm\n", focal_length);
 
     sb = init_driver (sbig_udrv);
     init_device (sb, sbig_device);
@@ -237,21 +237,21 @@ void show_fov (const char *sbig_udrv, const char *sbig_device,
 
     pixel_height = bcd6_2 (info.readoutInfo[rm_index].pixelHeight);
     pixel_width = bcd6_2 (info.readoutInfo[rm_index].pixelWidth);
-    msg ("pixel size: %.1fum H x %.1fum W", pixel_height, pixel_width);
+    printf ("pixel size: %.1fum H x %.1fum W\n", pixel_height, pixel_width);
 
     sensor_height = pixel_height * 1E-3 * info.readoutInfo[rm_index].height;
     sensor_width = pixel_width * 1E-3 * info.readoutInfo[rm_index].width;
-    msg ("sensor size: %.2fmm H x %.2fmm W", sensor_height, sensor_width);
+    printf ("sensor size: %.2fmm H x %.2fmm W\n", sensor_height, sensor_width);
 
     fov_height = (sensor_height * 3478.0 / focal_length);
     fov_width = (sensor_width * 3478.0 / focal_length);
-    msg ("field of view: %.2f'H x %.2f'W", fov_height, fov_width);
+    printf ("field of view: %.2f'H x %.2f'W\n", fov_height, fov_width);
     if (fov_height > 60)
-        msg ("  or: %.2f x %.2f degrees", fov_height/60, fov_width/60);
+        printf ("  or: %.2f x %.2f degrees\n", fov_height/60, fov_width/60);
 
     vres = 206.265 * pixel_height / focal_length;
     hres = 206.265 * pixel_width / focal_length;
-    msg ("resolution: %.2f''H x %.2f''W per pixel", vres, hres);
+    printf ("resolution: %.2f''H x %.2f''W per pixel\n", vres, hres);
 
     sbig_ccd_destroy (ccd);
     fini_device (sb);
@@ -270,25 +270,25 @@ void show_cooler_info (const char *sbig_udrv, const char *sbig_device,
 
     if ((e = sbig_temp_get_info (sb, &info)) != CE_NO_ERROR)
         msg_exit ("sbig_temp_get_info: %s", sbig_get_error_string (sb, e));
-    msg ("cooling:              %s", info.coolingEnabled ? "enabled"
+    printf ("cooling:              %s\n", info.coolingEnabled ? "enabled"
                                                          : "disabled");
-    msg ("imaging ccd setpoint: %.2fC", info.ccdSetpoint);
-    msg ("imaging ccd:          %.2fC", info.imagingCCDTemperature);
-    msg ("tracking setpoint:    %.2fC", info.trackingCCDSetpoint);
-    msg ("tracking ccd:         %.2fC", info.trackingCCDTemperature);
-    //msg ("ext-track ccd:     %.2fC", info.externalTrackingCCDTemperature);
-    msg ("ambient:              %.2fC", info.ambientTemperature);
-    msg ("heatsink:             %.2fC", info.heatsinkTemperature);
+    printf ("imaging ccd setpoint: %.2fC\n", info.ccdSetpoint);
+    printf ("imaging ccd:          %.2fC\n", info.imagingCCDTemperature);
+    printf ("tracking setpoint:    %.2fC\n", info.trackingCCDSetpoint);
+    printf ("tracking ccd:         %.2fC\n", info.trackingCCDTemperature);
+    //printf ("ext-track ccd:     %.2fC\n", info.externalTrackingCCDTemperature);
+    printf ("ambient:              %.2fC\n", info.ambientTemperature);
+    printf ("heatsink:             %.2fC\n", info.heatsinkTemperature);
 
-    msg ("imaging pwr:          %.0f%%", info.imagingCCDPower);
-    msg ("tracking pwr:         %.0f%%", info.trackingCCDPower);
-    //msg ("ext-track pwr:        %.0f percent", info.externalTrackingCCDPower);
+    printf ("imaging pwr:          %.0f%%\n", info.imagingCCDPower);
+    printf ("tracking pwr:         %.0f%%\n", info.trackingCCDPower);
+    //printf ("ext-track pwr:        %.0f percent\n", info.externalTrackingCCDPower);
 
-    msg ("fan:                  %s", info.fanEnabled == FS_OFF ? "off"
+    printf ("fan:                  %s\n", info.fanEnabled == FS_OFF ? "off"
                                    : info.fanEnabled == FS_ON ? "manual"
                                    : "auto");
-    msg ("fan pwr:              %.0f%%", info.fanPower);
-    msg ("fan speed:            %.0fRPM", info.fanSpeed);
+    printf ("fan pwr:              %.0f%%\n", info.fanPower);
+    printf ("fan speed:            %.0fRPM\n", info.fanSpeed);
 
     fini_device (sb);
     fini_driver (sb);
@@ -309,9 +309,9 @@ void show_driver_info (const char *sbig_udrv, int ac, char **av)
     if ((e = sbig_get_driver_info (sb, DRIVER_STD, &info)) != 0)
         msg_exit ("sbig_get_driver_info: %s", sbig_get_error_string (sb, e));
     bcd4str (info.version, version, sizeof (version));
-    msg ("version: %s", version);
-    msg ("name:    %s", info.name);
-    msg ("maxreq:  %d", info.maxRequest);
+    printf ("version: %s\n", version);
+    printf ("name:    %s\n", info.name);
+    printf ("maxreq:  %d\n", info.maxRequest);
 
     fini_driver (sb);
 }
@@ -334,10 +334,10 @@ void show_cfw_info (const char *sbig_udrv, const char *sbig_device,
     if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos)) != 0)
         msg_exit ("sbig_cfw_get_info: %s", sbig_get_error_string (sb, e));
 
-    msg ("model:            %s", sbig_strcfw (model));
+    printf ("model:            %s\n", sbig_strcfw (model));
     bcd4str (fwrev, version, sizeof (version));
-    msg ("firmware-version: %s", version);
-    msg ("num-positions:    %lu", numpos);
+    printf ("firmware-version: %s\n", version);
+    printf ("num-positions:    %lu\n", numpos);
 
     fini_device (sb);
     fini_driver (sb);
@@ -357,7 +357,7 @@ static void show_ccd_info0 (sbig_t *sb, sbig_ccd_t *ccd)
         msg_exit ("sbig_ccd_get_info: %s", sbig_get_error_string (sb, e));
 
     bcd4str (info0.firmwareVersion, version, sizeof (version));
-    msg ("firmware-version: %s", version);
+    printf ("firmware-version:   %s\n", version);
 
     camera_type = sbig_strcam (info0.cameraType);
     if (info0.cameraType == STX_CAMERA) { /* fixup STXL - reports as STX */
@@ -367,13 +367,14 @@ static void show_ccd_info0 (sbig_t *sb, sbig_ccd_t *ccd)
                 camera_type = "STXL";
         }
     }
-    msg ("camera-type:      %s", camera_type);
-    msg ("name:             %s", info0.name);
+    printf ("camera-type:        %s\n", camera_type);
+    printf ("name:               %s\n", info0.name);
 
-    msg ("readout-modes:");
     for (i = 0; i < info0.readoutModes; i++) {
-        msg ("%2d: %4d x %-4d %2.2f e-/ADU %3.2f x %-3.2f microns",
-             info0.readoutInfo[i].mode,
+        char pfx[16];
+        snprintf (pfx, sizeof (pfx), "mode-%d:", info0.readoutInfo[i].mode);
+        printf ("%-18s %4d x %-4d %2.2f e-/ADU %3.2f x %-3.2f microns\n",
+             pfx,
              info0.readoutInfo[i].width,
              info0.readoutInfo[i].height,
              bcd2_2 (info0.readoutInfo[i].gain),
@@ -394,12 +395,12 @@ static void show_ccd_info2 (sbig_t *sb, sbig_ccd_t *ccd)
     if (e != CE_NO_ERROR) {
         if (e == CE_BAD_PARAMETER)
             return;
-        msg_exit ("sbig_ccd_get_info2: %s", sbig_get_error_string (sb, e));
+        msg_exit ("sbig_ccd_get_info2:  %s", sbig_get_error_string (sb, e));
     }
-    msg ("bad-columns:       %d", info2.badColumns);
-    msg ("ABG:               %s", info2.imagingABG == ABG_PRESENT
+    printf ("bad-columns:        %d\n", info2.badColumns);
+    printf ("ABG:                %s\n", info2.imagingABG == ABG_PRESENT
                                   ? "yes" : "no");
-    msg ("serial-number:     %s", info2.serialNumber);
+    printf ("serial-number:      %s\n", info2.serialNumber);
 }
 
 /* Only ST5C and ST237 cameras support GetCCDInfoResults3.
@@ -416,11 +417,13 @@ static void show_ccd_info3 (sbig_t *sb, sbig_ccd_t *ccd)
             return;
         msg_exit ("sbig_ccd_get_info3: %s", sbig_get_error_string (sb, e));
     }
-    msg ("A/D-bits:          %s", info3.adSize == AD_UNKNOWN ? "unknown" :
+    printf ("A/D-bits:           %s\n",
+                                  info3.adSize == AD_UNKNOWN ? "unknown" :
                                   info3.adSize == AD_12_BITS ? "12" :
                                   info3.adSize == AD_16_BITS ? "16" :
                                   "invalid");
-    msg ("filter-type:       %s", info3.filterType == FW_UNKNOWN ? "unknown" :
+    printf ("filter-type:        %s\n",
+                                  info3.filterType == FW_UNKNOWN ? "unknown" :
                                   info3.filterType == FW_EXTERNAL ? "external" :
                                   info3.filterType == FW_VANE ? "2 position" :
                                   info3.filterType == FW_FILTER_WHEEL
@@ -439,17 +442,17 @@ static void show_ccd_info4 (sbig_t *sb, sbig_ccd_t *ccd)
     if (e != CE_NO_ERROR)
         msg_exit ("sbig_get_ccd_xinfo4: %s", sbig_get_error_string (sb, e));
     cap = info4.capabilitiesBits;
-    msg ("ccd-type:          %s", (cap & CB_CCD_TYPE_FRAME_TRANSFER)
+    printf ("ccd-type:           %s\n", (cap & CB_CCD_TYPE_FRAME_TRANSFER)
                                   ? "frame_transfer" : "full frame");
-    msg ("electronic-shutter:%s", !(cap & CB_CCD_ESHUTTER_YES) ? "no"
+    printf ("electronic-shutter: %s\n", !(cap & CB_CCD_ESHUTTER_YES) ? "no"
          : "Interline Imaging CCD with electronic shutter and ms exposure");
-    msg ("remote-guide-port: %s", (cap & CB_CCD_EXT_TRACKER_YES)
+    printf ("remote-guide-port:  %s\n", (cap & CB_CCD_EXT_TRACKER_YES)
                                   ? "yes" : "no");
-    msg ("biorad-tdi-mode:   %s", (cap & CB_CCD_BTDI_YES) ? "yes" : "no");
-    msg ("AO8-detected:      %s", (cap & CB_AO8_YES) ? "yes" : "no");
-    msg ("frame-buffer:      %s", (cap & CB_FRAME_BUFFER_YES)
+    printf ("biorad-tdi-mode:    %s\n", (cap & CB_CCD_BTDI_YES) ? "yes" : "no");
+    printf ("AO8-detected:       %s\n", (cap & CB_AO8_YES) ? "yes" : "no");
+    printf ("frame-buffer:       %s\n", (cap & CB_FRAME_BUFFER_YES)
                                   ? "yes" : "no");
-    msg ("use-startexp2:     %s", (cap & CB_REQUIRES_STARTEXP2_YES)
+    printf ("use-startexp2:      %s\n", (cap & CB_REQUIRES_STARTEXP2_YES)
                                   ? "yes" : "no");
 }
 
@@ -466,8 +469,9 @@ static void show_ccd_info6 (sbig_t *sb, sbig_ccd_t *ccd)
             return;
         msg_exit ("sbig_ccd_get_info6: %s", sbig_get_error_string (sb, e));
     }
-    msg ("color-type:        %s", !(info6.ccdBits & 1) ? "mono" :
-                                  !(info6.ccdBits & 2) ? "bayer" : "truesense");
+    printf ("color-type:         %s\n",
+                                 !(info6.ccdBits & 1) ? "mono" :
+                                 !(info6.ccdBits & 2) ? "bayer" : "truesense");
 }
 
 void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
