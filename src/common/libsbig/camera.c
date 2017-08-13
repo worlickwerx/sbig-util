@@ -49,12 +49,12 @@ struct sbig_ccd {
     READOUT_BINNING_MODE readout_mode;
     SHUTTER_COMMAND shutter_mode;
     GetCCDInfoResults0 info0;
-    GetCCDInfoResults4 info4;
     ushort top, left, height, width;
     ushort *frame;
     ulong exp_flags;
     double exposureTime;
     time_t exposureStart;
+    int has_eshutter:1;
 };
 
 static int lookup_roinfo (sbig_ccd_t *ccd, READOUT_BINNING_MODE mode)
@@ -79,19 +79,25 @@ static void realloc_frame (sbig_ccd_t *ccd)
 int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t **ccdp)
 {
     sbig_ccd_t *ccd = xzmalloc (sizeof (*ccd));
+    GetCCDInfoResults4 info4;
+    int e;
+
     ccd->ccd = chip;
     ccd->sb = sb;
-    int e = sbig_ccd_get_info0 (ccd, &ccd->info0);
 
+    e = sbig_ccd_get_info0 (ccd, &ccd->info0);
     if (e != CE_NO_ERROR) {
         free (ccd);
         return e;
     }
-    e = sbig_ccd_get_info4 (ccd, &ccd->info4);
+    e = sbig_ccd_get_info4 (ccd, &info4);
     if (e != CE_NO_ERROR) {
         free (ccd);
         return e;
     }
+    if ((info4.capabilitiesBits & CB_CCD_ESHUTTER_MASK) == CB_CCD_ESHUTTER_YES)
+        ccd->has_eshutter = 1;
+
     ccd->abg_mode = ABG_LOW7;            /* ABG shut off during exposure */
     ccd->shutter_mode = SC_OPEN_SHUTTER; /* open during exp, close during r/o */
 
@@ -295,13 +301,6 @@ int sbig_ccd_clr_exposure_flags (sbig_ccd_t *ccd, ulong flags)
     return CE_NO_ERROR;
 }
 
-static bool has_cap_eshutter (sbig_ccd_t *ccd)
-{
-    ushort cap = ccd->info4.capabilitiesBits;
-
-    return (cap & CB_CCD_ESHUTTER_MASK) == CB_CCD_ESHUTTER_YES;
-}
-
 /* Min exposure in seconds
  * FIXME: I've been conservative in grouping the ? cameras with ST7.
  */
@@ -346,7 +345,7 @@ static double min_exposure (sbig_ccd_t *ccd)
     }
     /* Fudge possibly conservative numbers above if we have an e-shutter.
      */
-    if (has_cap_eshutter (ccd))
+    if (ccd->has_eshutter)
         m = 1E-3;
 
     return m;
@@ -364,7 +363,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t *ccd, unsigned short flags,
 
     if (exposureTime < min_exposure (ccd) || exposureTime*100 > 0x00ffffff)
         return CE_BAD_PARAMETER;
-    if (exposureTime < 0.01 && has_cap_eshutter (ccd)) {
+    if (exposureTime < 0.01 && ccd->has_eshutter) {
         in.exposureTime = exposureTime * 1000.0;
         in.exposureTime |= EXP_MS_EXPOSURE;
     } else
