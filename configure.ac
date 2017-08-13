@@ -19,6 +19,8 @@ AM_MAINTAINER_MODE
 AC_DEFINE([_GNU_SOURCE], 1,
           [Define _GNU_SOURCE so that we get all necessary prototypes])
 
+PKG_PROG_PKG_CONFIG
+
 ##
 # Checks for programs
 ##
@@ -35,16 +37,15 @@ AC_PROG_LIBTOOL
 # Checks for header files.
 ##
 AC_HEADER_STDC
-AC_CHECK_HEADERS( \
-  usb.h
-)
-AS_VAR_IF([ac_cv_header_usb_h],[yes],,[
-  AC_MSG_ERROR([libusb header usb.h not found])
-])
+
+##
+# Checks for packages
+##
+PKG_CHECK_MODULES([LIBUSB], [libusb-1.0], [], [])
 
 ##
 # Checks for typedefs, structures, and compiler characteristics
-## 
+##
 AC_C_BIGENDIAN
 AC_C_CONST
 
