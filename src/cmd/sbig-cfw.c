@@ -116,7 +116,7 @@ void cfw_goto (sbig_t *sb, int ac, char **av)
     if (ac != 1)
         usage ();
     position = strtoul (av[0], NULL, 10);
-    
+
     if ((e = sbig_cfw_goto (sb, position)) != CE_NO_ERROR)
         msg_exit ("sbig_cfw_goto: %s", sbig_get_error_string (sb, e));
     do {
