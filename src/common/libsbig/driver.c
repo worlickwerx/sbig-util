@@ -44,12 +44,12 @@
 
 int sbig_open_driver (sbig_t *sb)
 {
-    return sb->fun (CC_OPEN_DRIVER, NULL, NULL); 
+    return sb->fun (CC_OPEN_DRIVER, NULL, NULL);
 }
 
 int sbig_close_driver (sbig_t *sb)
 {
-    return sb->fun (CC_CLOSE_DRIVER, NULL, NULL); 
+    return sb->fun (CC_CLOSE_DRIVER, NULL, NULL);
 }
 
 int sbig_get_driver_info (sbig_t *sb, DRIVER_REQUEST request,
@@ -59,7 +59,7 @@ int sbig_get_driver_info (sbig_t *sb, DRIVER_REQUEST request,
     return sb->fun (CC_GET_DRIVER_INFO, &in, info);
 }
 
-int sbig_open_device (sbig_t *sb, const char *name) 
+int sbig_open_device (sbig_t *sb, const char *name)
 {
     struct in_addr addr;
     memset (&addr, 0, sizeof (addr));
