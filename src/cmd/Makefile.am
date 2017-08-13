@@ -15,7 +15,8 @@ sbigbin_PROGRAMS = \
 	sbig-cfw \
 	sbig-snap \
 	sbig-cooler \
-	sbig-focus
+	sbig-focus \
+	sbig-find
 
 LDADD = \
 	$(top_builddir)/src/common/libsbig/libsbig.la \
