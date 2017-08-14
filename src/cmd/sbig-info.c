@@ -65,7 +65,7 @@ void usage (void)
 {
     fprintf (stderr,
 "Usage: sbig-info driver\n"
-"       sbig-info ccd {tracking|imaging}\n"
+"       sbig-info ccd [tracking|imaging]\n"
 "       sbig-info cfw\n"
 "       sbig-info cooler\n"
 "       sbig-info fov {tracking|imaging} {lo|med|hi} [focal-length]\n"
@@ -482,12 +482,16 @@ void show_ccd_info (const char *sbig_udrv, const char *sbig_device,
     sbig_ccd_t *ccd;
     sbig_t *sb;
 
-    if (ac != 1)
-        usage ();
-    if (!strcmp (av[0], "tracking"))
-        chip = CCD_TRACKING;
-    else if (!strcmp (av[0], "imaging"))
+    if (ac == 0)
         chip = CCD_IMAGING;
+    else if (ac == 1) {
+        if (!strcmp (av[0], "tracking"))
+            chip = CCD_TRACKING;
+        else if (!strcmp (av[0], "imaging"))
+            chip = CCD_IMAGING;
+        else
+            usage ();
+    }
     else
         usage ();
 
