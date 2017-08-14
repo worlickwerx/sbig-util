@@ -469,6 +469,8 @@ static void show_ccd_info6 (sbig_t *sb, sbig_ccd_t *ccd)
             return;
         msg_exit ("sbig_ccd_get_info6: %s", sbig_get_error_string (sb, e));
     }
+    printf ("mechanical-shutter: %s\n",
+                                 !(info6.cameraBits & 2) ? "yes" : "no");
     printf ("color-type:         %s\n",
                                  !(info6.ccdBits & 1) ? "mono" :
                                  !(info6.ccdBits & 2) ? "bayer" : "truesense");
