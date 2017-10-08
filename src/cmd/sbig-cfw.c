@@ -77,8 +77,6 @@ int main (int argc, char *argv[])
         usage ();
     cmd = argv[optind++];
 
-    if (!sbig_udrv)
-        msg_exit ("SBIG_UDRV is not set");
     if (!sbig_device)
         msg_exit ("SBIG_DEVICE is not set");
     if (!(sb = sbig_new ()))

@@ -1,12 +1,11 @@
 ##
 # Prologue
 ##
-AC_INIT(m4_esyscmd([awk '/Name:/ {printf "%s",$2; exit}' META]),
-        m4_esyscmd([awk '/Version:/ {printf "%s",$2; exit}' META]))
+AC_INIT([flux-core],
+        m4_esyscmd([git describe --always | awk '/.*/ {sub(/^v/, ""); printf "%s",$1; exit}']))
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_SRCDIR([NEWS])
 AC_CANONICAL_SYSTEM
-X_AC_META
 X_AC_EXPAND_INSTALL_DIRS
 
 ##
@@ -43,26 +42,13 @@ AC_HEADER_STDC
 ##
 PKG_CHECK_MODULES([LIBUSB], [libusb-1.0], [], [])
 
+X_AC_SBIGUDRV
+
 ##
 # Checks for typedefs, structures, and compiler characteristics
 ##
 AC_C_BIGENDIAN
 AC_C_CONST
-
-##
-# Set $sdk_libdir according to architecture.
-##
-AC_MSG_CHECKING([for usable sdk libdir])
-case "$host_cpu" in
-    i386|i686)	sdk_libdir="sdk/libs/i386" ;;
-    x86_64)	sdk_libdir="sdk/libs/x86_64" ;;
-    armv6l)	sdk_libdir="sdk/libs/arm_v6" ;;
-    armv7l)	sdk_libdir="sdk/libs/arm_v7" ;;
-    armv8l)	sdk_libdir="sdk/libs/arm_v8" ;;
-    *)		AC_MSG_RESULT([no]) ;;
-esac
-AC_MSG_RESULT([yes])
-AC_SUBST([sdk_libdir])
 
 ##
 # Checks for library functions

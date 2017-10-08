@@ -1,72 +1,38 @@
 ### sbig-util
 
 sbig-util is a set of Linux command line tools for controlling cameras
-from the Santa Barbara Instrument group.  The goal is to develop a simple
+from the Santa Barbara Instrument Group.  The goal is to develop a simple
 tool that can directly control a camera and filter wheel in the field
 during an astrophotography session, and be part of a workflow that
-includes other AIPS tools such as [ds9](http://ds9.si.edu).  It is a
-fairly new work in progress and provides only basic functionality and
-rather narrow testing with the hardware at hand.
-
-If you use `sbig-utils` on a camera other than the ST-8 with any success,
-please open a github issue tracker to tell me to update this document.
-If you have any problems or feature requests, please open an issue or
-submit a github pull request.
-
-sbig-util includes a copy of the SBIG Linux Development Kit
-as a convenience.  You may configure sbig-util to use either this copy,
-or another external one.  These instructions presume that you will use
-the internal one.  The SDK includes firmware, udev rules, documentation,
-the SBIG universal (all user space) driver, and some test code.
-
-### Supported Platforms
-
-We are limited to architectures for which SBIG pre-compiled the
-libraries in the SDK.  As of this writing, sbig-util includes the
-SDK drop dated 2014-10-27T12-58, built for
-* 32-bit ARM (v6, v7, v8)
-* 32-bit x86
-* 64-bit x86
-
-As I understand it, the SDK builds were on Debian 7 derived distros
-(Raspbian for arm v6, Ubuntu 14.04 for the rest).  My testing thus
-far is on a BeagleBone black (ARM) running Debian 7.0 (Wheezy)
-and a VMWare virtual machine (64-bit x86) running Ubuntu 14.04.
-My SBIG hardware an ST-8XME USB camera and CFW-10 filter wheel.
+includes other AIPS tools such as [ds9](http://ds9.si.edu).
 
 ### Prerequisites
 
-You will need to install libusb version 1.0.x, fxload, and cfitsio.
-On Debian Wheezy use:
+The proprietary SBIG universal driver is required by this project.
+If running on Ubuntu or Raspbian distros, the easiest way to install
+this is to grab the `libsbigudrv2` deb package from the
+[INDI](http://www.indilib.org/download.html) project.  Otherwise,
+find a copy at the Diffraction Limited web site (or request it on their
+SBIG discussion forum), and follow their instructions to install udev
+rules and firmware.  Put the library and include file where sbig-util's
+configure script can find it, e.g.
+```
+/usr/local/lib/libsbigudrv.so
+/usr/local/include/sbigudrv.h
+```
+
+In addition, you will need the following packages (e.g. raspbian):
 ```
 sudo apt-get install fxload
 sudo apt-get install libusb-1.0-0-dev
-sudo apt-get install cfitsio-dev
+sudo apt-get install libcfitsio-dev
 ```
 
-If you want to use ds9 for FITS previewing, install it and its
-messaging system, XPA:
+Also, if you want to use `ds9` for FITS previewing:
 ```
 sudo apt-get install saods9
 sudo apt-get install xpa-tools
 ```
-
-### USB firmware download
-
-The devkit includes a set of udev rules and .hex files for USB cameras.
-When udev detects an SBIG USB device, the udev rules invoke fxload to
-download the appropriate .hex file into the camera.  For this to work
-you must copy the udev rules and firmware files to the following locations:
-```
-sudo cp sdk/udev/51-sbig-debian.rules /etc/udev/rules.d
-sudo cp sdk/firmware/* /lib/firmware/
-```
-You may need to then poke udev with
-```
-sudo udevadm control --reload-rules
-```
-When my camera is properly initialized, the red LED on the back blinks
-for about a second, then the cooling fan comes on.
 
 ### Building sbig-util
 
@@ -123,6 +89,15 @@ export XPA_HOST=10.10.10.253
 ds9
 ```
 
+### Running sbig-find
+
+With your camera plugged (or on the local ethernet), `sbig-find`
+should be able to probe it, e.g.
+```
+$ sbig find
+LPT1: ST-5C 'SBIG ST-5C Camera' serial-unknown
+```
+
 ### Running sbig-info
 
 sbig-info can query info about the various parts of your system,
@@ -132,7 +107,7 @@ config file.
 
 ```
 Usage: sbig-info driver
-       sbig-info ccd {tracking|imaging}
+       sbig-info ccd [tracking|imaging]
        sbig-info cfw
        sbig-info cooler
        sbig-info fov {tracking|imaging} {lo|med|hi} [focal-length]
@@ -292,3 +267,12 @@ PEDESTAL=                 -100 / Add to ADU for 0-base
 DATAMAX =                40000 / Saturation level
 END
 ```
+
+### Parallel Port Cameras
+
+See my other projects to revive support for the older parallel port
+based cameras:
+
+http://github.com/garlick/sbig-parport
+
+http://github.com/garlick/pi-parport

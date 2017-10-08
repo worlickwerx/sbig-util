@@ -3,6 +3,9 @@
 
 /* This is our handle (sbig-utils), not to be confused with "driver handle"
  * described in SBIGUdrv sec 3.1.6.
+ *
+ * Note that if the 'path' argument to sbig_dlopen() may be NULL to indicate
+ * that -lsbigudrv was linked in the usual way.
  */
 
 typedef struct sbig sbig_t;

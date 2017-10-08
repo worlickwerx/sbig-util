@@ -76,7 +76,7 @@ struct options {
     bool no_cooler;
 };
 
-const char *software_name = META_NAME "-" META_VERSION;
+const char *software_name = PACKAGE_NAME "-" PACKAGE_VERSION;
 const double TE_stable = 3.0; /* degrees C allowable diff from setpoint */
 static bool interrupted = false;
 
@@ -262,8 +262,6 @@ int main (int argc, char *argv[])
 
     /* Connect to driver
      */
-    if (!sbig_udrv)
-        msg_exit ("SBIG_UDRV is not set");
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != 0)

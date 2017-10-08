@@ -173,12 +173,8 @@ int main (int argc, char *argv[])
     if (!strcmp (dir_self (), X_BINDIR)) {
         if (setenv ("SBIG_EXEC_DIR", EXEC_DIR, 0) < 0)
             err_exit ("setenv");
-        if (setenv ("SBIG_UDRV", PATH_SBIGUDRV, 0) < 0)
-            err_exit ("setenv");
     } else {
         if (setenv ("SBIG_EXEC_DIR", ".", 0) < 0)
-            err_exit ("setenv");
-        if (setenv ("SBIG_UDRV", PATH_SBIGUDRV_BUILD, 0) < 0)
             err_exit ("setenv");
     }
 
