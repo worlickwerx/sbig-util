@@ -43,26 +43,13 @@ AC_HEADER_STDC
 ##
 PKG_CHECK_MODULES([LIBUSB], [libusb-1.0], [], [])
 
+X_AC_SBIGUDRV
+
 ##
 # Checks for typedefs, structures, and compiler characteristics
 ##
 AC_C_BIGENDIAN
 AC_C_CONST
-
-##
-# Set $sdk_libdir according to architecture.
-##
-AC_MSG_CHECKING([for usable sdk libdir])
-case "$host_cpu" in
-    i386|i686)	sdk_libdir="sdk/libs/i386" ;;
-    x86_64)	sdk_libdir="sdk/libs/x86_64" ;;
-    armv6l)	sdk_libdir="sdk/libs/arm_v6" ;;
-    armv7l)	sdk_libdir="sdk/libs/arm_v7" ;;
-    armv8l)	sdk_libdir="sdk/libs/arm_v8" ;;
-    *)		AC_MSG_RESULT([no]) ;;
-esac
-AC_MSG_RESULT([yes])
-AC_SUBST([sdk_libdir])
 
 ##
 # Checks for library functions
