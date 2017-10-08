@@ -89,8 +89,6 @@ int main (int argc, char *argv[])
         }
     }
 
-    if (!sbig_udrv)
-        msg_exit ("SBIG_UDRV is not set");
     if (!(sb = sbig_new ()))
         err_exit ("sbig_new");
     if (sbig_dlopen (sb, sbig_udrv) != 0)
