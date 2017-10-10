@@ -49,7 +49,6 @@
 typedef enum { SNAP_DF, SNAP_LF, SNAP_AUTO } snap_type_t;
 
 struct options {
-    char *device;
     CCD_REQUEST chip;
     READOUT_BINNING_MODE readout_mode;
     double partial;
@@ -152,7 +151,6 @@ int main (int argc, char *argv[])
 
     /* Set default option values.
      */
-    opt->device = xstrdup (sbig_device);
     opt->chip = CCD_IMAGING;         /* main imaging ccd */
     opt->readout_mode = RM_1X1;      /* high resolution */
     opt->imagedir = xstrdup("/tmp"); /* where to write files */
@@ -277,8 +275,8 @@ int main (int argc, char *argv[])
 
     /* Open camera
      */
-    if ((e = sbig_open_device (sb, opt->device)) != CE_NO_ERROR)
-        msg_exit ("sbig_open_device: %s: %s", opt->device,
+    if ((e = sbig_open_device (sb, sbig_device)) != CE_NO_ERROR)
+        msg_exit ("sbig_open_device: %s: %s", sbig_device,
                    sbig_get_error_string (sb, e));
     if (opt->verbose)
         msg ("Device open");
@@ -352,8 +350,6 @@ int config_cb (void *user, const char *section, const char *name,
             if (opt->imagedir)
                 free (opt->imagedir);
             opt->imagedir = xstrdup (value);
-        } else if (!strcmp (name, "device")) {
-            opt->device = xstrdup (value);
         }
     } else if (!strcmp (section, "cfw")) {
         int slot;
