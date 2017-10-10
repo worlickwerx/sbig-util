@@ -117,9 +117,9 @@ int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t **ccdp)
     ccd->height = ccd->info0.readoutInfo[0].height;
     ccd->width = ccd->info0.readoutInfo[0].width;
     realloc_frame (ccd);
-    
+
     *ccdp = ccd;
-    return CE_NO_ERROR;     
+    return CE_NO_ERROR;
 }
 
 void sbig_ccd_destroy (sbig_ccd_t *ccd)
@@ -325,7 +325,7 @@ static double min_exposure (sbig_ccd_t *ccd)
             //m = 1E-2*MIN_STF3200_EXPOSURE; // ?
             //m = 1E-3*MIN_STF8050_EXPOSURE; // ?
             //m = 1E-3*MIN_STF4070_EXPOSURE; // ?
-            m = 1E-2*MIN_STF8300_EXPOSURE; // largest of the STL's 
+            m = 1E-2*MIN_STF8300_EXPOSURE; // largest of the STL's
             break;
         case ST7_CAMERA:
         case ST8_CAMERA:
@@ -377,7 +377,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t *ccd, unsigned short flags,
 int sbig_ccd_get_exposure_status (sbig_ccd_t *ccd, PAR_COMMAND_STATUS *sp)
 {
     ushort status;
-    int e = sbig_query_cmd_status (ccd->sb, CC_START_EXPOSURE, &status);
+    int e = sbig_query_cmd_status (ccd->sb, CC_START_EXPOSURE2, &status);
 
     if (e == CE_NO_ERROR) {
         if (ccd->ccd == CCD_IMAGING)
