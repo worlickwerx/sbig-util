@@ -377,7 +377,7 @@ int sbig_ccd_start_exposure (sbig_ccd_t *ccd, unsigned short flags,
 int sbig_ccd_get_exposure_status (sbig_ccd_t *ccd, PAR_COMMAND_STATUS *sp)
 {
     ushort status;
-    int e = sbig_query_cmd_status (ccd->sb, CC_START_EXPOSURE, &status);
+    int e = sbig_query_cmd_status (ccd->sb, CC_START_EXPOSURE2, &status);
 
     if (e == CE_NO_ERROR) {
         if (ccd->ccd == CCD_IMAGING)
