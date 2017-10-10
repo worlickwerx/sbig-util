@@ -1,7 +1,7 @@
 ##
 # Prologue
 ##
-AC_INIT([flux-core],
+AC_INIT([sbig-util],
         m4_esyscmd([git describe --always | awk '/.*/ {sub(/^v/, ""); printf "%s",$1; exit}']))
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_SRCDIR([NEWS])
