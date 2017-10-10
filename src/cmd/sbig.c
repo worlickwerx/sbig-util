@@ -69,7 +69,7 @@ static const struct option longopts[] = {
 
 static void usage (void)
 {
-    fprintf (stderr, 
+    fprintf (stderr,
 "Usage: sbig [OPTIONS] COMMAND ARGS\n"
 "    -x,--exec-dir DIR     set directory to search for commands\n"
 "    -S,--sbig-udrv FILE   set path to SBIG universal driver .so file\n"
@@ -141,7 +141,7 @@ int main (int argc, char *argv[])
             case 'S': /* --sbig-udrv FILE */
                 if (opt->sbigudrv)
                     free (opt->sbigudrv);
-                opt->sbigudrv = xstrdup (optarg);                
+                opt->sbigudrv = xstrdup (optarg);
                 break;
             case 'd': /* --device DEV */
                 if (opt->device)
