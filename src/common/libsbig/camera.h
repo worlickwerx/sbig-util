@@ -58,6 +58,11 @@ int sbig_ccd_get_readout_mode (sbig_ccd_t *ccd, READOUT_BINNING_MODE *modep);
  *  SC_LEAVE_SHUTTER, SC_OPEN_SHUTTER, SC_CLOSE_SHUTTER,
  *  SC_INITIALIZE_SHUTTER, SC_OPEN_EXT_SHUTTER, SC_CLOSE_EXT_SHUTTER
  * Default: SC_OPEN_SHUTTER
+ *
+ * N.B. although SBIGUdrv ignores shutter mode on ST-5C/255, in this lib
+ * we compensate:  sbig_ccd_start_exposure() and sbig_ccd_end_exposure()
+ * move the internal filter wheel to emulate SC_OPEN_SHUTTER and
+ * SC_CLOSE_SHUTTER on those models.
  */
 int sbig_ccd_set_shutter_mode (sbig_ccd_t *ccd, SHUTTER_COMMAND mode);
 int sbig_ccd_get_shutter_mode (sbig_ccd_t *ccd, SHUTTER_COMMAND *modep);

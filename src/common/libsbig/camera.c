@@ -54,6 +54,8 @@ struct sbig_ccd {
     ulong exp_flags;
     double exposureTime;
     time_t exposureStart;
+    CFW_POSITION last_cfw_position;
+    int restore_cfw_position:1;
     int has_eshutter:1;
 };
 
@@ -371,6 +373,33 @@ int sbig_ccd_start_exposure (sbig_ccd_t *ccd, unsigned short flags,
     in.exposureTime |= ccd->exp_flags;
     ccd->exposureTime = exposureTime; /* leave it here for stats later */
     ccd->exposureStart = time (NULL);
+
+    /* ST-5C and ST-237 have internal filter wheel instead of shutter.
+     * (shutter_mode parameter is ignored).  for CFW5: 1=open, 2=closed.
+     * If filter is repositioned in start_exposure, restore it in end_exposure.
+     */
+    ccd->restore_cfw_position = 0;
+    if (ccd->info0.cameraType == ST5C_CAMERA
+                                || ccd->info0.cameraType == ST237_CAMERA) {
+        CFW_STATUS status;
+        int e;
+
+        e = sbig_cfw_query (ccd->sb, &status, &ccd->last_cfw_position);
+        if (e != CE_NO_ERROR)
+            return e;
+        if (ccd->shutter_mode == SC_CLOSE_SHUTTER
+                                            && ccd->last_cfw_position != 2) {
+            if ((e = sbig_cfw_goto (ccd->sb, 2)) != CE_NO_ERROR)
+                return e;
+            ccd->restore_cfw_position = 1;
+        }
+        else if (ccd->shutter_mode == SC_OPEN_SHUTTER
+                                            && ccd->last_cfw_position == 2) {
+            if ((e = sbig_cfw_goto (ccd->sb, 1)) != CE_NO_ERROR)
+                return e;
+            ccd->restore_cfw_position = 1;
+        }
+    }
     return ccd->sb->fun (CC_START_EXPOSURE2, &in, NULL);
 }
 
@@ -391,6 +420,13 @@ int sbig_ccd_get_exposure_status (sbig_ccd_t *ccd, PAR_COMMAND_STATUS *sp)
 int sbig_ccd_end_exposure (sbig_ccd_t *ccd, ushort flags)
 {
     EndExposureParams in = { .ccd = ccd->ccd | flags };
+
+    if (ccd->restore_cfw_position) {
+        int e = sbig_cfw_goto (ccd->sb, ccd->last_cfw_position);
+        if (e != CE_NO_ERROR)
+            return e;
+        ccd->restore_cfw_position = 0;
+    }
 
     return ccd->sb->fun (CC_END_EXPOSURE, &in, NULL);
 }
