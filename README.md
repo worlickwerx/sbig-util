@@ -215,7 +215,8 @@ sbig snap --object M31 -t 30
 ### FITS headers
 
 sbig-util writes FITS files using SBIG FITS header extensions, described in
-[this document](http://archive.sbig.com/pdffiles/SBFITSEXT_1r0.pdf).
+[SBFITSEXT Version 1.0: A Set of FITS Standard Extensions for Amateur
+Astronomical Processing Software Packages March 19, 2003](http://diffractionlimited.com/wp-content/uploads/2016/11/sbfitsext_1r0.pdf)
 
 Here is an example header:
 ```
