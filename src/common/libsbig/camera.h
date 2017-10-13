@@ -106,6 +106,12 @@ int sbig_ccd_end_exposure (sbig_ccd_t *ccd, ushort flags);
 int sbig_ccd_readout (sbig_ccd_t *ccd);
 int sbig_ccd_readout_subtract (sbig_ccd_t *ccd);
 
+/* Convert single shot color image.
+ * Set 'option' to one of the following (or a substring):
+ *   - monochrome - convert to to mono using 3x3 kernel from SBIGUDrv sec 5.2
+ */
+int sbig_ccd_color_convert (sbig_ccd_t *ccd, const char *option);
+
 /* Get reference to internal buffer, a sequence of rows, pixels.
  */
 ushort *sbig_ccd_get_data (sbig_ccd_t *ccd, ushort *height, ushort *width);

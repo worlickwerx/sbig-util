@@ -40,6 +40,7 @@
 #include "sbig.h"
 
 #include "src/common/libutil/bcd.h"
+#include "src/common/libutil/color.h"
 #include "src/common/libutil/xzmalloc.h"
 
 struct sbig_ccd {
@@ -531,6 +532,24 @@ int sbig_ccd_readout_subtract (sbig_ccd_t *ccd)
         e = end_readout (ccd);
 
     return e;
+}
+
+int sbig_ccd_color_convert (sbig_ccd_t *ccd, const char *method)
+{
+    if (!ccd->color_bayer) // FIXME: add support for Truesense (which cam?)
+        return CE_BAD_PARAMETER;
+
+    if (!strncasecmp (method, "monochrome", strlen (method))) {
+        ushort *xframe;
+
+        if (!(xframe = calloc (ccd->height*ccd->width, sizeof (ushort))))
+            return CE_OS_ERROR;
+        color_bayer_to_mono (ccd->frame, xframe, ccd->width, ccd->height);
+        free (ccd->frame);
+        ccd->frame = xframe;
+        return CE_NO_ERROR;
+    }
+    return CE_BAD_PARAMETER;
 }
 
 /* These two functions presume that SBIGUdrv gave us unsigned shorts
