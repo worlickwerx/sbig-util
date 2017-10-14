@@ -186,7 +186,7 @@ int main (int argc, char *argv[])
                     usage ();
                 break;
             case 'p': /* --partial */
-                opt->partial = strtod (optarg, NULL); 
+                opt->partial = strtod (optarg, NULL);
                 if (opt->partial <= 0 || opt->partial > 1.0)
                     usage ();
                 break;
@@ -194,7 +194,7 @@ int main (int argc, char *argv[])
                 opt->preview = true;
                 break;
             case 'f': /* --force */
-                force = true; 
+                force = true;
                 break;
             case 'O': /* --object NAME */
                 opt->object = optarg;
