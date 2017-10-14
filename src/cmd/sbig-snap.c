@@ -73,13 +73,14 @@ struct options {
     bool preview;
     snap_type_t image_type;
     bool no_cooler;
+    char *color_convert;
 };
 
 const char *software_name = PACKAGE_NAME "-" PACKAGE_VERSION;
 const double TE_stable = 3.0; /* degrees C allowable diff from setpoint */
 static bool interrupted = false;
 
-#define OPTIONS "ht:d:C:r:n:D:m:O:fp:PT:c"
+#define OPTIONS "ht:d:C:r:n:D:m:O:fp:PT:cx:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
@@ -95,6 +96,7 @@ static const struct option longopts[] = {
     {"preview",       no_argument,           0, 'P'},
     {"image-type",    required_argument,     0, 'T'},
     {"no-cooler",     no_argument,           0, 'c'},
+    {"color-convert", required_argument,     0, 'x'},
     {0, 0, 0, 0},
 };
 
@@ -120,6 +122,7 @@ void usage (void)
 "  -P, --preview              preview image using ds9\n"
 "  -T, --image-type TYPE      take df, lf, or auto (default auto)\n"
 "  -c, --no-cooler            allow TE to be disabled/unstable\n"
+"  -x, --color-convert=mono   convert raw single shot color to monochrome\n"
 );
     exit (1);
 }
@@ -239,6 +242,10 @@ int main (int argc, char *argv[])
                     opt->readout_mode = RM_3X3;
                 else
                     msg_exit ("error parsing --resolution (hi, med, lo)");
+                break;
+            case 'x': /* --color-convert=mono */
+                free (opt->color_convert);
+                opt->color_convert = xstrdup (optarg);
                 break;
             case 'h': /* --help */
             default:
@@ -447,6 +454,15 @@ bool snap (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt,
         e = sbig_ccd_readout (ccd);
     if (e != CE_NO_ERROR)
         msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
+
+    if (opt->color_convert && type != SNAP_DF) {
+        if (opt->verbose)
+            msg ("[%d]color_convert: to %s", seq, opt->color_convert);
+        e = sbig_ccd_color_convert (ccd, opt->color_convert);
+        if (e != CE_NO_ERROR)
+            msg_exit ("sbig_ccd_color_convert: %s",
+                      sbig_get_error_string (sb, e));
+    }
     return true;
 abort:
     (void)sbig_ccd_end_exposure (ccd, ABORT_DONT_END);
@@ -554,6 +570,8 @@ void snap_one_autodark (sbig_t *sb, sbig_ccd_t *ccd,
      */
     update_fitsheader (sb, sbf, ccd, opt, setpoint, temp);
     sbfits_add_history (sbf, software_name, "Dark Subtraction");
+    if (opt->color_convert)
+        sbfits_add_history (sbf, software_name, "One shot color conversion");
     sbfits_set_pedestal (sbf, -100); /* readout_subtract does this */
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
@@ -619,6 +637,8 @@ void snap_one_lf (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt,
         goto abort;
 
     update_fitsheader (sb, sbf, ccd, opt, setpoint, temp);
+    if (opt->color_convert)
+        sbfits_add_history (sbf, software_name, "One shot color conversion");
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
     if (sbfits_close_file (sbf))
