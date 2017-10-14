@@ -101,7 +101,7 @@ sbfits_t *sbfits_create (void)
     sbfits_t *sbf = xzmalloc (sizeof (*sbf));
     sbf->num_exposures = 1;
     return sbf;
-}                         
+}
 
 void sbfits_destroy (sbfits_t *sbf)
 {
@@ -308,10 +308,10 @@ static int sbfits_write_header (sbfits_t *sbf)
 {
     char buf[64];
 
-    fits_write_key (sbf->fptr, TSTRING, "COMMENT", 
+    fits_write_key (sbf->fptr, TSTRING, "COMMENT",
                     "SBIG FITS header format per:",
                     "", &sbf->status);
-    fits_write_key (sbf->fptr, TSTRING, "COMMENT", 
+    fits_write_key (sbf->fptr, TSTRING, "COMMENT",
                     " http://www.sbig.com/pdffiles/SBFITSEXT_1r0.pdf",
                     "", &sbf->status);
     fits_write_key(sbf->fptr, TSTRING, "SBSTDVER", "SBFITSEXT Version 1.0",
@@ -368,7 +368,7 @@ static int sbfits_write_header (sbfits_t *sbf)
         fits_write_key(sbf->fptr, TSTRING, "TELESCOP", (char *)sbf->telescope,
                        "Telescope model", &sbf->status);
     if (sbf->filter)
-        fits_write_key(sbf->fptr, TSTRING, "FILTER", (char *)sbf->filter, 
+        fits_write_key(sbf->fptr, TSTRING, "FILTER", (char *)sbf->filter,
                        "Optical filter name", &sbf->status);
     if (sbf->observer)
         fits_write_key(sbf->fptr, TSTRING, "OBSERVER", (char *)sbf->observer,
