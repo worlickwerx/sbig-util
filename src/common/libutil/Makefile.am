@@ -13,4 +13,6 @@ libutil_la_SOURCES = \
 	bcd.c \
 	bcd.h \
 	color.c \
-	color.h
+	color.h \
+	list.c \
+	list.h
