@@ -553,7 +553,7 @@ void snap_one_autodark (sbig_t *sb, sbig_ccd_t *ccd,
     /* Write out FITS file, optionally preview
      */
     update_fitsheader (sb, sbf, ccd, opt, setpoint, temp);
-    sbfits_set_history (sbf, software_name, "Dark Subtraction");
+    sbfits_add_history (sbf, software_name, "Dark Subtraction");
     sbfits_set_pedestal (sbf, -100); /* readout_subtract does this */
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));
