@@ -40,6 +40,7 @@
 #include "sbig.h"
 
 #include "src/common/libutil/bcd.h"
+#include "src/common/libutil/color.h"
 #include "src/common/libutil/xzmalloc.h"
 
 struct sbig_ccd {
@@ -57,6 +58,8 @@ struct sbig_ccd {
     CFW_POSITION last_cfw_position;
     int restore_cfw_position:1;
     int has_eshutter:1;
+    int color_bayer:1;
+    int color_truesense:1;
 };
 
 static int lookup_roinfo (sbig_ccd_t *ccd, READOUT_BINNING_MODE mode)
@@ -82,6 +85,7 @@ int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t **ccdp)
 {
     sbig_ccd_t *ccd = xzmalloc (sizeof (*ccd));
     GetCCDInfoResults4 info4;
+    GetCCDInfoResults6 info6;
     int e;
 
     ccd->ccd = chip;
@@ -97,6 +101,12 @@ int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t **ccdp)
         free (ccd);
         return e;
     }
+    e = sbig_ccd_get_info6 (ccd, &info6);
+    if (e != CE_NO_ERROR) {
+        free (ccd);
+        return e;
+    }
+
     if ((info4.capabilitiesBits & CB_CCD_ESHUTTER_MASK) == CB_CCD_ESHUTTER_YES)
         ccd->has_eshutter = 1;
 
@@ -119,6 +129,13 @@ int sbig_ccd_create (sbig_t *sb, CCD_REQUEST chip, sbig_ccd_t **ccdp)
     ccd->height = ccd->info0.readoutInfo[0].height;
     ccd->width = ccd->info0.readoutInfo[0].width;
     realloc_frame (ccd);
+
+    /* Note that this is a one-shot color camera with a Bayer matrix.
+     */
+    if ((info6.ccdBits & 0x3) == 1)
+        ccd->color_bayer = 1;
+    else if ((info6.ccdBits & 0x3) == 3)
+        ccd->color_truesense = 1;
 
     *ccdp = ccd;
     return CE_NO_ERROR;
@@ -250,6 +267,17 @@ static double cfe (double m, double F, double *a)
     return (b - *a);
 }
 
+/* Adjust subframe if it lands on an odd offset so that 2x2 bayer matrix
+ * always starts on the same color
+ */
+static void align_bayer_matrix (sbig_ccd_t *ccd)
+{
+    if (ccd->top % 2 != 0)
+        ccd->top++;
+    if (ccd->left % 2 != 0)
+        ccd->left++;
+}
+
 int sbig_ccd_set_partial_frame (sbig_ccd_t *ccd, double part)
 {
     int ro_index = lookup_roinfo (ccd, ccd->readout_mode);
@@ -259,6 +287,8 @@ int sbig_ccd_set_partial_frame (sbig_ccd_t *ccd, double part)
     ccd->top = top;
     ccd->width = cfe (ccd->info0.readoutInfo[ro_index].width, part, &left);
     ccd->left = left;
+    if (ccd->color_bayer)
+        align_bayer_matrix (ccd);
     realloc_frame (ccd);
     return CE_NO_ERROR;
 }
@@ -273,6 +303,8 @@ int sbig_ccd_set_window (sbig_ccd_t *ccd, ushort top, ushort left,
     ccd->left = left;
     ccd->height = height;
     ccd->width = width;
+    if (ccd->color_bayer)
+        align_bayer_matrix (ccd);
     realloc_frame (ccd);
     return CE_NO_ERROR;
 }
@@ -500,6 +532,24 @@ int sbig_ccd_readout_subtract (sbig_ccd_t *ccd)
         e = end_readout (ccd);
 
     return e;
+}
+
+int sbig_ccd_color_convert (sbig_ccd_t *ccd, const char *method)
+{
+    if (!ccd->color_bayer) // FIXME: add support for Truesense (which cam?)
+        return CE_BAD_PARAMETER;
+
+    if (!strncasecmp (method, "monochrome", strlen (method))) {
+        ushort *xframe;
+
+        if (!(xframe = calloc (ccd->height*ccd->width, sizeof (ushort))))
+            return CE_OS_ERROR;
+        color_bayer_to_mono (ccd->frame, xframe, ccd->width, ccd->height);
+        free (ccd->frame);
+        ccd->frame = xframe;
+        return CE_NO_ERROR;
+    }
+    return CE_BAD_PARAMETER;
 }
 
 /* These two functions presume that SBIGUdrv gave us unsigned shorts

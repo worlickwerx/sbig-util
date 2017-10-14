@@ -21,8 +21,10 @@
 \*****************************************************************************/
 
 /* Write FITS file with SBIG header extensions
- * See http://hesarc.gsfc.nasa.gov/docs/fcg/standard_dict.html
- *     http://www.sbig.com/pdffiles/SBFITSEXT_1r0.pdf"
+ *
+ * Ref:
+ * http://hesarc.gsfc.nasa.gov/docs/fcg/standard_dict.html
+ * http://diffractionlimited.com/wp-content/uploads/2016/11/sbfitsext_1r0.pdf
  */
 
 #if HAVE_CONFIG_H
@@ -46,6 +48,12 @@
 
 #include "src/common/libutil/xzmalloc.h"
 #include "src/common/libutil/bcd.h"
+#include "src/common/libutil/list.h"
+
+struct history {
+    char *sw;             /* software that modified image */
+    char *hist;           /* history (goes with swmodify) */
+};
 
 struct sbfits {
     fitsfile *fptr;
@@ -67,8 +75,7 @@ struct sbfits {
     const char *longitude;       /* (opt) site longitude (+DDD:MM:SS.SSS) */
     const char *sitename;        /* (opt) site name */
     const char *swcreate;        /* software that created image */
-    const char *swmodify;        /* software that modified image */
-    const char *history;         /* history (goes with swmodify) */
+    List history;                /* list of (SWMODIFY,HISTORY) pairs */
     sbfits_type_t image_type;    /* (opt) image type */
     double elevation;
     ushort *data;                /* image data */
@@ -84,6 +91,8 @@ struct sbfits {
     long pedestal;
     ushort datamax;
 };
+
+const char *sbig_url = "http://diffractionlimited.com/wp-content/uploads/2016/11/sbfitsext_1r0.pdf";
 
 static char *gmtime_str (time_t t, char *buf, int sz)
 {
@@ -101,11 +110,15 @@ sbfits_t *sbfits_create (void)
     sbfits_t *sbf = xzmalloc (sizeof (*sbf));
     sbf->num_exposures = 1;
     return sbf;
-}                         
+}
 
 void sbfits_destroy (sbfits_t *sbf)
 {
-    free (sbf);
+    if (sbf) {
+        if (sbf->history)
+            list_destroy (sbf->history);
+        free (sbf);
+    }
 }
 
 int sbfits_create_file (sbfits_t *sbf, const char *imagedir,
@@ -260,10 +273,24 @@ void sbfits_set_annotation (sbfits_t *sbf, const char *str)
     sbf->annotation = str;
 }
 
-void sbfits_set_history (sbfits_t *sbf, const char *swmodify, const char *str)
+static void history_free (struct history *h)
 {
-    sbf->swmodify = swmodify;
-    sbf->history = str;
+    if (h) {
+        free (h->sw);
+        free (h->hist);
+        free (h);
+    }
+}
+
+void sbfits_add_history (sbfits_t *sbf, const char *sw, const char *hist)
+{
+    struct history *h = xzmalloc (sizeof (*h));
+
+    if (!sbf->history)
+        sbf->history = list_create ((ListDelF)history_free);
+    h->sw = xstrdup (sw);
+    h->hist = xstrdup (hist);
+    list_append (sbf->history, h);
 }
 
 void sbfits_set_swcreate (sbfits_t *sbf, const char *swcreate)
@@ -306,14 +333,14 @@ static int lookup_readoutmode_index (sbfits_t *sbf)
 
 static int sbfits_write_header (sbfits_t *sbf)
 {
-    char buf[64];
+    char buf[128];
 
-    fits_write_key (sbf->fptr, TSTRING, "COMMENT", 
+    fits_write_key (sbf->fptr, TSTRING, "COMMENT",
                     "SBIG FITS header format per:",
                     "", &sbf->status);
-    fits_write_key (sbf->fptr, TSTRING, "COMMENT", 
-                    " http://www.sbig.com/pdffiles/SBFITSEXT_1r0.pdf",
-                    "", &sbf->status);
+    snprintf (buf, sizeof (buf), " %s", sbig_url);
+    fits_write_key (sbf->fptr, TSTRING, "COMMENT",
+                    buf, "", &sbf->status);
     fits_write_key(sbf->fptr, TSTRING, "SBSTDVER", "SBFITSEXT Version 1.0",
                     "SBIG FITS extensions ver", &sbf->status);
     if (sbf->annotation)
@@ -342,12 +369,21 @@ static int sbfits_write_header (sbfits_t *sbf)
     if (sbf->swcreate)
         fits_write_key (sbf->fptr, TSTRING, "SWCREATE", (char *)sbf->swcreate,
                         "Software that created this image", &sbf->status);
-    if (sbf->swmodify)
-        fits_write_key (sbf->fptr, TSTRING, "SWMODIFY", (char *)sbf->swmodify,
-                        "Software that modified this image", &sbf->status);
-    if (sbf->history)
-        fits_write_key (sbf->fptr, TSTRING, "HISTORY", (char *)sbf->history,
-                        "How modified", &sbf->status);
+
+    if (sbf->history) {
+        ListIterator itr;
+        struct history *h;
+
+        itr = list_iterator_create (sbf->history);
+        while ((h = list_next (itr))) {
+            fprintf (stderr, "Add '%s' '%s'\n", h->sw, h->hist);
+            fits_write_key (sbf->fptr, TSTRING, "SWMODIFY", h->sw,
+                            "Software that modified this image", &sbf->status);
+            fits_write_key (sbf->fptr, TSTRING, "HISTORY", h->hist,
+                            "How modified", &sbf->status);
+        }
+        list_iterator_destroy (itr);
+    }
 
     if (sbf->sitename)
         fits_write_key(sbf->fptr, TSTRING, "SITENAME", (char *)sbf->sitename,
@@ -368,7 +404,7 @@ static int sbfits_write_header (sbfits_t *sbf)
         fits_write_key(sbf->fptr, TSTRING, "TELESCOP", (char *)sbf->telescope,
                        "Telescope model", &sbf->status);
     if (sbf->filter)
-        fits_write_key(sbf->fptr, TSTRING, "FILTER", (char *)sbf->filter, 
+        fits_write_key(sbf->fptr, TSTRING, "FILTER", (char *)sbf->filter,
                        "Optical filter name", &sbf->status);
     if (sbf->observer)
         fits_write_key(sbf->fptr, TSTRING, "OBSERVER", (char *)sbf->observer,

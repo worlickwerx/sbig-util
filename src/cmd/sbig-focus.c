@@ -50,15 +50,17 @@ struct options {
     double partial;
     double t;
     bool verbose;
+    char *color_convert;
 };
 
-#define OPTIONS "ht:C:r:p:"
+#define OPTIONS "ht:C:r:p:x:"
 static const struct option longopts[] = {
     {"help",          no_argument,           0, 'h'},
     {"exposure-time", required_argument,     0, 't'},
     {"chip",          required_argument,     0, 'C'},
     {"resolution",    required_argument,     0, 'r'},
     {"partial",       required_argument,     0, 'p'},
+    {"color-convert", required_argument,     0, 'x'},
     {0, 0, 0, 0},
 };
 
@@ -70,10 +72,11 @@ void usage (void)
 {
     fprintf (stderr,
 "Usage: sbig-focus [OPTIONS]\n"
-"  -t, --exposure-time SEC exposure time in seconds (default 1.0)\n"
-"  -C, --ccd-chip CHIP     use imaging, tracking, or ext-tracking\n"
-"  -r, --resolution RES    select hi, med, or lo resolution\n"
-"  -p, --partial N         take centered partial frame (0 < N <= 1.0)\n"
+"  -t, --exposure-time SEC   exposure time in seconds (default 1.0)\n"
+"  -C, --ccd-chip CHIP       use imaging, tracking, or ext-tracking\n"
+"  -r, --resolution RES      select hi, med, or lo resolution\n"
+"  -p, --partial N           take centered partial frame (0 < N <= 1.0)\n"
+"  -x, --color-convert=mono  convert raw single shot color to monochrome\n"
 );
     exit (1);
 }
@@ -137,6 +140,9 @@ int main (int argc, char *argv[])
                     opt->readout_mode = RM_3X3;
                 else
                     msg_exit ("error parsing --resolution (hi, med, lo)");
+                break;
+            case 'x': /* --color-convert=monochrome */
+                opt->color_convert = xstrdup (optarg);
                 break;
             case 'h': /* --help */
             default:
@@ -253,7 +259,12 @@ bool snap (sbig_t *sb, sbig_ccd_t *ccd, const struct options *opt)
         msg ("readout");
     if ((e = sbig_ccd_readout (ccd)) != CE_NO_ERROR)
         msg_exit ("sbig_ccd_readout: %s", sbig_get_error_string (sb, e));
-
+    if (opt->color_convert) {
+        e = sbig_ccd_color_convert (ccd, opt->color_convert);
+        if (e != CE_NO_ERROR)
+            msg_exit ("sbig_ccd_color_convert: %s",
+                      sbig_get_error_string (sb, e));
+    }
     sbfits_set_ccdinfo (sbf, ccd);
     if (sbfits_write_file (sbf) < 0)
         err_exit ("sbfits_write: %s", sbfits_get_errstr (sbf));

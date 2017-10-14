@@ -11,4 +11,8 @@ libutil_la_SOURCES = \
 	xzmalloc.c \
 	xzmalloc.h \
 	bcd.c \
-	bcd.h
+	bcd.h \
+	color.c \
+	color.h \
+	list.c \
+	list.h

@@ -32,7 +32,7 @@ void sbfits_set_site (sbfits_t *sbf, const char *name,
                       const char *lat, const char *lng, double elevation);
 void sbfits_set_swcreate (sbfits_t *sbf, const char *swcreate);
 void sbfits_set_imagetype (sbfits_t *sbf, sbfits_type_t type);
-void sbfits_set_history (sbfits_t *sbf, const char *swmodify, const char *str);
+void sbfits_add_history (sbfits_t *sbf, const char *swmodify, const char *str);
 void sbfits_set_contrast (sbfits_t *sbf, ulong cblack, ulong cwhite);
 void sbfits_set_pedestal (sbfits_t *sbf, ulong pedestal);
 
