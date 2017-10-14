@@ -21,8 +21,10 @@
 \*****************************************************************************/
 
 /* Write FITS file with SBIG header extensions
- * See http://hesarc.gsfc.nasa.gov/docs/fcg/standard_dict.html
- *     http://www.sbig.com/pdffiles/SBFITSEXT_1r0.pdf"
+ *
+ * Ref:
+ * http://hesarc.gsfc.nasa.gov/docs/fcg/standard_dict.html
+ * http://diffractionlimited.com/wp-content/uploads/2016/11/sbfitsext_1r0.pdf
  */
 
 #if HAVE_CONFIG_H
@@ -84,6 +86,8 @@ struct sbfits {
     long pedestal;
     ushort datamax;
 };
+
+const char *sbig_url = "http://diffractionlimited.com/wp-content/uploads/2016/11/sbfitsext_1r0.pdf";
 
 static char *gmtime_str (time_t t, char *buf, int sz)
 {
@@ -306,14 +310,14 @@ static int lookup_readoutmode_index (sbfits_t *sbf)
 
 static int sbfits_write_header (sbfits_t *sbf)
 {
-    char buf[64];
+    char buf[128];
 
     fits_write_key (sbf->fptr, TSTRING, "COMMENT",
                     "SBIG FITS header format per:",
                     "", &sbf->status);
+    snprintf (buf, sizeof (buf), " %s", sbig_url);
     fits_write_key (sbf->fptr, TSTRING, "COMMENT",
-                    " http://www.sbig.com/pdffiles/SBFITSEXT_1r0.pdf",
-                    "", &sbf->status);
+                    buf, "", &sbf->status);
     fits_write_key(sbf->fptr, TSTRING, "SBSTDVER", "SBFITSEXT Version 1.0",
                     "SBIG FITS extensions ver", &sbf->status);
     if (sbf->annotation)
