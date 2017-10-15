@@ -15,4 +15,8 @@ libutil_la_SOURCES = \
 	color.c \
 	color.h \
 	list.c \
-	list.h
+	list.h \
+	hash.c \
+	hash.h \
+	thread.c \
+	thread.h
