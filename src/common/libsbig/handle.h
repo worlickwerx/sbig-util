@@ -5,7 +5,7 @@
  * described in SBIGUdrv sec 3.1.6.
  *
  * Note that if the 'path' argument to sbig_dlopen() may be NULL to indicate
- * that -lsbigudrv was linked in the usual way.
+ * that the system dynamic library search path should be used (see dlopen(2)).
  */
 
 typedef struct sbig sbig_t;
