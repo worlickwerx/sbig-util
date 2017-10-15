@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #include "log.h"
 #include "xzmalloc.h"
@@ -50,6 +51,26 @@ char *xstrdup (const char *s)
     if (!cpy)
         oom ();
     return cpy;
+}
+
+char *xvasprintf(const char *fmt, va_list ap)
+{
+    char *s;
+
+    if (vasprintf (&s, fmt, ap) < 0)
+        oom ();
+    return s;
+}
+
+char *xasprintf (const char *fmt, ...)
+{
+    va_list ap;
+    char *s;
+
+    va_start (ap, fmt);
+    s = xvasprintf (fmt, ap);
+    va_end (ap);
+    return s;
 }
 
 /*
