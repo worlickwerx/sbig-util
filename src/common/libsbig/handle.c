@@ -48,6 +48,8 @@ sbig_t *sbig_new (void)
 
 int sbig_dlopen (sbig_t *sb, const char *path)
 {
+    if (!path)
+        path = "libsbigudrv.so";
     dlerror ();
     if (!(sb->dso = dlopen (path, RTLD_LAZY | RTLD_LOCAL)))
         return CE_OS_ERROR;
