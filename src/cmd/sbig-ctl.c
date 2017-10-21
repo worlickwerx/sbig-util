@@ -23,6 +23,7 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <unistd.h>
 #include <stdio.h>
 #include <libgen.h>
 #include <stdlib.h>
@@ -57,6 +58,9 @@ void get_cooling_info  (sbig_t *sb, CAMERA_TYPE camera_type,
 void update_cooling_info (sbig_t *sb, struct xhash *h);
 
 void get_cfw_info  (sbig_t *sb, const char *key_prefix, struct xhash *h);
+void set_cfw_info (const char *key_profile, const char *key,
+                   const char *val, struct xhash *h, int *update);
+void update_cfw_info (sbig_t *sb, struct xhash *h);
 
 void get_ccd_info  (sbig_t *sb, const char *key_prefix, struct xhash *h);
 
@@ -168,6 +172,9 @@ int main (int argc, char *argv[])
     if ((update & UPDATE_COOLING)) {
         update_cooling_info (sb, h);
     }
+    if ((update & UPDATE_CFW)) {
+        update_cfw_info (sb, h);
+    }
 
     xhash_destroy (h);
 
@@ -224,6 +231,9 @@ void ctl_set_value (struct xhash *h, const char *key_value, int *update)
 
     if (!strncmp (key, "cooling.", 8)) {
         set_cooling_info ("cooling", key + 8, val, h, update);
+    }
+    else if (!strncmp (key, "cfw.", 4)) {
+        set_cfw_info ("cfw", key + 4, val, h, update);
     }
     else
         msg_exit ("%s cannot be set", key);
@@ -377,6 +387,39 @@ void get_driver_info (sbig_t *sb, const char *key_prefix, struct xhash *h)
     xhash_insert (h, key_prefix, "version", "%s", version);
     xhash_insert (h, key_prefix, "name", "%s", info.name);
     xhash_insert (h, key_prefix, "maxreq", "%d", info.maxRequest);
+}
+
+void set_cfw_info (const char *key_prefix, const char *key,
+                   const char *val, struct xhash *h, int *update)
+{
+
+    if (!strcmp (key, "position")) {
+        xhash_insert (h, key_prefix, key, "%s", val);
+        *update |= UPDATE_CFW;
+    }
+    else
+        msg_exit ("cannot set %s", key);
+}
+
+void update_cfw_info (sbig_t *sb, struct xhash *h)
+{
+    CFW_POSITION position, actual;
+    CFW_STATUS status;
+    int e;
+    const char *s;
+
+    if (!(s = hash_find (h->hash, "cfw.position")))
+        msg_exit ("cannot get cooling.setpoint");
+    position = strtoul (s, NULL, 10);
+
+    if ((e = sbig_cfw_goto  (sb, position)) != CE_NO_ERROR)
+        msg_exit ("sbig_cfw_goto: %s", sbig_get_error_string (sb, e));
+    do {
+        if ((e = sbig_cfw_query (sb, &status, &actual)) != CE_NO_ERROR)
+            msg_exit ("sbig_cfw_query: %s", sbig_get_error_string (sb, e));
+        if (status == CFWS_BUSY)
+            usleep (1000*100);
+    } while (status == CFWS_BUSY);
 }
 
 void get_cfw_info (sbig_t *sb, const char *key_prefix, struct xhash *h)
