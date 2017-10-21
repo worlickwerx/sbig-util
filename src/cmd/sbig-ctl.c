@@ -49,9 +49,15 @@ struct xhash {
 };
 
 void get_driver_info  (sbig_t *sb, const char *key_prefix, struct xhash *h);
+
+void set_cooling_info (const char *key_prefix, const char *key,
+                       const char *val, struct xhash *h, int *update);
 void get_cooling_info  (sbig_t *sb, CAMERA_TYPE camera_type,
                         const char *key_prefix, struct xhash *h);
+void update_cooling_info (sbig_t *sb, struct xhash *h);
+
 void get_cfw_info  (sbig_t *sb, const char *key_prefix, struct xhash *h);
+
 void get_ccd_info  (sbig_t *sb, const char *key_prefix, struct xhash *h);
 
 void xhash_insert (struct xhash *h, const char *prefix, const char *name,
@@ -61,8 +67,13 @@ void xhash_destroy (struct xhash *h);
 void xhash_sort (struct xhash *h);
 
 void ctl_list_value (struct xhash *h, const char *key_match);
-void ctl_set_value (struct xhash *h, const char *key_value);
+void ctl_set_value (struct xhash *h, const char *key_value, int *update);
 
+enum {
+    UPDATE_NONE = 0,
+    UPDATE_COOLING = 1,
+    UPDATE_CFW = 2,
+};
 
 #define OPTIONS "ah"
 static const struct option longopts[] = {
@@ -90,6 +101,7 @@ int main (int argc, char *argv[])
     sbig_t *sb;
     CAMERA_TYPE camera_type;
     struct xhash *h;
+    int update = UPDATE_NONE;
 
     log_init ("sbig-ctl");
 
@@ -142,19 +154,19 @@ int main (int argc, char *argv[])
         ctl_list_value (h, "");
     }
     else {
-        char kv[2*MAX_KEYLEN];
-        int i, n, used;
-        kv[0] = '\0';
-        for (i = optind; i < argc; i++) {
-            used = strlen (kv);
-            n = snprintf (kv + used, sizeof (kv) - used, "%s", argv[i]);
-            if (n >= sizeof (kv) - used)
-                errn_exit (EINVAL, "buffer exceeded");
+        while (optind < argc) {
+            if (strchr (argv[optind], '='))
+                ctl_set_value (h, argv[optind], &update);
+            else
+                ctl_list_value (h, argv[optind]);
+            optind++;
         }
-       if (strchr (kv, '='))
-            ctl_set_value (h, kv);
-       else
-            ctl_list_value (h, kv);
+    }
+
+    /* Perform updates, if needed
+     */
+    if ((update & UPDATE_COOLING)) {
+        update_cooling_info (sb, h);
     }
 
     xhash_destroy (h);
@@ -186,7 +198,7 @@ void ctl_list_value (struct xhash *h, const char *key_match)
     list_iterator_destroy (itr);
 }
 
-void ctl_set_value (struct xhash *h, const char *key_value)
+void ctl_set_value (struct xhash *h, const char *key_value, int *update)
 {
     char key[MAX_KEYLEN*2];
     char *val;
@@ -209,9 +221,12 @@ void ctl_set_value (struct xhash *h, const char *key_value)
         key[strlen (key) - 1] = '\0';
     if (strlen (key) == 0)
         errn_exit (EINVAL, "missing key=");
-    /* Try to set it
-     */
-    msg ("set '%s' to '%s'", key, val);
+
+    if (!strncmp (key, "cooling.", 8)) {
+        set_cooling_info ("cooling", key + 8, val, h, update);
+    }
+    else
+        msg_exit ("%s cannot be set", key);
 }
 
 void xhash_sort (struct xhash *h)
@@ -253,37 +268,11 @@ void xhash_insert (struct xhash *h, const char *prefix, const char *name,
     va_start (ap, fmt);
     val = xvasprintf (fmt, ap);
     va_end (ap);
+    if (hash_find (h->hash, key)) {
+        hash_remove (h->hash, key);
+    } else
+        list_append (h->keys, key);
     hash_insert (h->hash, key, val);
-    list_append (h->keys, key);
-}
-
-bool has_int_tracking (sbig_t *sb)
-{
-    sbig_ccd_t *ccd;
-
-    if (sbig_ccd_create (sb, CCD_TRACKING, &ccd) != CE_NO_ERROR)
-        return false;
-    sbig_ccd_destroy (ccd);
-    return true;
-}
-
-bool has_ext_tracking_capability (sbig_t *sb)
-{
-    sbig_ccd_t *ccd;
-    GetCCDInfoResults4 info4;
-    bool result = false;
-
-    if (sbig_ccd_create (sb, CCD_TRACKING, &ccd) != CE_NO_ERROR)
-        goto done;
-    if (sbig_ccd_get_info4 (ccd, &info4) != CE_NO_ERROR)
-        goto done_destroy;
-    if ((info4.capabilitiesBits & CB_CCD_EXT_TRACKER_MASK)
-                                                == CB_CCD_EXT_TRACKER_YES)
-        result = true;
-done_destroy:
-    sbig_ccd_destroy (ccd);
-done:
-    return result;
 }
 
 bool has_fan (sbig_t *sb)
@@ -304,13 +293,52 @@ done:
     return result;
 }
 
+void set_cooling_info (const char *key_prefix, const char *key,
+                       const char *val, struct xhash *h, int *update)
+{
+
+    if (!strcmp (key, "enabled")) {
+        xhash_insert (h, key_prefix, key, "%s", val);
+        *update |= UPDATE_COOLING;
+    }
+    else if (!strcmp (key, "setpoint")) {
+        xhash_insert (h, key_prefix, key, "%s", val);
+        *update |= UPDATE_COOLING;
+    }
+    else
+        msg_exit ("cannot set %s", key);
+}
+
+void update_cooling_info (sbig_t *sb, struct xhash *h)
+{
+    double setpoint;
+    TEMPERATURE_REGULATION mode;
+    int e;
+    const char *s;
+
+    if (!(s = hash_find (h->hash, "cooling.setpoint")))
+        msg_exit ("cannot get cooling.setpoint");
+    setpoint = strtod (s, NULL);
+
+    if (!(s = hash_find (h->hash, "cooling.enabled")))
+        msg_exit ("cannot get cooling.setpoint");
+    if (!strcmp (s, "0"))
+        mode = REGULATION_OFF;
+    else
+        mode = REGULATION_ON;
+
+    if ((e = sbig_temp_set (sb, mode, setpoint)) != CE_NO_ERROR)
+        msg_exit ("sbig_temp_set: %s", sbig_get_error_string (sb, e));
+}
+
+/* FIXME: tracking and ext-tracking do not appear to have any way to
+ * adjust the setpoint?  Just report the main cooling status for now.
+ */
 void get_cooling_info (sbig_t *sb, CAMERA_TYPE camera_type,
                        const char *key_prefix, struct xhash *h)
 {
     QueryTemperatureStatusResults2 info;
     int e;
-    bool have_int_tracking = has_int_tracking (sb);
-    bool have_ext_tracking = has_ext_tracking_capability (sb);
     bool have_fan = has_fan (sb);
 
     if ((e = sbig_temp_get_info (sb, &info)) != CE_NO_ERROR)
@@ -322,35 +350,11 @@ void get_cooling_info (sbig_t *sb, CAMERA_TYPE camera_type,
     xhash_insert (h, key_prefix, "ambient", "%.2f", info.ambientTemperature);
     xhash_insert (h, key_prefix, "heatsink", "%.2f", info.heatsinkTemperature);
 
-    xhash_insert (h, key_prefix, "imaging.setpoint", "%.2f", info.ccdSetpoint);
-    xhash_insert (h, key_prefix, "imaging.temperature", "%.2f",
+    xhash_insert (h, key_prefix, "setpoint", "%.2f", info.ccdSetpoint);
+    xhash_insert (h, key_prefix, "temperature", "%.2f",
                               info.imagingCCDTemperature);
-    xhash_insert (h, key_prefix, "imaging.power", "%.0f",
-                              info.imagingCCDPower);
+    xhash_insert (h, key_prefix, "power", "%.0f", info.imagingCCDPower);
 
-    /* Internal guide chip cooling status
-     */
-    if (have_int_tracking) {
-        xhash_insert (h, key_prefix, "tracking.setpoint", "%.2f",
-                                  info.trackingCCDSetpoint);
-        xhash_insert (h, key_prefix, "tracking.temperature", "%.2f",
-                                  info.trackingCCDTemperature);
-        xhash_insert (h, key_prefix, "tracking.power", "%.0f",
-                                  info.trackingCCDPower);
-    }
-
-    /* Remote guide head cooling status
-     * N.B. where is the 'setpoint'?
-     */
-    if (have_ext_tracking) {
-        xhash_insert (h, key_prefix, "tracking-ext.temperature", "%.2f",
-                                  info.externalTrackingCCDTemperature);
-        xhash_insert (h, key_prefix, "tracking-ext.power", "%.0f",
-                                  info.externalTrackingCCDPower);
-    }
-
-    /* Fan status
-     */
     if (have_fan) {
         xhash_insert (h, key_prefix, "fan.enabled", "%s",
                                   info.fanEnabled == FS_OFF ? "off" :
