@@ -368,7 +368,7 @@ void get_cooling_info (sbig_t *sb, CAMERA_TYPE camera_type,
     if (have_fan) {
         xhash_insert (h, key_prefix, "fan.enabled", "%s",
                                   info.fanEnabled == FS_OFF ? "off" :
-                                  info.fanEnabled == FS_ON ? "manual" : "auto");
+                                  info.fanEnabled == FS_ON ? "on" : "auto");
         xhash_insert (h, key_prefix, "fan.power", "%.0f", info.fanPower);
         xhash_insert (h, key_prefix, "fan.rpm", "%.0f", info.fanSpeed);
     }
