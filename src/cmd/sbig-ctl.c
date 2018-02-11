@@ -432,7 +432,7 @@ void get_cfw_info (sbig_t *sb, const char *key_prefix, struct xhash *h)
     CFW_POSITION position;
 
     if ((e = sbig_cfw_get_info (sb, &model, &fwrev, &numpos)) != 0)
-        msg_exit ("sbig_cfw_get_info: %s", sbig_get_error_string (sb, e));
+        return; // no CFW installed
     bcd4str (fwrev, version, sizeof (version));
 
     xhash_insert (h, key_prefix, "model", "%s", sbig_strcfw (model));
