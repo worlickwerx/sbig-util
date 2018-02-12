@@ -62,6 +62,10 @@ void set_cfw_info (const char *key_profile, const char *key,
                    const char *val, struct xhash *h, int *update);
 void update_cfw_info (sbig_t *sb, struct xhash *h);
 
+void set_cooling_fan_enabled (const char *key_prefix, const char *key,
+                              const char *val, struct xhash *h, int *update);
+void update_misc (sbig_t *sb, struct xhash *h);
+
 void get_ccd_info  (sbig_t *sb, const char *key_prefix, struct xhash *h);
 
 void xhash_insert (struct xhash *h, const char *prefix, const char *name,
@@ -77,6 +81,7 @@ enum {
     UPDATE_NONE = 0,
     UPDATE_COOLING = 1,
     UPDATE_CFW = 2,
+    UPDATE_MISC = 4,
 };
 
 #define OPTIONS "ah"
@@ -169,6 +174,9 @@ int main (int argc, char *argv[])
 
     /* Perform updates, if needed
      */
+    if ((update & UPDATE_MISC)) {
+        update_misc (sb, h);
+    }
     if ((update & UPDATE_COOLING)) {
         update_cooling_info (sb, h);
     }
@@ -229,7 +237,10 @@ void ctl_set_value (struct xhash *h, const char *key_value, int *update)
     if (strlen (key) == 0)
         errn_exit (EINVAL, "missing key=");
 
-    if (!strncmp (key, "cooling.", 8)) {
+    if (!strcmp (key, "cooling.fan.enabled")) {
+        set_cooling_fan_enabled ("cooling.fan", "enabled",  val, h, update);
+    }
+    else if (!strncmp (key, "cooling.", 8)) {
         set_cooling_info ("cooling", key + 8, val, h, update);
     }
     else if (!strncmp (key, "cfw.", 4)) {
@@ -303,6 +314,13 @@ done:
     return result;
 }
 
+void set_cooling_fan_enabled (const char *key_prefix, const char *key,
+                              const char *val, struct xhash *h, int *update)
+{
+    xhash_insert (h, key_prefix, key, "%s", val);
+    *update |= UPDATE_MISC;
+}
+
 void set_cooling_info (const char *key_prefix, const char *key,
                        const char *val, struct xhash *h, int *update)
 {
@@ -319,6 +337,53 @@ void set_cooling_info (const char *key_prefix, const char *key,
         msg_exit ("cannot set %s", key);
 }
 
+bool has_fan_speed_control (sbig_t *sb)
+{
+    sbig_ccd_t *ccd;
+    GetCCDInfoResults0 info0;
+    bool result = false;
+
+    if (sbig_ccd_create (sb, CCD_IMAGING, &ccd) != CE_NO_ERROR)
+        goto done;
+    if (sbig_ccd_get_info0 (ccd, &info0) != CE_NO_ERROR)
+        goto done_destroy;
+    if (info0.cameraType == STT_CAMERA || info0.cameraType == STX_CAMERA)
+        result = true;
+done_destroy:
+    sbig_ccd_destroy (ccd);
+done:
+    return result;
+}
+
+/* cooling.fan.enabled:
+ * info2.fanEnabled: FS_OFF (0), FS_ON (1), or FS_AUTOCONTROL (2).
+ * misc.fanEnable on non-STX/STT: off (0), or on (1).
+ * misc.fanEanble on STX/STT:  off (0), auto (1), pct max speed (20-100).
+ */
+void update_misc (sbig_t *sb, struct xhash *h)
+{
+    MiscellaneousControlParams misc;
+    const char *s;
+    unsigned long value;
+    int e;
+
+    misc.shutterCommand = SC_LEAVE_SHUTTER; // ignore shutter
+    misc.ledState = LED_ON; // restores LED to default (non-integrating) value
+
+    if (!(s = hash_find (h->hash, "cooling.fan.enabled")))
+        msg_exit ("cannot get cooling.fan.enabled");
+    value = strtoul (s, NULL, 10);
+
+    if (has_fan_speed_control (sb))
+        misc.fanEnable = (value == 0 || value >= 20) ? value : 1;
+    else
+        misc.fanEnable = value ? TRUE : FALSE;
+    msg ("XXX setting misc.fanEnable=%d", misc.fanEnable);
+
+    if ((e = sbig_misc_set (sb, &misc)) != CE_NO_ERROR)
+        msg_exit ("sbig_misc_set: %s", sbig_get_error_string (sb, e));
+}
+
 void update_cooling_info (sbig_t *sb, struct xhash *h)
 {
     double setpoint;
@@ -331,7 +396,7 @@ void update_cooling_info (sbig_t *sb, struct xhash *h)
     setpoint = strtod (s, NULL);
 
     if (!(s = hash_find (h->hash, "cooling.enabled")))
-        msg_exit ("cannot get cooling.setpoint");
+        msg_exit ("cannot get cooling.enabled");
     if (!strcmp (s, "0"))
         mode = REGULATION_OFF;
     else
@@ -366,9 +431,7 @@ void get_cooling_info (sbig_t *sb, CAMERA_TYPE camera_type,
     xhash_insert (h, key_prefix, "power", "%.0f", info.imagingCCDPower);
 
     if (have_fan) {
-        xhash_insert (h, key_prefix, "fan.enabled", "%s",
-                                  info.fanEnabled == FS_OFF ? "off" :
-                                  info.fanEnabled == FS_ON ? "on" : "auto");
+        xhash_insert (h, key_prefix, "fan.enabled", "%d", info.fanEnabled);
         xhash_insert (h, key_prefix, "fan.power", "%.0f", info.fanPower);
         xhash_insert (h, key_prefix, "fan.rpm", "%.0f", info.fanSpeed);
     }
