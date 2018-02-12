@@ -8,6 +8,7 @@
 #include "cfw.h"
 #include "ao.h"
 #include "temp.h"
+#include "misc.h"
 
 #endif
 

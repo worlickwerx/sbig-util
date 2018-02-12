@@ -20,4 +20,6 @@ libsbig_la_SOURCES = \
 	temp.h \
 	sbfits.c \
 	sbfits.h \
-	sbig.h
+	sbig.h \
+	misc.c \
+	misc.h
