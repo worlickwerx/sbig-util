@@ -4,7 +4,8 @@ sbigbindir = $(libexecdir)/sbig-util
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
-	-DEXEC_DIR=\"$(sbigbindir)\"
+	-DEXEC_DIR=\"$(sbigbindir)\" \
+	$(CFITSIO_CFLAGS)
 
 bin_PROGRAMS = sbig
 
@@ -20,4 +21,4 @@ LDADD = \
 	$(top_builddir)/src/common/libsbig/libsbig.la \
 	$(top_builddir)/src/common/libutil/libutil.la \
 	$(top_builddir)/src/common/libini/libini.la \
-	$(LIBM) $(LIBDL) $(LIBCFITSIO)
+	$(LIBM) $(LIBDL) $(CFITSIO_LIBS)

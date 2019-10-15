@@ -41,6 +41,7 @@ AC_HEADER_STDC
 # Checks for packages
 ##
 PKG_CHECK_MODULES([LIBUSB], [libusb-1.0], [], [])
+PKG_CHECK_MODULES([CFITSIO], [cfitsio], [], [])
 
 X_AC_SBIGUDRV
 
@@ -60,7 +61,6 @@ AC_CHECK_FUNCS( \
 )
 X_AC_CHECK_COND_LIB(dl, dlerror)
 X_AC_CHECK_COND_LIB(m, sqrt)
-X_AC_CHECK_COND_LIB(cfitsio, ffopen)
 
 ##
 # Epilogue
