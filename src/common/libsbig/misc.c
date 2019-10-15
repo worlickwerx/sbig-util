@@ -29,20 +29,11 @@
 #include "handle.h"
 #include "handle_impl.h"
 #include "sbigudrv.h"
-#include "sbig.h"
+#include "misc.h"
 
-int sbig_temp_set (sbig_t *sb, TEMPERATURE_REGULATION reg, double ccdSetpoint)
+int sbig_misc_set (sbig_t *sb, MiscellaneousControlParams *misc)
 {
-    SetTemperatureRegulationParams2 in = { .regulation = reg,
-                                           .ccdSetpoint = ccdSetpoint };
-
-    return sb->fun (CC_SET_TEMPERATURE_REGULATION2, &in, NULL);
-}
-
-int sbig_temp_get_info (sbig_t *sb, QueryTemperatureStatusResults2 *info)
-{
-    QueryTemperatureStatusParams in = { .request = TEMP_STATUS_ADVANCED2};
-    return sb->fun (CC_QUERY_TEMPERATURE_STATUS, &in, info);
+    return sb->fun (CC_MISCELLANEOUS_CONTROL, misc, NULL);
 }
 
 /*
